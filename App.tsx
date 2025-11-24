@@ -7,6 +7,12 @@ import Settings from './components/Settings';
 import SupportView from './components/SupportView';
 import AuthScreen from './components/AuthScreen';
 import { ViewState, Receipt, User, SubscriptionTier } from './types';
+import { authService } from './services/authService';
+
+// Helper to generate a unique signature for a receipt to detect duplicates
+const getReceiptSignature = (r: Receipt) => {
+    return `${r.storeName.toLowerCase().trim()}|${r.date}|${r.total.toFixed(2)}|${r.type || 'receipt'}|${(r.referenceCode || '').toLowerCase().trim()}`;
+};
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -15,37 +21,51 @@ const App: React.FC = () => {
   // User Authentication State
   const [user, setUser] = useState<User | null>(null);
 
-  // Settings State
-  const [monthlyBudget, setMonthlyBudget] = useState<number>(1000);
+  // Settings State - Default set to 300 Euro as requested
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(300);
   const [ageRestricted, setAgeRestricted] = useState<boolean>(false);
 
-  // Load user session on mount
+  // Initialize Auth Service & Listen for changes
   useEffect(() => {
-      const session = localStorage.getItem('truetrack_user');
-      if (session) {
-          try {
-              setUser(JSON.parse(session));
-          } catch (e) {
-              console.error("Invalid session");
-          }
-      }
-  }, []);
+    const initAuth = async () => {
+        try {
+            const currentUser = await authService.getCurrentUser();
+            setUser(currentUser);
+        } catch (e) {
+            console.error("Auth init failed", e);
+        }
+    };
+    initAuth();
 
-  // Save user session whenever it changes
-  useEffect(() => {
-      if (user) {
-          localStorage.setItem('truetrack_user', JSON.stringify(user));
-      } else {
-          localStorage.removeItem('truetrack_user');
-      }
-  }, [user]);
+    const { data: { subscription } } = authService.onAuthStateChange((newUser) => {
+        setUser(newUser);
+    });
+
+    return () => {
+        subscription.unsubscribe();
+    };
+  }, []);
 
   // Load receipts and settings
   useEffect(() => {
     const savedReceipts = localStorage.getItem('truetrack_receipts');
     if (savedReceipts) {
       try {
-        setReceipts(JSON.parse(savedReceipts));
+        const parsed = JSON.parse(savedReceipts) as Receipt[];
+        
+        // Deduplicate on load: Ensure we don't have existing duplicates
+        const uniqueMap = new Map<string, Receipt>();
+        parsed.forEach(r => {
+            const sig = getReceiptSignature(r);
+            // We keep the first instance we encounter
+            if (!uniqueMap.has(sig)) {
+                uniqueMap.set(sig, r);
+            }
+        });
+        
+        // Convert map values back to array
+        setReceipts(Array.from(uniqueMap.values()));
+
       } catch (e) {
         console.error("Failed to parse receipts", e);
       }
@@ -75,7 +95,22 @@ const App: React.FC = () => {
   }, [monthlyBudget, ageRestricted]);
 
   const handleScanComplete = (newReceipts: Receipt[]) => {
-    setReceipts(prev => [...newReceipts, ...prev]);
+    setReceipts(prev => {
+        // Create a set of signatures from existing receipts
+        const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
+        const uniqueNewReceipts: Receipt[] = [];
+
+        for (const receipt of newReceipts) {
+            const sig = getReceiptSignature(receipt);
+            // Only add if it doesn't already exist
+            if (!existingSignatures.has(sig)) {
+                existingSignatures.add(sig); // Add to set to also prevent duplicates within the *new* batch
+                uniqueNewReceipts.push(receipt);
+            }
+        }
+
+        return [...uniqueNewReceipts, ...prev];
+    });
     setCurrentView('dashboard'); // Redirect to dashboard
   };
   
@@ -88,16 +123,17 @@ const App: React.FC = () => {
       setCurrentView('dashboard');
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+      await authService.signOut();
       setUser(null);
       setAgeRestricted(false); // Reset sensitive settings on logout
       setCurrentView('dashboard'); // Will show auth screen next render
   };
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
       if (user) {
-          const upgradedUser = { ...user, tier: SubscriptionTier.PRO };
-          setUser(upgradedUser);
+          const updated = await authService.updateProfile({ tier: SubscriptionTier.PRO });
+          if (updated) setUser(updated);
       }
   };
 

@@ -26,6 +26,7 @@ export interface Receipt {
   scannedAt: string; // ISO date string
   type?: 'receipt' | 'bill';
   referenceCode?: string;
+  imageUrl?: string; // Base64 string of the receipt image
 }
 
 export interface AnalysisResult {

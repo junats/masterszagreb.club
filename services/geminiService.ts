@@ -57,11 +57,23 @@ const receiptSchema: Schema = {
 };
 
 export const analyzeReceiptImage = async (base64Image: string, type: 'receipt' | 'bill' = 'receipt'): Promise<AnalysisResult> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing.");
+  let apiKey: string | undefined;
+  
+  try {
+      // Robust check to allow bundlers to replace process.env.API_KEY 
+      // while preventing ReferenceError if process is undefined at runtime
+      if (typeof process !== 'undefined') {
+          apiKey = process.env.API_KEY;
+      }
+  } catch (e) {
+      console.warn("Failed to access process.env safely:", e);
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  if (!apiKey) {
+    throw new Error("API Key is missing or environment configuration is invalid.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   let promptText = "";
 
