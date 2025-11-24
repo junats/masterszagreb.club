@@ -21,7 +21,7 @@ const App: React.FC = () => {
 
   // Load user session on mount
   useEffect(() => {
-      const session = localStorage.getItem('smartspend_user');
+      const session = localStorage.getItem('truetrack_user');
       if (session) {
           try {
               setUser(JSON.parse(session));
@@ -34,15 +34,15 @@ const App: React.FC = () => {
   // Save user session whenever it changes
   useEffect(() => {
       if (user) {
-          localStorage.setItem('smartspend_user', JSON.stringify(user));
+          localStorage.setItem('truetrack_user', JSON.stringify(user));
       } else {
-          localStorage.removeItem('smartspend_user');
+          localStorage.removeItem('truetrack_user');
       }
   }, [user]);
 
   // Load receipts and settings
   useEffect(() => {
-    const savedReceipts = localStorage.getItem('smartspend_receipts');
+    const savedReceipts = localStorage.getItem('truetrack_receipts');
     if (savedReceipts) {
       try {
         setReceipts(JSON.parse(savedReceipts));
@@ -51,7 +51,7 @@ const App: React.FC = () => {
       }
     }
 
-    const savedSettings = localStorage.getItem('smartspend_settings');
+    const savedSettings = localStorage.getItem('truetrack_settings');
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings);
@@ -66,12 +66,12 @@ const App: React.FC = () => {
 
   // Save receipts changes
   useEffect(() => {
-    localStorage.setItem('smartspend_receipts', JSON.stringify(receipts));
+    localStorage.setItem('truetrack_receipts', JSON.stringify(receipts));
   }, [receipts]);
 
   // Save settings changes
   useEffect(() => {
-    localStorage.setItem('smartspend_settings', JSON.stringify({ budget: monthlyBudget, ageRestricted }));
+    localStorage.setItem('truetrack_settings', JSON.stringify({ budget: monthlyBudget, ageRestricted }));
   }, [monthlyBudget, ageRestricted]);
 
   const handleScanComplete = (newReceipts: Receipt[]) => {

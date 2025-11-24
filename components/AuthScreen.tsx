@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Shield, FileText } from 'lucide-react';
 import { User, SubscriptionTier } from '../types';
 
 interface AuthScreenProps {
@@ -32,18 +32,27 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-background">
         {/* Background Gradients */}
         <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
 
         <div className="w-full max-w-sm z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary to-blue-600 rounded-2xl mx-auto flex items-center justify-center shadow-2xl shadow-primary/20 mb-4">
-                    <span className="text-2xl font-bold text-white">S</span>
+            <div className="text-center mb-10">
+                {/* Logo Composition */}
+                <div className="relative w-20 h-20 mx-auto mb-4">
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl"></div>
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        <Shield className="w-20 h-20 text-[#0f172a] fill-white" strokeWidth={1.5} />
+                        <FileText className="w-8 h-8 text-[#0f172a] absolute" strokeWidth={2.5} />
+                    </div>
                 </div>
-                <h1 className="text-3xl font-bold text-white mb-2">SmartSpend</h1>
-                <p className="text-slate-400">Secure your future. Track your provision.</p>
+                
+                <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">TrueTrack</h1>
+                <p className="text-slate-400 font-medium">Protecting fathers. Verifying provision.</p>
+                <p className="text-xs text-slate-500 mt-2 max-w-[280px] mx-auto">
+                    Secure your legal standing with AI-powered record keeping and restricted item filtering.
+                </p>
             </div>
 
             <div className="bg-surface/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 shadow-2xl">
@@ -79,7 +88,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                         <div className="w-full border-t border-slate-700"></div>
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-[#151f32] px-2 text-slate-500">Or continue with email</span>
+                        <span className="bg-[#1e293b] px-2 text-slate-500">Or continue with email</span>
                     </div>
                 </div>
 
@@ -116,7 +125,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                         disabled={loading}
                         className="w-full bg-primary hover:bg-sky-400 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+                        {loading ? 'Authenticating...' : (isLogin ? 'Sign In' : 'Create Account')}
                         {!loading && <ArrowRight size={18} />}
                     </button>
                 </form>
@@ -132,7 +141,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </div>
 
             <p className="text-center text-slate-600 text-xs mt-6">
-                By continuing, you agree to our Terms of Service and Privacy Policy.
+                Your data is encrypted and secure. By continuing, you agree to our Terms of Service.
             </p>
         </div>
     </div>

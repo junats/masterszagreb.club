@@ -39,7 +39,7 @@ const Settings: React.FC<SettingsProps> = ({
         return;
     }
 
-    const receiptsData = localStorage.getItem('smartspend_receipts');
+    const receiptsData = localStorage.getItem('truetrack_receipts');
     if (!receiptsData) {
         alert("No data to export.");
         return;
@@ -67,7 +67,7 @@ const Settings: React.FC<SettingsProps> = ({
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `smartspend_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute("download", `truetrack_export_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

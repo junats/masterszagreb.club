@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Receipt, Category } from '../types';
-import { TrendingUp, ShoppingBag, Sparkles, X, Activity, TrendingDown, ShieldCheck, FileText, AlertTriangle, ArrowUpRight, ArrowDownRight, Calendar, Receipt as ReceiptIcon } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Sparkles, X, Activity, TrendingDown, ShieldCheck, FileText, AlertTriangle, ArrowUpRight, ArrowDownRight, Calendar, Receipt as ReceiptIcon, Shield, Calculator, Store } from 'lucide-react';
 
 interface DashboardProps {
   receipts: Receipt[];
@@ -28,33 +27,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     // For Dynamic Insight
     const storeTotals: Record<string, number> = {};
     let mostExpensiveItem = { name: '', price: 0, store: '' };
-
-    // Trend Data Logic (Last 7 scans)
-    const rawTrendData = receipts
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-7);
-
-    const trendData = rawTrendData.map(r => {
-        const validItems = r.items.filter(item => !ageRestricted || !item.isRestricted);
-        let essentials = 0;
-        let discretionary = 0;
-
-        validItems.forEach(i => {
-            if ([Category.NECESSITY, Category.FOOD, Category.HEALTH, Category.HOUSEHOLD, Category.TRANSPORT, Category.EDUCATION].includes(i.category)) {
-                essentials += i.price;
-            } else {
-                discretionary += i.price;
-            }
-        });
-
-        return {
-            name: r.storeName.length > 8 ? r.storeName.substring(0,8) + '..' : r.storeName,
-            date: new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-            Essentials: Number(essentials.toFixed(2)),
-            Discretionary: Number(discretionary.toFixed(2)),
-            Total: Number((essentials + discretionary).toFixed(2))
-        };
-    });
 
     receipts.forEach(r => {
       const validItems = r.items.filter(item => !ageRestricted || !item.isRestricted);
@@ -91,7 +63,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     const categoryData = Object.entries(categoryTotals).map(([name, value]) => ({
       name,
-      value
+      value,
+      percentage: totalSpent > 0 ? (value / totalSpent) * 100 : 0
     })).sort((a, b) => b.value - a.value);
 
     // Sort drilldown items
@@ -99,26 +72,54 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         categoryItems[key].sort((a, b) => b.price - a.price);
     });
 
-    const chartData = categoryData.filter(d => d.value > 0);
     const provisionRatio = totalSpent > 0 ? (provisionTotal / totalSpent) * 100 : 0;
     
-    // Evidence Score Calculation (Mock logic for "Proof")
-    // Based on consistency (receipt count) and provision ratio
-    let evidenceScore = 'Building';
-    if (receipts.length > 5) evidenceScore = 'Moderate';
-    if (receipts.length > 10 && provisionRatio > 60) evidenceScore = 'Strong';
-    if (receipts.length > 20 && provisionRatio > 70) evidenceScore = 'Ironclad';
+    // Evidence Score Calculation (0-100)
+    const volumeScore = Math.min(receipts.length, 20) * 2.5;
+    const qualityScore = Math.min(provisionRatio, 100) * 0.5;
+    const numericEvidenceScore = Math.round(volumeScore + qualityScore);
+
+    let evidenceLabel = 'Starting';
+    let evidenceColor = 'text-slate-400';
+    let evidenceStroke = 'stroke-slate-400';
+
+    if (numericEvidenceScore > 30) { 
+        evidenceLabel = 'Building'; 
+        evidenceColor = 'text-amber-400'; 
+        evidenceStroke = 'stroke-amber-400';
+    }
+    if (numericEvidenceScore > 60) { 
+        evidenceLabel = 'Strong'; 
+        evidenceColor = 'text-blue-400'; 
+        evidenceStroke = 'stroke-blue-400';
+    }
+    if (numericEvidenceScore > 85) { 
+        evidenceLabel = 'Ironclad'; 
+        evidenceColor = 'text-emerald-400'; 
+        evidenceStroke = 'stroke-emerald-400';
+    }
+
+    // Top Store Calculation
+    const topStoreEntry = Object.entries(storeTotals).sort((a, b) => b[1] - a[1])[0];
+    const topStore = topStoreEntry ? { name: topStoreEntry[0], amount: topStoreEntry[1] } : null;
+
+    // Avg Receipt
+    const avgReceipt = receipts.length > 0 ? totalSpent / receipts.length : 0;
 
     return { 
         totalSpent, 
         provisionTotal,
         provisionRatio,
-        chartData, 
+        categoryData, 
         luxuryTotal, 
         categoryItems,
         mostExpensiveItem,
-        trendData,
-        evidenceScore
+        evidenceScore: numericEvidenceScore,
+        evidenceLabel,
+        evidenceColor,
+        evidenceStroke,
+        topStore,
+        avgReceipt
     };
   }, [receipts, ageRestricted]);
 
@@ -161,7 +162,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     return opportunities.sort((a, b) => b.savings - a.savings).slice(0, 3);
   }, [receipts, ageRestricted]);
 
-
   const COLORS: Record<string, string> = {
     [Category.NECESSITY]: '#38bdf8', // Sky
     [Category.FOOD]: '#4ade80',      // Green
@@ -173,14 +173,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     [Category.OTHER]: '#94a3b8',     // Slate
   };
 
-  const handlePieClick = (entry: any) => {
-      const cat = entry.name;
-      const items = metrics.categoryItems[cat] || [];
-      if (items.length > 0) {
-          setDrillDown({ category: cat, items });
-      }
-  };
-
   const budgetProgress = monthlyBudget > 0 ? (metrics.totalSpent / monthlyBudget) * 100 : 0;
 
   return (
@@ -188,10 +180,13 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
       {/* Header */}
       <div className="flex justify-between items-end mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Provisioning Dashboard</h1>
+          <div className="flex items-center gap-2 mb-1">
+             <Shield className="w-5 h-5 text-white fill-white/20" />
+             <h1 className="text-xl font-bold text-white tracking-tight">TrueTrack</h1>
+          </div>
           <div className="flex items-center gap-2 mt-1">
-             <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-             <p className="text-slate-400 text-xs font-medium">System Active • Protecting Records</p>
+             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+             <p className="text-slate-400 text-xs font-medium">Safe Harbor Active • Records Secure</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -216,7 +211,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             
             <div className="relative z-10 flex justify-between items-start">
                 <div>
-                    <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider mb-1">Total Verified Provision</p>
+                    <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider mb-1">Verified Provision</p>
                     <h2 className="text-3xl font-bold text-white tracking-tight">
                         €{metrics.provisionTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </h2>
@@ -246,26 +241,41 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             </div>
         </div>
 
-        {/* 2. Evidence Strength (Square) */}
+        {/* 2. Evidence Strength (Square) - QUANTIFIED GAUGE */}
         <div className="col-span-1 bg-surface border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden">
              <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl"></div>
-             <div className="flex items-center gap-2 mb-2">
-                 <FileText className="text-emerald-400 w-4 h-4" />
+             <div className="flex items-center gap-2 mb-2 z-10 relative">
+                 <FileText className={`${metrics.evidenceColor} w-4 h-4`} />
                  <span className="text-slate-400 text-xs font-medium">Log Strength</span>
              </div>
-             <div>
-                 <span className={`text-xl font-bold tracking-tight ${
-                     metrics.evidenceScore === 'Ironclad' ? 'text-emerald-400' :
-                     metrics.evidenceScore === 'Strong' ? 'text-blue-400' :
-                     'text-amber-400'
-                 }`}>
-                     {metrics.evidenceScore}
-                 </span>
-                 <p className="text-[10px] text-slate-500 mt-1">{receipts.length} verified receipts</p>
+             
+             <div className="flex flex-col justify-end h-full z-10 relative">
+                 <div className="flex items-end justify-between">
+                     <div>
+                        <span className={`text-xl font-bold tracking-tight block ${metrics.evidenceColor}`}>
+                            {metrics.evidenceLabel}
+                        </span>
+                        <p className="text-[10px] text-slate-500 mt-1">{receipts.length} verified logs</p>
+                     </div>
+                     
+                     {/* Radial Progress Gauge (SVG) */}
+                     <div className="relative w-12 h-12 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-800" />
+                            <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" 
+                                strokeDasharray={2 * Math.PI * 20}
+                                strokeDashoffset={2 * Math.PI * 20 * (1 - metrics.evidenceScore / 100)}
+                                className={`${metrics.evidenceStroke} transition-all duration-1000 ease-out`}
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                        <span className="absolute text-[10px] font-bold text-white">{metrics.evidenceScore}</span>
+                     </div>
+                 </div>
              </div>
         </div>
 
-        {/* 3. Deal Alerts / Savings (Square) */}
+        {/* 3. Deal Alerts / Opportunities */}
         <div className="col-span-1 bg-surface border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden">
              <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full blur-2xl"></div>
              <div className="flex items-center gap-2 mb-2">
@@ -280,79 +290,59 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
              </div>
         </div>
 
-        {/* 4. Chart: Spending Consistency (Wide) */}
-        <div className="col-span-2 bg-surface border border-slate-700/50 rounded-2xl p-4">
+        {/* 4. Quick Stats (New Boxes replacing Graph) */}
+        <div className="col-span-1 bg-surface border border-slate-700/50 rounded-2xl p-4">
+             <div className="flex items-center gap-2 mb-2">
+                 <Calculator className="text-blue-400 w-4 h-4" />
+                 <span className="text-slate-400 text-xs font-medium">Avg. Log</span>
+             </div>
+             <p className="text-lg font-bold text-white tracking-tight">€{metrics.avgReceipt.toFixed(0)}</p>
+        </div>
+
+        <div className="col-span-1 bg-surface border border-slate-700/50 rounded-2xl p-4">
+             <div className="flex items-center gap-2 mb-2">
+                 <Store className="text-purple-400 w-4 h-4" />
+                 <span className="text-slate-400 text-xs font-medium">Top Store</span>
+             </div>
+             <p className="text-lg font-bold text-white tracking-tight truncate">
+                {metrics.topStore ? metrics.topStore.name.substring(0,8) : 'N/A'}
+             </p>
+        </div>
+
+        {/* 5. Category Breakdown (Progress Bars replacing Pie Chart) */}
+        <div className="col-span-2 bg-surface border border-slate-700/50 rounded-2xl p-5">
              <div className="flex justify-between items-center mb-4">
-                 <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Provisioning Consistency</h3>
-                 <Activity className="text-slate-600 w-4 h-4" />
+                 <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Spending Breakdown</h3>
+                 <ShoppingBag className="text-slate-600 w-4 h-4" />
              </div>
-             <div className="h-32 w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={metrics.trendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="colorEssentials" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#38bdf8" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                        <XAxis dataKey="date" tick={{fontSize: 9, fill: '#64748b'}} axisLine={false} tickLine={false} dy={5} />
-                        <YAxis tick={{fontSize: 9, fill: '#64748b'}} axisLine={false} tickLine={false} />
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                            itemStyle={{ color: '#fff' }}
-                            formatter={(value: number) => [`€${value}`, '']}
-                        />
-                        <Area type="monotone" dataKey="Essentials" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#colorEssentials)" />
-                    </AreaChart>
-                 </ResponsiveContainer>
-             </div>
-        </div>
-
-        {/* 5. Pie Chart Breakdown (Wide) */}
-        <div className="col-span-2 bg-surface border border-slate-700/50 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden">
-             <div className="w-1/2">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Breakdown</h3>
-                <div className="space-y-2">
-                    {metrics.chartData.slice(0, 3).map((d, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
+             <div className="space-y-4">
+                {metrics.categoryData.slice(0, 4).map((d, i) => (
+                    <div key={i} onClick={() => {
+                        const items = metrics.categoryItems[d.name] || [];
+                        if(items.length > 0) setDrillDown({ category: d.name, items });
+                    }} className="cursor-pointer group">
+                        <div className="flex justify-between items-center text-xs mb-1.5">
+                            <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[d.name] }}></div>
-                                <span className="text-slate-400">{d.name}</span>
+                                <span className="text-slate-200 font-medium group-hover:text-white transition-colors">{d.name}</span>
                             </div>
-                            <span className="text-slate-200 font-mono">€{d.value.toFixed(0)}</span>
+                            <span className="text-slate-400 font-mono">€{d.value.toFixed(0)}</span>
                         </div>
-                    ))}
-                    {metrics.chartData.length > 3 && (
-                        <p className="text-[10px] text-slate-500 pt-1">+ {metrics.chartData.length - 3} more categories</p>
-                    )}
-                </div>
-             </div>
-             <div className="w-1/2 h-32 relative">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={metrics.chartData}
-                            innerRadius={30}
-                            outerRadius={45}
-                            paddingAngle={5}
-                            dataKey="value"
-                            stroke="none"
-                            onClick={handlePieClick}
-                        >
-                            {metrics.chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[entry.name] || COLORS[Category.OTHER]} cursor="pointer" />
-                            ))}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <ShoppingBag className="text-slate-600 w-4 h-4" />
-                </div>
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full rounded-full transition-all duration-500" 
+                                style={{ width: `${d.percentage}%`, backgroundColor: COLORS[d.name] }}
+                            ></div>
+                        </div>
+                    </div>
+                ))}
+                {metrics.categoryData.length === 0 && (
+                    <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
+                )}
              </div>
         </div>
 
-        {/* 6. Smart Suggestions (Full Width - Contextual) */}
+        {/* 6. Smart Suggestions (Contextual) */}
         {priceWatch.length > 0 && (
             <div className="col-span-2 bg-gradient-to-r from-emerald-900/30 to-emerald-800/10 border border-emerald-500/20 rounded-2xl p-4">
                  <div className="flex items-center gap-2 mb-2">
@@ -424,37 +414,30 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                   </div>
                   
                   <div className="p-4 overflow-y-auto custom-scrollbar">
-                      {drillDown.items.length > 0 ? (
-                        <div className="h-[180px] w-full mb-6">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                    layout="vertical"
-                                    data={drillDown.items.slice(0, 10)} 
-                                    margin={{ top: 0, right: 30, left: 10, bottom: 0 }}
-                                >
-                                    <XAxis type="number" hide />
-                                    <YAxis 
-                                        type="category" 
-                                        dataKey="name" 
-                                        width={80} 
-                                        tick={{fill: '#94a3b8', fontSize: 10}} 
-                                        tickFormatter={(val) => val.length > 10 ? val.substring(0,10)+'..' : val}
-                                    />
-                                    <Tooltip 
-                                        cursor={{fill: 'transparent'}}
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                        formatter={(value: number) => [`€${value.toFixed(2)}`, '']}
-                                    />
-                                    <Bar dataKey="price" fill={COLORS[drillDown.category] || '#818cf8'} radius={[0, 4, 4, 0]} barSize={12} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                      ) : (
-                          <div className="text-center py-10 text-slate-500">No data available</div>
-                      )}
+                      <div className="space-y-4 mb-4">
+                          {drillDown.items.slice(0, 5).map((item, idx) => {
+                             // Simple Bar Visualization for Drilldown
+                             const maxPrice = Math.max(...drillDown.items.map(i => i.price));
+                             const width = (item.price / maxPrice) * 100;
+                             
+                             return (
+                                 <div key={idx} className="space-y-1">
+                                     <div className="flex justify-between text-xs text-slate-400">
+                                         <span>{item.name.substring(0, 15)}...</span>
+                                         <span>€{item.price.toFixed(2)}</span>
+                                     </div>
+                                     <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full rounded-full opacity-80" 
+                                            style={{ width: `${width}%`, backgroundColor: COLORS[drillDown.category] || '#818cf8' }}
+                                        ></div>
+                                     </div>
+                                 </div>
+                             )
+                          })}
+                      </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 pt-4 border-t border-slate-800">
                           <div className="flex justify-between items-center px-2 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                               <span>Item / Date</span>
                               <span>Price</span>

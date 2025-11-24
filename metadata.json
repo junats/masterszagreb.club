@@ -1,5 +1,5 @@
 {
-  "name": "SmartSpend Scanner",
+  "name": "TrueTrack",
   "description": "Scan receipts, categorize expenses (Luxury vs Necessity), and track spending habits with AI-powered analytics.",
   "requestFramePermissions": [
     "camera",

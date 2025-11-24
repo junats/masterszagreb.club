@@ -40,7 +40,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
     setError(null);
     setIsAnalyzing(true);
     
-    const fileList = Array.from(files);
+    const fileList: File[] = Array.from(files);
     const totalFiles = fileList.length;
     setProgress({ current: 0, total: totalFiles });
 
