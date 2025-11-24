@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Receipt, Category } from '../types';
-import { ShoppingBag, X, ShieldCheck, FileText, Calendar, Store, ArrowUp, BarChart3, Check, Shield, Sparkles, TrendingUp, TrendingDown, Minus, Wallet, Hash, ArrowUpRight, AlertTriangle, PiggyBank } from 'lucide-react';
+import { ShoppingBag, X, ShieldCheck, FileText, Calendar, Store, ArrowUp, BarChart3, Check, Shield, Sparkles, TrendingUp, TrendingDown, Minus, Wallet, Hash, ArrowUpRight, AlertTriangle } from 'lucide-react';
 
 interface DashboardProps {
   receipts: Receipt[];
@@ -187,7 +187,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
   };
 
   const budgetProgress = monthlyBudget > 0 ? (metrics.totalSpent / monthlyBudget) * 100 : 0;
-  const remainingBudget = monthlyBudget - metrics.totalSpent;
 
   return (
     <div className="flex flex-col h-full px-4 pt-4 pb-24 overflow-y-auto no-scrollbar bg-[#0b1120]">
@@ -338,7 +337,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
              </div>
         </div>
 
-        {/* 4. Financial Snapshot (Grid of 3) */}
+        {/* 4. Financial Snapshot (Grid of 3) - REPLACES Old Avg Log Box */}
         <div className="col-span-2 bg-surface border border-slate-700/50 rounded-2xl p-4">
              <div className="flex items-center gap-2 mb-3">
                  <Wallet className="text-emerald-400 w-4 h-4" />
@@ -392,31 +391,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
              </div>
         </div>
 
-        {/* 6. Budget Status (New Box) */}
-        <div className="col-span-1 bg-surface border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
-             <div className="flex items-center gap-2 mb-1">
-                 <PiggyBank className="text-amber-400 w-4 h-4" />
-                 <span className="text-slate-400 text-xs font-medium">Budget Left</span>
-             </div>
-             
-             <div className="mt-2">
-                 <h3 className={`text-xl font-bold ${remainingBudget >= 0 ? 'text-white' : 'text-red-400'}`}>
-                     €{remainingBudget.toLocaleString()}
-                 </h3>
-                 <p className="text-[10px] text-slate-500 mt-1">
-                     {remainingBudget >= 0 ? 'Available to spend' : 'Over budget'}
-                 </p>
-             </div>
-             
-             <div className="h-1 w-full bg-slate-800 rounded-full mt-3">
-                 <div 
-                    className={`h-full rounded-full transition-all duration-500 ${remainingBudget < 0 ? 'bg-red-500' : 'bg-emerald-500'}`} 
-                    style={{ width: `${Math.max(0, Math.min(100, (remainingBudget / monthlyBudget) * 100))}%` }}
-                 ></div>
-             </div>
-        </div>
-
-        {/* 7. Category Breakdown (Linear Bars) */}
+        {/* 6. Category Breakdown (Linear Bars) */}
         <div className="col-span-2 bg-surface border border-slate-700/50 rounded-2xl p-5">
              <div className="flex justify-between items-center mb-4">
                  <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Spending Breakdown</h3>
@@ -449,7 +424,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
              </div>
         </div>
 
-        {/* 8. Recent Log (Compact List) */}
+        {/* 7. Recent Log (Compact List) */}
         <div className="col-span-2">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1 mt-2">Recent Logs</h3>
             <div className="space-y-2">

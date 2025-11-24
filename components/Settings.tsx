@@ -134,34 +134,22 @@ const Settings: React.FC<SettingsProps> = ({
          {/* Spending Configuration */}
          <section>
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Finances</h4>
-            <div className="bg-surface rounded-xl overflow-hidden border border-slate-700/50 p-4">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-primary/20 p-2 rounded-lg text-primary">
-                        <Wallet size={18} />
-                    </div>
-                    <div>
-                         <span className="text-slate-200 text-sm font-medium block">Monthly Budget</span>
-                    </div>
-                </div>
-                
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-500">Target Limit</span>
-                        <span className="text-xl font-bold text-primary">€{monthlyBudget}</span>
+            <div className="bg-surface rounded-xl overflow-hidden border border-slate-700/50">
+                <div className="w-full flex items-center justify-between p-4 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-primary/20 p-2 rounded-lg text-primary">
+                            <Wallet size={18} />
+                        </div>
+                        <div>
+                             <span className="text-slate-200 text-sm font-medium block">Monthly Budget (€)</span>
+                        </div>
                     </div>
                     <input 
-                        type="range" 
-                        min="100"
-                        max="2000"
-                        step="50"
+                        type="number" 
                         value={monthlyBudget}
                         onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                        className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-white focus:outline-none focus:border-primary text-sm font-mono"
                     />
-                    <div className="flex justify-between text-[10px] text-slate-600">
-                        <span>€100</span>
-                        <span>€2000+</span>
-                    </div>
                 </div>
             </div>
         </section>
