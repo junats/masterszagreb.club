@@ -1,0 +1,8 @@
+{
+  "name": "SmartSpend Scanner",
+  "description": "Scan receipts, categorize expenses (Luxury vs Necessity), and track spending habits with AI-powered analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
