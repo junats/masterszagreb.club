@@ -1,15 +1,18 @@
+
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine } from 'lucide-react';
 import { analyzeReceiptImage } from '../services/geminiService';
+import { storageService } from '../services/storageService';
 import { Receipt, AnalysisResult } from '../types';
 
 interface ReceiptScannerProps {
   onScanComplete: (receipts: Receipt[]) => void;
   onCancel: () => void;
   ageRestricted: boolean;
+  userId: string;
 }
 
-const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCancel, ageRestricted }) => {
+const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCancel, ageRestricted, userId }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
@@ -18,7 +21,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to compress image before sending/storing
-  const optimizeImage = async (file: File): Promise<string> => {
+  const optimizeImage = async (file: File): Promise<Blob> => {
     // Check for HEIC/HEIF format (common on iOS) and convert to JPEG
     if (file.type === 'image/heic' || file.type === 'image/heif' || 
         file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
@@ -42,7 +45,6 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             console.log(`Conversion successful: ${file.name}`);
         } catch (e) {
             console.error("HEIC conversion failed, attempting to read as is:", e);
-            // Continue execution, browser might handle it or fail downstream
         }
     }
 
@@ -78,18 +80,32 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            // Compress to JPEG at 0.7 quality
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            resolve(dataUrl);
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Canvas to Blob failed"));
+            }, 'image/jpeg', 0.7);
           } else {
             reject(new Error("Canvas context failed"));
           }
         };
-        img.onerror = (err) => reject(new Error("Failed to load image (Format may be unsupported): " + err));
+        img.onerror = (err) => reject(new Error("Failed to load image: " + err));
       };
       reader.onerror = (err) => reject(new Error("Failed to read file: " + err));
       reader.readAsDataURL(file);
     });
+  };
+
+  // Helper to convert Blob to Base64 for Gemini Analysis
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+      return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              const base64String = (reader.result as string).split(',')[1];
+              resolve(base64String);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+      });
   };
 
   const generateId = () => {
@@ -115,12 +131,17 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         const file = fileList[i];
 
         try {
-            // Optimize image first (Resize & Compress & Convert HEIC)
-            const fullDataUrl = await optimizeImage(file);
-            const base64String = fullDataUrl.split(',')[1];
+            // 1. Optimize Image (Resize & Compress) -> Blob
+            const processedBlob = await optimizeImage(file);
             
-            // Analyze with Unified Smart Service
-            const result: AnalysisResult = await analyzeReceiptImage(base64String);
+            // 2. Convert to Base64 for Gemini Analysis
+            const base64ForAI = await blobToBase64(processedBlob);
+            
+            // 3. Analyze with Unified Smart Service
+            const result: AnalysisResult = await analyzeReceiptImage(base64ForAI);
+
+            // 4. Upload Image via Storage Service (Cloud or Mock)
+            const storagePath = await storageService.uploadReceiptImage(processedBlob, userId);
             
             newReceipts.push({
               id: generateId(),
@@ -129,9 +150,9 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
               total: result.total,
               items: result.items,
               scannedAt: new Date().toISOString(),
-              type: result.type || 'receipt', // Use AI classification
+              type: result.type || 'receipt',
               referenceCode: result.referenceCode,
-              imageUrl: base64String // Store compressed image
+              storagePath: storagePath // Save the path/reference, not just base64
             });
 
         } catch (err) {
@@ -154,14 +175,14 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
   const triggerCamera = () => {
     if (cameraInputRef.current) {
-        cameraInputRef.current.value = ''; // Reset to ensure onChange fires even if same file
+        cameraInputRef.current.value = ''; 
         cameraInputRef.current.click();
     }
   };
 
   const triggerUpload = () => {
     if (uploadInputRef.current) {
-        uploadInputRef.current.value = ''; // Reset to ensure onChange fires even if same file
+        uploadInputRef.current.value = '';
         uploadInputRef.current.click();
     }
   };
@@ -225,7 +246,6 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       )}
 
       <div className="flex-1 flex flex-col justify-center items-center gap-6">
-        {/* Hidden File Inputs */}
         <input
           type="file"
           accept="image/*,.heic,.heif"
@@ -244,7 +264,6 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           className="hidden"
         />
 
-        {/* Camera Button */}
         <button
           onClick={triggerCamera}
           className="group relative flex flex-col items-center justify-center w-60 h-60 rounded-full bg-surface border-2 border-dashed border-slate-700 hover:border-primary hover:bg-surfaceHighlight transition-all duration-500 shadow-2xl shadow-black/50 hover:shadow-[0_0_40px_rgba(56,189,248,0.15)]"
@@ -259,7 +278,6 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           <span className="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wide group-hover:text-primary/70 transition-colors duration-300">Camera Capture</span>
         </button>
 
-        {/* Gallery/Multiple Upload Button */}
         <button
             onClick={triggerUpload}
             className="w-60 py-4 rounded-2xl bg-surface border border-white/5 text-slate-300 font-bold hover:bg-surfaceHighlight hover:border-white/20 hover:text-white transition-all duration-300 flex items-center justify-center gap-2.5 shadow-sm hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]"

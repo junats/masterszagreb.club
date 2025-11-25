@@ -1,6 +1,8 @@
+
 import React, { useState, useMemo } from 'react';
 import { Receipt, Category } from '../types';
 import { Search, ChevronRight, Share2, MapPin, Trash2, FileText, Receipt as ReceiptIcon, Copy, Image as ImageIcon, X, BarChart3, PieChart, TrendingUp, Baby } from 'lucide-react';
+import { storageService } from '../services/storageService';
 
 interface HistoryViewProps {
   receipts: Receipt[];
@@ -22,7 +24,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
     ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [receipts, searchTerm]);
 
-  // --- STATISTICS CALCULATION ---
   const stats = useMemo(() => {
       let childTotal = 0;
       let luxuryTotal = 0;
@@ -35,15 +36,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
               if (ageRestricted && i.isRestricted) return;
               
               total += i.price;
-              
-              // Grouping logic: "Child is preferred"
-              const isChildOrHome = [
-                  Category.EDUCATION, 
-                  Category.HEALTH, 
-                  Category.FOOD, 
-                  Category.NECESSITY, 
-                  Category.HOUSEHOLD
-              ].includes(i.category);
+              const isChildOrHome = [Category.EDUCATION, Category.HEALTH, Category.FOOD, Category.NECESSITY, Category.HOUSEHOLD].includes(i.category);
 
               if (isChildOrHome) {
                   childTotal += i.price;
@@ -57,18 +50,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
       });
 
       return { 
-          childTotal, 
-          luxuryTotal, 
-          otherTotal, 
-          total,
+          childTotal, luxuryTotal, otherTotal, total,
           childRatio: total > 0 ? (childTotal / total) * 100 : 0,
-          topChildCategories: Object.entries(catBreakdown)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 3)
+          topChildCategories: Object.entries(catBreakdown).sort((a, b) => b[1] - a[1]).slice(0, 3)
       };
   }, [filteredReceipts, ageRestricted]);
 
-  // Helper to calculate effective total
   const getEffectiveTotal = (receipt: Receipt) => {
       const validItems = receipt.items.filter(i => !ageRestricted || !i.isRestricted);
       return validItems.reduce((sum, item) => sum + item.price, 0);
@@ -94,17 +81,16 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
               ...updatedItems[itemIndex],
               isRestricted: !updatedItems[itemIndex].isRestricted
           };
-          
-          const updatedReceipt = { ...selectedReceipt, items: updatedItems };
-          onUpdate(updatedReceipt);
-          setSelectedReceipt(updatedReceipt); // Update local view
+          onUpdate({ ...selectedReceipt, items: updatedItems });
+          setSelectedReceipt({ ...selectedReceipt, items: updatedItems });
       }
   };
 
   if (selectedReceipt) {
-    const visibleItems = selectedReceipt.items; // Show all, but mark restricted visually
+    const visibleItems = selectedReceipt.items;
     const effectiveTotal = getEffectiveTotal(selectedReceipt);
     const isBill = selectedReceipt.type === 'bill';
+    const displayImageUrl = storageService.getPublicUrl(selectedReceipt.storagePath || selectedReceipt.imageUrl);
 
     return (
         <div className="flex flex-col h-full px-4 pt-4 pb-24 animate-in slide-in-from-right duration-300 ease-out">
@@ -122,7 +108,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                         </div>
                         <h2 className="text-2xl font-heading font-bold text-white tracking-tight">{selectedReceipt.storeName}</h2>
                         
-                        {/* Reference Code Display for Bills */}
                         {isBill && selectedReceipt.referenceCode && (
                             <div className="mt-2 bg-black/30 border border-white/10 rounded-lg p-2 flex items-center gap-3 w-fit hover:border-white/30 transition-colors duration-300">
                                 <div>
@@ -151,8 +136,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                     </div>
                 </div>
 
-                {/* Scanned Image Preview Section */}
-                {selectedReceipt.imageUrl && (
+                {displayImageUrl && (
                     <div className="mb-6">
                         <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Original Scan</p>
                         <div 
@@ -160,7 +144,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                             onClick={() => setShowFullImage(true)}
                         >
                             <img 
-                                src={`data:image/jpeg;base64,${selectedReceipt.imageUrl}`} 
+                                src={displayImageUrl} 
                                 alt="Receipt Scan" 
                                 className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
                             />
@@ -200,7 +184,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                                     <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
                                         €{item.price.toFixed(2)}
                                     </span>
-                                    {/* Manual Ban Toggle */}
                                     {onUpdate && !ageRestricted && (
                                         <button 
                                             onClick={() => handleToggleRestriction(idx)}
@@ -233,8 +216,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                 </div>
             </div>
 
-            {/* Full Image Modal */}
-            {showFullImage && selectedReceipt.imageUrl && (
+            {showFullImage && displayImageUrl && (
                 <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-sm">
                     <button 
                         onClick={() => setShowFullImage(false)} 
@@ -243,7 +225,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                         <X size={24} />
                     </button>
                     <img 
-                        src={`data:image/jpeg;base64,${selectedReceipt.imageUrl}`} 
+                        src={displayImageUrl} 
                         alt="Full Receipt" 
                         className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                     />
@@ -279,11 +261,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
         </button>
       </div>
 
-      {/* STATISTICS SECTION (Collapsible) */}
       {showStats && filteredReceipts.length > 0 && (
           <div className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
-              
-              {/* Summary Card */}
               <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-white/10 shadow-lg">
                   <div className="flex justify-between items-start mb-4">
                       <div>
@@ -298,44 +277,15 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                           <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Child & Home</p>
                       </div>
                   </div>
-
-                  {/* Stacked Bar Chart */}
                   <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex mb-3 ring-1 ring-white/5">
                       <div className="h-full bg-emerald-500" style={{ width: `${stats.childRatio}%` }}></div>
                       <div className="h-full bg-slate-600" style={{ width: `${(stats.otherTotal / stats.total) * 100}%` }}></div>
                       <div className="h-full bg-pink-500" style={{ width: `${(stats.luxuryTotal / stats.total) * 100}%` }}></div>
                   </div>
-                  
-                  {/* Legend */}
-                  <div className="flex justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wide">
-                      <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                          <span>Child/Home</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
-                          <span>General</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-pink-500"></div>
-                          <span>Luxury</span>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Child Category Breakdown */}
-              <div className="grid grid-cols-3 gap-2">
-                  {stats.topChildCategories.map(([cat, val], i) => (
-                      <div key={i} className="bg-surface border border-white/5 rounded-xl p-3 text-center transition-all duration-300 hover:bg-surfaceHighlight hover:border-white/10">
-                          <p className="text-[10px] text-slate-400 truncate font-bold uppercase">{cat}</p>
-                          <p className="text-sm font-bold text-white tabular-nums">€{val.toFixed(0)}</p>
-                      </div>
-                  ))}
               </div>
           </div>
       )}
 
-      {/* History List */}
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
         {filteredReceipts.length === 0 ? (
             <div className="text-center py-10">
@@ -346,6 +296,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                 const effectiveTotal = getEffectiveTotal(receipt);
                 const visibleItemCount = getVisibleItems(receipt).length;
                 const isBill = receipt.type === 'bill';
+                const thumbUrl = storageService.getPublicUrl(receipt.storagePath || receipt.imageUrl);
 
                 return (
                     <button 
@@ -357,11 +308,10 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                             : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
                         }`}
                     >
-                         {/* Thumbnail Image */}
                          <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
-                             {receipt.imageUrl ? (
+                             {thumbUrl ? (
                                  <img 
-                                     src={`data:image/jpeg;base64,${receipt.imageUrl}`} 
+                                     src={thumbUrl} 
                                      alt="Receipt" 
                                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
                                  />
@@ -389,7 +339,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                                 <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
                                 <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
                                     <span>{visibleItemCount} items</span>
-                                    <ChevronRight size={12} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                                    <ChevronRight size={12} />
                                 </div>
                             </div>
                         </div>

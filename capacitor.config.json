@@ -1,0 +1,14 @@
+
+{
+  "appId": "com.truetrack.app",
+  "appName": "TrueTrack",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

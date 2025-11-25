@@ -1,3 +1,4 @@
+
 export enum Category {
   NECESSITY = 'Necessity',
   FOOD = 'Food',
@@ -26,7 +27,8 @@ export interface Receipt {
   scannedAt: string; // ISO date string
   type?: 'receipt' | 'bill';
   referenceCode?: string;
-  imageUrl?: string; // Base64 string of the receipt image
+  imageUrl?: string; // Legacy Base64 string (Mock mode)
+  storagePath?: string; // Path in Cloud Storage (Production mode)
 }
 
 export interface AnalysisResult {
