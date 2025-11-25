@@ -4,6 +4,8 @@ import { User, SubscriptionTier } from '../types';
 // Mock Data Storage Key
 const MOCK_STORAGE_KEY = 'truetrack_mock_users';
 
+export const isMockMode = !supabase;
+
 // --- MOCK IMPLEMENTATION (Runs if no API Keys) ---
 const mockAuthService = {
   async signUp(email: string, password: string, name: string): Promise<{ user: User | null; error: string | null }> {

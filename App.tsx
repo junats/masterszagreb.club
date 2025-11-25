@@ -8,7 +8,8 @@ import Settings from './components/Settings';
 import SupportView from './components/SupportView';
 import AuthScreen from './components/AuthScreen';
 import { ViewState, Receipt, User, SubscriptionTier } from './types';
-import { authService } from './services/authService';
+import { authService, isMockMode } from './services/authService';
+import { Database, X } from 'lucide-react';
 
 const getReceiptSignature = (r: Receipt) => {
     const cleanStore = r.storeName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(300);
   const [ageRestricted, setAgeRestricted] = useState<boolean>(false);
+  const [showDevBanner, setShowDevBanner] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -180,6 +182,18 @@ const App: React.FC = () => {
     <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col">
       <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+      {isMockMode && showDevBanner && (
+        <div className="bg-indigo-900/90 text-indigo-100 text-[10px] py-1 px-3 text-center border-b border-indigo-500/30 flex items-center justify-between relative z-50 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mx-auto">
+                <Database size={12} className="text-indigo-400" />
+                <span>Running in <strong>Mock Mode</strong>. Data is not saved to cloud.</span>
+            </div>
+            <button onClick={() => setShowDevBanner(false)} className="absolute right-2 p-1 hover:text-white">
+                <X size={12} />
+            </button>
+        </div>
+      )}
 
       <main className="flex-1 w-full max-w-md mx-auto relative z-10 h-full">
         {renderView()}

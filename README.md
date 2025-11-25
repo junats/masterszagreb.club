@@ -1,8 +1,37 @@
+
 # 🛡️ TrueTrack
 
 > **Protecting Fathers. Verifying Provision.**
 
 TrueTrack is a specialized expense tracking and document verification application designed specifically for single fathers. It serves as a digital "Safe Harbor," allowing users to scan receipts, automatically categorize expenses (distinguishing between Child Necessity and Luxury), and build a verifiable log of financial provision.
+
+---
+
+## 📱 What Now? (Mobile Deployment)
+
+Since you have the web app running locally, here are the steps to build the Native iOS and Android apps for the App Store.
+
+### 1. Build the Web Assets
+Run this command to create the production bundle of your React app.
+```bash
+npm run build
+```
+
+### 2. Sync with Native Projects
+This copies your build folder (`dist`) into the iOS and Android native containers.
+```bash
+npx cap sync
+```
+
+### 3. Open in Native IDE
+Use these commands to open the native project. You will then click the "Play" button in Xcode or Android Studio to run it on your phone/simulator.
+```bash
+# For iPhone
+npx cap open ios
+
+# For Android
+npx cap open android
+```
 
 ---
 
