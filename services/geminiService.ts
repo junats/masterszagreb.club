@@ -1,6 +1,45 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Category } from "../types";
+// Add this helper function at the top of the file, after imports
+async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
 
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const base64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+        resolve(base64);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 // Define the expected schema for the AI response
 const receiptSchema: Schema = {
   type: Type.OBJECT,
@@ -62,22 +101,31 @@ const receiptSchema: Schema = {
 };
 
 export const analyzeReceiptImage = async (base64Image: string): Promise<AnalysisResult> => {
+  console.log('🔍 analyzeReceiptImage called, image length:', base64Image?.length);
+
   let apiKey: string | undefined;
-  
+
   try {
-      // Robust check to allow bundlers to replace process.env.API_KEY 
-      // while preventing ReferenceError if process is undefined at runtime
-      if (typeof process !== 'undefined') {
-          apiKey = process.env.API_KEY;
-      }
+    // Robust check to allow bundlers to replace process.env.API_KEY 
+    // while preventing ReferenceError if process is undefined at runtime
+    if (typeof process !== 'undefined') {
+      apiKey = process.env.API_KEY;
+    }
   } catch (e) {
-      console.warn("Failed to access process.env safely:", e);
+    console.warn("Failed to access process.env safely:", e);
+  }
+
+  // Fallback for production builds (especially iOS) where process.env doesn't work
+  if (!apiKey) {
+    console.log('📌 Using fallback API key');
+    apiKey = 'AIzaSyA-w-s5GVM5xVkS1siyypYRqXfSFIVy3wI';
   }
 
   if (!apiKey) {
     throw new Error("API Key is missing or environment configuration is invalid.");
   }
 
+  console.log('✅ API key present, initializing GoogleGenAI...');
   const ai = new GoogleGenAI({ apiKey });
 
   // Unified Smart Prompt
@@ -123,16 +171,29 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
     }
 
     const data = JSON.parse(text) as AnalysisResult;
-    
+
     // Ensure date defaults to today if missing or invalid
     if (!data.date) {
-        data.date = new Date().toISOString().split('T')[0];
+      data.date = new Date().toISOString().split('T')[0];
     }
-    
+
     return data;
+
 
   } catch (error) {
     console.error("Error analyzing receipt:", error);
+    console.error("Error type:", typeof error);
+    console.error("Error stringified:", JSON.stringify(error, null, 2));
+
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
+    // Log additional details
+    console.error("API Key present:", !!apiKey);
+    console.error("Image data length:", base64Image?.length || 0);
+
     throw error;
   }
 };

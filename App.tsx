@@ -12,10 +12,10 @@ import { authService, isMockMode } from './services/authService';
 import { Database, X } from 'lucide-react';
 
 const getReceiptSignature = (r: Receipt) => {
-    const cleanStore = r.storeName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const cleanRef = (r.referenceCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const priceCents = Math.round(r.total * 100);
-    return `${cleanStore}|${r.date}|${priceCents}|${r.type || 'receipt'}|${cleanRef}`;
+  const cleanStore = r.storeName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cleanRef = (r.referenceCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const priceCents = Math.round(r.total * 100);
+  return `${cleanStore}|${r.date}|${priceCents}|${r.type || 'receipt'}|${cleanRef}`;
 };
 
 const App: React.FC = () => {
@@ -29,11 +29,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initAuth = async () => {
-        const currentUser = await authService.getUser();
-        if (currentUser) {
-            setUser(currentUser);
-        }
-        setIsAuthLoading(false);
+      const currentUser = await authService.getUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+      setIsAuthLoading(false);
     };
     initAuth();
   }, []);
@@ -45,10 +45,10 @@ const App: React.FC = () => {
         const parsed = JSON.parse(savedReceipts) as Receipt[];
         const uniqueMap = new Map<string, Receipt>();
         parsed.forEach(r => {
-            const sig = getReceiptSignature(r);
-            if (!uniqueMap.has(sig)) {
-                uniqueMap.set(sig, r);
-            }
+          const sig = getReceiptSignature(r);
+          if (!uniqueMap.has(sig)) {
+            uniqueMap.set(sig, r);
+          }
         });
         setReceipts(Array.from(uniqueMap.values()));
       } catch (e) {
@@ -79,62 +79,67 @@ const App: React.FC = () => {
   const handleScanComplete = (newReceipts: Receipt[]) => {
     let duplicateCount = 0;
     setReceipts(prev => {
-        const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
-        const uniqueNewReceipts: Receipt[] = [];
+      const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
+      const uniqueNewReceipts: Receipt[] = [];
 
-        for (const receipt of newReceipts) {
-            const sig = getReceiptSignature(receipt);
-            if (!existingSignatures.has(sig)) {
-                existingSignatures.add(sig); 
-                uniqueNewReceipts.push(receipt);
-            } else {
-                duplicateCount++;
-            }
+      for (const receipt of newReceipts) {
+        const sig = getReceiptSignature(receipt);
+        if (!existingSignatures.has(sig)) {
+          existingSignatures.add(sig);
+          uniqueNewReceipts.push(receipt);
+        } else {
+          duplicateCount++;
+          // Prompt user to dismiss duplicate
+          const keep = window.confirm('Duplicate receipt detected. Do you want to keep it?');
+          if (keep) {
+            uniqueNewReceipts.push(receipt);
+          }
         }
-        if (duplicateCount > 0) {
-            setTimeout(() => {
-                alert(`${duplicateCount} receipt(s) were identified as duplicates and omitted.`);
-            }, 100);
-        }
-        return [...uniqueNewReceipts, ...prev];
+      }
+      if (duplicateCount > 0) {
+        setTimeout(() => {
+          alert(`${duplicateCount} duplicate receipt(s) were identified.`);
+        }, 100);
+      }
+      return [...uniqueNewReceipts, ...prev];
     });
     setCurrentView('dashboard');
   };
-  
+
   const handleDeleteReceipt = (id: string) => {
-      setReceipts(prev => prev.filter(r => r.id !== id));
+    setReceipts(prev => prev.filter(r => r.id !== id));
   };
-  
+
   const handleUpdateReceipt = (updatedReceipt: Receipt) => {
-      setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
+    setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
   };
 
   const handleLogin = (newUser: User) => {
-      setUser(newUser);
-      setCurrentView('dashboard');
+    setUser(newUser);
+    setCurrentView('dashboard');
   };
 
   const handleSignOut = async () => {
-      await authService.signOut();
-      setUser(null);
-      setAgeRestricted(false);
-      setCurrentView('dashboard'); 
+    await authService.signOut();
+    setUser(null);
+    setAgeRestricted(false);
+    setCurrentView('dashboard');
   };
 
   const handleUpgrade = () => {
-      if (user) {
-          const upgradedUser = { ...user, tier: SubscriptionTier.PRO };
-          setUser(upgradedUser);
-          localStorage.setItem('truetrack_session', JSON.stringify(upgradedUser));
-      }
+    if (user) {
+      const upgradedUser = { ...user, tier: SubscriptionTier.PRO };
+      setUser(upgradedUser);
+      localStorage.setItem('truetrack_session', JSON.stringify(upgradedUser));
+    }
   };
 
   if (isAuthLoading) {
-      return <div className="h-screen w-full bg-background flex items-center justify-center text-slate-500">Loading...</div>;
+    return <div className="h-screen w-full bg-background flex items-center justify-center text-slate-500">Loading...</div>;
   }
 
   if (!user) {
-      return <AuthScreen onLogin={handleLogin} />;
+    return <AuthScreen onLogin={handleLogin} />;
   }
 
   const renderView = () => {
@@ -143,28 +148,28 @@ const App: React.FC = () => {
         return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} />;
       case 'scan':
         return (
-          <ReceiptScanner 
-            onScanComplete={handleScanComplete} 
-            onCancel={() => setCurrentView('dashboard')} 
+          <ReceiptScanner
+            onScanComplete={handleScanComplete}
+            onCancel={() => setCurrentView('dashboard')}
             ageRestricted={ageRestricted}
-            userId={user.id} 
+            userId={user.id}
           />
         );
       case 'history':
         return (
-            <HistoryView 
-                receipts={receipts} 
-                ageRestricted={ageRestricted} 
-                onDelete={handleDeleteReceipt}
-                onUpdate={handleUpdateReceipt} 
-            />
+          <HistoryView
+            receipts={receipts}
+            ageRestricted={ageRestricted}
+            onDelete={handleDeleteReceipt}
+            onUpdate={handleUpdateReceipt}
+          />
         );
       case 'support':
         return <SupportView />;
       case 'settings':
         return (
-          <Settings 
-            monthlyBudget={monthlyBudget} 
+          <Settings
+            monthlyBudget={monthlyBudget}
             setMonthlyBudget={setMonthlyBudget}
             ageRestricted={ageRestricted}
             setAgeRestricted={setAgeRestricted}
@@ -185,13 +190,13 @@ const App: React.FC = () => {
 
       {isMockMode && showDevBanner && (
         <div className="bg-indigo-900/90 text-indigo-100 text-[10px] py-1 px-3 text-center border-b border-indigo-500/30 flex items-center justify-between relative z-50 backdrop-blur-sm">
-            <div className="flex items-center gap-2 mx-auto">
-                <Database size={12} className="text-indigo-400" />
-                <span>Running in <strong>Mock Mode</strong>. Data is not saved to cloud.</span>
-            </div>
-            <button onClick={() => setShowDevBanner(false)} className="absolute right-2 p-1 hover:text-white">
-                <X size={12} />
-            </button>
+          <div className="flex items-center gap-2 mx-auto">
+            <Database size={12} className="text-indigo-400" />
+            <span>Running in <strong>Mock Mode</strong>. Data is not saved to cloud.</span>
+          </div>
+          <button onClick={() => setShowDevBanner(false)} className="absolute right-2 p-1 hover:text-white">
+            <X size={12} />
+          </button>
         </div>
       )}
 
