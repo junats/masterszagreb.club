@@ -35,6 +35,7 @@ export interface AnalysisResult {
   total: number;
   items: ReceiptItem[];
   referenceCode?: string;
+  type?: 'receipt' | 'bill';
 }
 
 export enum SubscriptionTier {

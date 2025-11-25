@@ -79,35 +79,35 @@ const Settings: React.FC<SettingsProps> = ({
 
   return (
     <>
-    <div className="flex flex-col h-full px-4 pt-4 pb-24 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col h-full px-4 pt-4 pb-24 overflow-y-auto no-scrollbar bg-background">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-slate-400 text-sm">Manage your account and preferences</p>
+        <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Settings</h1>
+        <p className="text-slate-400 text-sm font-medium">Manage your account and preferences</p>
       </div>
 
       {/* Profile Card */}
-      <div className="bg-surface p-4 rounded-2xl border border-slate-700 flex items-center gap-4 mb-6 relative overflow-hidden">
+      <div className="bg-surface p-5 rounded-3xl border border-white/5 flex items-center gap-4 mb-6 relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:border-white/10">
         {user.tier === SubscriptionTier.PRO && (
             <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/10 to-transparent w-2/3 h-full pointer-events-none"></div>
         )}
         
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg border-2 z-10 ${
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-inner ring-1 ring-white/10 z-10 ${
             user.tier === SubscriptionTier.PRO 
-            ? 'bg-gradient-to-br from-amber-400 to-orange-600 border-amber-500/20' 
-            : 'bg-slate-700 border-slate-600'
+            ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
+            : 'bg-slate-700'
         }`}>
             {user.name.charAt(0).toUpperCase()}
         </div>
         <div className="z-10 flex-1">
             <div className="flex items-center gap-2">
-                <h3 className="text-white font-semibold">{user.name}</h3>
+                <h3 className="text-white font-heading font-bold tracking-tight text-lg">{user.name}</h3>
                 {user.tier === SubscriptionTier.PRO ? (
-                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-sm">PRO</span>
+                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide">PRO</span>
                 ) : (
-                    <span className="bg-slate-700 text-slate-300 text-[10px] px-1.5 py-0.5 rounded font-medium">FREE</span>
+                    <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide">FREE</span>
                 )}
             </div>
-            <p className="text-slate-400 text-xs truncate max-w-[180px]">{user.email}</p>
+            <p className="text-slate-400 text-xs truncate max-w-[180px] font-medium">{user.email}</p>
         </div>
       </div>
 
@@ -115,16 +115,16 @@ const Settings: React.FC<SettingsProps> = ({
       {user.tier === SubscriptionTier.FREE && (
           <button 
             onClick={() => setShowPaywall(true)}
-            className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 p-4 rounded-2xl shadow-lg mb-6 flex items-center justify-between group"
+            className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 p-4 rounded-2xl shadow-lg mb-6 flex items-center justify-between group border border-white/10 transition-all duration-300 hover:shadow-[0_0_20px_rgba(79,70,229,0.4)]"
           >
               <div className="text-left">
-                  <p className="text-white font-bold text-sm flex items-center gap-1.5">
-                      <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                  <p className="text-white font-heading font-bold text-sm flex items-center gap-1.5">
+                      <Star size={14} className="fill-yellow-400 text-yellow-400 animate-pulse" />
                       Upgrade to Pro
                   </p>
-                  <p className="text-indigo-100 text-xs mt-0.5">Unlock Parental Controls & Exports</p>
+                  <p className="text-indigo-100 text-xs mt-0.5 font-medium">Unlock Parental Controls & Exports</p>
               </div>
-              <div className="bg-white/20 p-2 rounded-lg text-white group-hover:bg-white/30 transition-colors">
+              <div className="bg-white/20 p-2 rounded-xl text-white group-hover:bg-white/30 transition-colors duration-300">
                   <ChevronRight size={16} />
               </div>
           </button>
@@ -133,23 +133,38 @@ const Settings: React.FC<SettingsProps> = ({
       <div className="space-y-6">
          {/* Spending Configuration */}
          <section>
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Finances</h4>
-            <div className="bg-surface rounded-xl overflow-hidden border border-slate-700/50">
-                <div className="w-full flex items-center justify-between p-4 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-primary/20 p-2 rounded-lg text-primary">
-                            <Wallet size={18} />
+            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Finances</h4>
+            <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                <div className="w-full p-4 border-b border-white/5">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-primary/20 p-2 rounded-xl text-primary">
+                                <Wallet size={18} />
+                            </div>
+                            <div>
+                                <span className="text-slate-200 text-sm font-bold block">Monthly Budget</span>
+                                <span className="text-slate-500 text-xs font-medium">Target limit for all spending</span>
+                            </div>
                         </div>
-                        <div>
-                             <span className="text-slate-200 text-sm font-medium block">Monthly Budget (€)</span>
+                        <span className="text-white font-mono font-bold tabular-nums">€{monthlyBudget}</span>
+                    </div>
+                    
+                    {/* Range Slider */}
+                    <div className="px-1 pb-1">
+                        <input 
+                            type="range" 
+                            min="100" 
+                            max="3000" 
+                            step="50"
+                            value={monthlyBudget}
+                            onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-medium">
+                            <span>€100</span>
+                            <span>€3000</span>
                         </div>
                     </div>
-                    <input 
-                        type="number" 
-                        value={monthlyBudget}
-                        onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                        className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-white focus:outline-none focus:border-primary text-sm font-mono"
-                    />
                 </div>
             </div>
         </section>
@@ -157,24 +172,24 @@ const Settings: React.FC<SettingsProps> = ({
         {/* Pro Features */}
         <section>
             <div className="flex items-center justify-between mb-3 ml-1">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pro Controls</h4>
+                <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">Pro Controls</h4>
                 {user.tier === SubscriptionTier.PRO && (
                     <div className="flex items-center gap-1">
                         <Shield size={10} className="text-amber-500" />
-                        <span className="text-[10px] text-amber-500 font-medium">Active</span>
+                        <span className="text-[10px] text-amber-500 font-bold tracking-wide">Active</span>
                     </div>
                 )}
             </div>
             
-            <div className="bg-surface rounded-xl overflow-hidden border border-slate-700/50">
-                 <div className="w-full flex items-center justify-between p-4 border-b border-slate-800">
+            <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                 <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${user.tier === SubscriptionTier.PRO ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-700 text-slate-500'}`}>
+                        <div className={`p-2 rounded-xl ${user.tier === SubscriptionTier.PRO ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
                             <Lock size={18} />
                         </div>
                         <div className={user.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}>
-                            <span className="text-slate-200 text-sm font-medium block">Parental Control</span>
-                            <span className="text-xs text-slate-500 block">Omit restricted items (18+)</span>
+                            <span className="text-slate-200 text-sm font-bold block">Parental Control</span>
+                            <span className="text-xs text-slate-500 font-medium block">Omit restricted items (18+)</span>
                         </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -184,22 +199,22 @@ const Settings: React.FC<SettingsProps> = ({
                             checked={ageRestricted}
                             onChange={handleToggleRestricted}
                         />
-                        <div className={`w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user.tier === SubscriptionTier.PRO ? 'peer-checked:bg-rose-500' : ''}`}></div>
+                        <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user.tier === SubscriptionTier.PRO ? 'peer-checked:bg-rose-500 peer-checked:shadow-[0_0_10px_rgba(244,63,94,0.4)]' : ''}`}></div>
                     </label>
                 </div>
                 
                  {/* Data Export (Proof) */}
                 <button 
                     onClick={handleExportData}
-                    className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors border-b border-slate-800"
+                    className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
                 >
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${user.tier === SubscriptionTier.PRO ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
+                        <div className={`p-2 rounded-xl ${user.tier === SubscriptionTier.PRO ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
                             <FileDown size={18} />
                         </div>
                         <div className={`text-left ${user.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}`}>
-                            <span className="text-slate-200 text-sm font-medium block">Export Data</span>
-                            <span className="text-xs text-slate-500">Download CSV for proof</span>
+                            <span className="text-slate-200 text-sm font-bold block">Export Data</span>
+                            <span className="text-xs text-slate-500 font-medium">Download CSV for proof</span>
                         </div>
                     </div>
                     {user.tier !== SubscriptionTier.PRO ? <Lock size={14} className="text-slate-500" /> : <ChevronRight className="text-slate-600" size={16} />}
@@ -209,41 +224,41 @@ const Settings: React.FC<SettingsProps> = ({
 
         {/* General Settings */}
         <section>
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">General</h4>
-            <div className="bg-surface rounded-xl overflow-hidden border border-slate-700/50">
-                <button className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors border-b border-slate-800">
+            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">General</h4>
+            <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                <button className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="bg-indigo-500/20 p-2 rounded-lg text-indigo-400">
+                        <div className="bg-indigo-500/20 p-2 rounded-xl text-indigo-400">
                             <Users size={18} />
                         </div>
                         <div className="text-left">
-                            <span className="text-slate-200 text-sm font-medium block">Family Group</span>
-                            <span className="text-xs text-slate-500">Manage members</span>
+                            <span className="text-slate-200 text-sm font-bold block">Family Group</span>
+                            <span className="text-xs text-slate-500 font-medium">Manage members</span>
                         </div>
                     </div>
-                    <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full">Coming Soon</span>
+                    <span className="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">Soon</span>
                 </button>
-                 <button className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors border-b border-slate-800">
+                 <button className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                         <div className="bg-slate-500/20 p-2 rounded-lg text-slate-400">
+                         <div className="bg-slate-500/20 p-2 rounded-xl text-slate-400">
                             <Database size={18} />
                         </div>
                         <div className="text-left">
-                            <span className="text-slate-200 text-sm font-medium block">Privacy & Data</span>
+                            <span className="text-slate-200 text-sm font-bold block">Privacy & Data</span>
                         </div>
                     </div>
                      <ChevronRight className="text-slate-600" size={16} />
                 </button>
-                <div className="w-full flex items-center justify-between p-4 border-b border-slate-800">
+                <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
                      <div className="flex items-center gap-3">
-                        <div className="bg-amber-500/20 p-2 rounded-lg text-amber-400">
+                        <div className="bg-amber-500/20 p-2 rounded-xl text-amber-400">
                             <Bell size={18} />
                         </div>
-                        <span className="text-slate-200 text-sm font-medium">Notifications</span>
+                        <span className="text-slate-200 text-sm font-bold">Notifications</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" defaultChecked />
-                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                        <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:shadow-[0_0_10px_rgba(56,189,248,0.3)]"></div>
                     </label>
                 </div>
             </div>
@@ -251,7 +266,7 @@ const Settings: React.FC<SettingsProps> = ({
 
         <button 
             onClick={onSignOut}
-            className="w-full py-4 text-red-400 text-sm font-medium hover:bg-red-500/5 rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="w-full py-4 text-red-400 text-sm font-bold hover:bg-red-500/10 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 border border-transparent hover:border-red-500/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.1)]"
         >
             <LogOut size={16} />
             Sign Out

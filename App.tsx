@@ -7,10 +7,17 @@ import Settings from './components/Settings';
 import SupportView from './components/SupportView';
 import AuthScreen from './components/AuthScreen';
 import { ViewState, Receipt, User, SubscriptionTier } from './types';
+import { authService } from './services/authService';
 
 // Helper to generate a unique signature for a receipt to detect duplicates
 const getReceiptSignature = (r: Receipt) => {
-    return `${r.storeName.toLowerCase().trim()}|${r.date}|${r.total.toFixed(2)}|${r.type || 'receipt'}|${(r.referenceCode || '').toLowerCase().trim()}`;
+    // String normalization: remove all non-alphanumeric chars for stricter comparison
+    const cleanStore = r.storeName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanRef = (r.referenceCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Use Math.round to compare cents and avoid floating point issues
+    const priceCents = Math.round(r.total * 100);
+    
+    return `${cleanStore}|${r.date}|${priceCents}|${r.type || 'receipt'}|${cleanRef}`;
 };
 
 const App: React.FC = () => {
@@ -19,31 +26,23 @@ const App: React.FC = () => {
   
   // User Authentication State
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Settings State
   const [monthlyBudget, setMonthlyBudget] = useState<number>(300);
   const [ageRestricted, setAgeRestricted] = useState<boolean>(false);
 
-  // Load user session on mount
+  // Load user session on mount via Service
   useEffect(() => {
-      const session = localStorage.getItem('truetrack_user');
-      if (session) {
-          try {
-              setUser(JSON.parse(session));
-          } catch (e) {
-              console.error("Invalid session");
-          }
-      }
+    const initAuth = async () => {
+        const currentUser = await authService.getUser();
+        if (currentUser) {
+            setUser(currentUser);
+        }
+        setIsAuthLoading(false);
+    };
+    initAuth();
   }, []);
-
-  // Save user session whenever it changes
-  useEffect(() => {
-      if (user) {
-          localStorage.setItem('truetrack_user', JSON.stringify(user));
-      } else {
-          localStorage.removeItem('truetrack_user');
-      }
-  }, [user]);
 
   // Load receipts and settings
   useEffect(() => {
@@ -52,17 +51,15 @@ const App: React.FC = () => {
       try {
         const parsed = JSON.parse(savedReceipts) as Receipt[];
         
-        // Deduplicate on load: Ensure we don't have existing duplicates
+        // Deduplicate on load
         const uniqueMap = new Map<string, Receipt>();
         parsed.forEach(r => {
             const sig = getReceiptSignature(r);
-            // We keep the first instance we encounter
             if (!uniqueMap.has(sig)) {
                 uniqueMap.set(sig, r);
             }
         });
         
-        // Convert map values back to array
         setReceipts(Array.from(uniqueMap.values()));
 
       } catch (e) {
@@ -75,7 +72,6 @@ const App: React.FC = () => {
       try {
         const parsed = JSON.parse(savedSettings);
         if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
-        // Only load ageRestricted if user is authorized (double check)
         if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
       } catch (e) {
         console.error("Failed to parse settings", e);
@@ -83,7 +79,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Save receipts changes
+  // Save receipts changes (Sync to backend would happen here)
   useEffect(() => {
     localStorage.setItem('truetrack_receipts', JSON.stringify(receipts));
   }, [receipts]);
@@ -97,22 +93,19 @@ const App: React.FC = () => {
     let duplicateCount = 0;
 
     setReceipts(prev => {
-        // Create a set of signatures from existing receipts
         const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
         const uniqueNewReceipts: Receipt[] = [];
 
         for (const receipt of newReceipts) {
             const sig = getReceiptSignature(receipt);
-            // Only add if it doesn't already exist
             if (!existingSignatures.has(sig)) {
-                existingSignatures.add(sig); // Add to set to also prevent duplicates within the *new* batch
+                existingSignatures.add(sig); 
                 uniqueNewReceipts.push(receipt);
             } else {
                 duplicateCount++;
             }
         }
 
-        // Alert user about duplicates after state update logic determines count
         if (duplicateCount > 0) {
             setTimeout(() => {
                 alert(`${duplicateCount} receipt(s) were identified as duplicates and omitted.`);
@@ -122,11 +115,16 @@ const App: React.FC = () => {
         return [...uniqueNewReceipts, ...prev];
     });
     
-    setCurrentView('dashboard'); // Redirect to dashboard
+    setCurrentView('dashboard');
   };
   
   const handleDeleteReceipt = (id: string) => {
       setReceipts(prev => prev.filter(r => r.id !== id));
+  };
+  
+  // This allows manual tagging of 18+ items if AI misses them
+  const handleUpdateReceipt = (updatedReceipt: Receipt) => {
+      setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r));
   };
 
   const handleLogin = (newUser: User) => {
@@ -134,18 +132,26 @@ const App: React.FC = () => {
       setCurrentView('dashboard');
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+      await authService.signOut();
       setUser(null);
-      setAgeRestricted(false); // Reset sensitive settings on logout
-      setCurrentView('dashboard'); // Will show auth screen next render
+      setAgeRestricted(false);
+      setCurrentView('dashboard'); 
   };
 
   const handleUpgrade = () => {
       if (user) {
           const upgradedUser = { ...user, tier: SubscriptionTier.PRO };
           setUser(upgradedUser);
+          // In real app, we would update the backend here
+          localStorage.setItem('truetrack_session', JSON.stringify(upgradedUser));
       }
   };
+
+  // Show loading state while checking session
+  if (isAuthLoading) {
+      return <div className="h-screen w-full bg-background flex items-center justify-center text-slate-500">Loading...</div>;
+  }
 
   // If not logged in, show Auth Screen
   if (!user) {
@@ -167,7 +173,14 @@ const App: React.FC = () => {
           />
         );
       case 'history':
-        return <HistoryView receipts={receipts} ageRestricted={ageRestricted} onDelete={handleDeleteReceipt} />;
+        return (
+            <HistoryView 
+                receipts={receipts} 
+                ageRestricted={ageRestricted} 
+                onDelete={handleDeleteReceipt}
+                onUpdate={handleUpdateReceipt} 
+            />
+        );
       case 'support':
         return <SupportView />;
       case 'settings':

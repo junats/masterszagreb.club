@@ -17,6 +17,11 @@ const receiptSchema: Schema = {
       type: Type.NUMBER,
       description: "The total amount paid or due. Extract only the numeric value.",
     },
+    type: {
+      type: Type.STRING,
+      enum: ["receipt", "bill"],
+      description: "Classify the document. 'bill' for invoices/services/utilities/tuition/kindergarten. 'receipt' for standard retail shopping.",
+    },
     referenceCode: {
       type: Type.STRING,
       description: "For bills/invoices: Extract the Payment Reference, Invoice Number, or Student ID Code. Return null for regular receipts.",
@@ -53,10 +58,10 @@ const receiptSchema: Schema = {
       },
     },
   },
-  required: ["storeName", "total", "items"],
+  required: ["storeName", "total", "items", "type"],
 };
 
-export const analyzeReceiptImage = async (base64Image: string, type: 'receipt' | 'bill' = 'receipt'): Promise<AnalysisResult> => {
+export const analyzeReceiptImage = async (base64Image: string): Promise<AnalysisResult> => {
   let apiKey: string | undefined;
   
   try {
@@ -75,13 +80,19 @@ export const analyzeReceiptImage = async (base64Image: string, type: 'receipt' |
 
   const ai = new GoogleGenAI({ apiKey });
 
-  let promptText = "";
-
-  if (type === 'bill') {
-      promptText = "Analyze this image as a Kindergarten, School, or Utility BILL. Extract the Provider Name (e.g., Kindergarten Name), Invoice Date, and Total Amount. CRITICAL: Extract the 'Reference Code', 'Payment Code', 'Kid ID' or 'Invoice Number' visible on the bill. Categorize services as 'Education' (for childcare/tuition) or 'Necessity'. Prices are in Euro (€).";
-  } else {
-      promptText = "Analyze this receipt image. Extract the store name, date, total, and all line items. Prices are in Euro (€). Categorize each item strictly into: Necessity, Food, Luxury, Household, Health, Transport, Education, or Other. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true. Ensure numeric values handle commas as decimals if standard in the receipt region.";
-  }
+  // Unified Smart Prompt
+  const promptText = `
+    Analyze this image, which could be a retail shopping receipt OR a service bill/invoice (e.g., Kindergarten, School, Utility).
+    
+    1. Extract the Store or Provider Name, Date, and Total Amount. Prices are in Euro (€).
+    2. Classify the document type: 'bill' if it is an invoice or has a payment reference code; 'receipt' if it is retail shopping.
+    3. If it is a bill, extract the 'Reference Code', 'Invoice Number', or 'Payment ID' if visible.
+    4. Extract all line items. 
+    5. Categorize each item strictly into: Necessity, Food, Luxury, Household, Health, Transport, Education, or Other.
+       - Note: Kindergarten/Tuition/Childcare fees should be 'Education'.
+    6. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true.
+    7. Ensure numeric values handle commas as decimals if standard in the receipt region.
+  `;
 
   try {
     const response = await ai.models.generateContent({
