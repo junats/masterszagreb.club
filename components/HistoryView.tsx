@@ -275,79 +275,120 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                                 </div>
                                 <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Child & Home</p>
                             </div>
-                        </div>
-                        <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex mb-3 ring-1 ring-white/5">
-                            <div className="h-full bg-emerald-500" style={{ width: `${stats.childRatio}%` }}></div>
-                            <div className="h-full bg-slate-600" style={{ width: `${(stats.otherTotal / stats.total) * 100}%` }}></div>
-                            <div className="h-full bg-pink-500" style={{ width: `${(stats.luxuryTotal / stats.total) * 100}%` }}></div>
+                        )}
+
+                            <div className="space-y-3 pb-4">
+                                {visibleItems.map((item, idx) => {
+                                    const isHidden = ageRestricted && item.isRestricted;
+                                    if (isHidden) return null;
+
+                                    return (
+                                        <div key={idx} className={`flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-slate-200 text-sm font-medium">{item.name}</p>
+                                                    {item.isRestricted && !ageRestricted && (
+                                                        <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
+                                                    )}
+                                                </div>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                    item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                        item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                                            'bg-slate-800 border-slate-700 text-slate-400'
+                                                    }`}>
+                                                    {item.category}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
+                                                    €{item.price.toFixed(2)}
+                                                </span>
+                                                {onUpdate && !ageRestricted && (
+                                                    <button
+                                                        onClick={() => handleToggleRestriction(idx)}
+                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
+                                                        title="Toggle Restriction (18+)"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex mb-3 ring-1 ring-white/5">
+                                <div className="h-full bg-emerald-500" style={{ width: `${stats.childRatio}%` }}></div>
+                                <div className="h-full bg-slate-600" style={{ width: `${(stats.otherTotal / stats.total) * 100}%` }}></div>
+                                <div className="h-full bg-pink-500" style={{ width: `${(stats.luxuryTotal / stats.total) * 100}%` }}></div>
+                            </div>
                         </div>
                     </div>
-                </div>
             )}
 
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
-                {filteredReceipts.length === 0 ? (
-                    <div className="text-center py-10">
-                        <p className="text-slate-600 font-medium">No records found.</p>
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                        {filteredReceipts.length === 0 ? (
+                            <div className="text-center py-10">
+                                <p className="text-slate-600 font-medium">No records found.</p>
+                            </div>
+                        ) : (
+                            filteredReceipts.map((receipt) => {
+                                const effectiveTotal = getEffectiveTotal(receipt);
+                                const visibleItemCount = getVisibleItems(receipt).length;
+                                const isBill = receipt.type === 'bill';
+                                const thumbUrl = receipt.imageUrl || (receipt.storagePath ? storageService.getPublicUrl(receipt.storagePath) : '');
+
+                                return (
+                                    <button
+                                        key={receipt.id}
+                                        onClick={() => setSelectedReceipt(receipt)}
+                                        className={`w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group ${isBill
+                                            ? 'bg-gradient-to-r from-slate-900 to-indigo-950/30 border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                                            : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
+                                            }`}
+                                    >
+                                        <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
+                                            {thumbUrl ? (
+                                                <img
+                                                    src={thumbUrl}
+                                                    alt="Receipt"
+                                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-slate-700">
+                                                    <ReceiptIcon size={24} />
+                                                </div>
+                                            )}
+                                            {isBill && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <div className="flex justify-between items-start mb-0.5">
+                                                <h3 className="text-slate-200 font-bold text-sm truncate pr-2 tracking-tight group-hover:text-white transition-colors duration-300">{receipt.storeName}</h3>
+                                                <span className={`font-bold text-sm tabular-nums tracking-tight transition-colors duration-300 ${isBill ? 'text-indigo-400 group-hover:text-indigo-300' : 'text-white'}`}>€{effectiveTotal.toFixed(2)}</span>
+                                            </div>
+
+                                            {isBill && receipt.referenceCode && (
+                                                <p className="text-[10px] font-mono text-indigo-300/80 truncate mb-1">
+                                                    Ref: {receipt.referenceCode}
+                                                </p>
+                                            )}
+
+                                            <div className="flex justify-between items-end mt-1">
+                                                <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
+                                                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
+                                                    <span>{visibleItemCount} items</span>
+                                                    <ChevronRight size={12} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })
+                        )}
                     </div>
-                ) : (
-                    filteredReceipts.map((receipt) => {
-                        const effectiveTotal = getEffectiveTotal(receipt);
-                        const visibleItemCount = getVisibleItems(receipt).length;
-                        const isBill = receipt.type === 'bill';
-                        const thumbUrl = receipt.imageUrl || (receipt.storagePath ? storageService.getPublicUrl(receipt.storagePath) : '');
-
-                        return (
-                            <button
-                                key={receipt.id}
-                                onClick={() => setSelectedReceipt(receipt)}
-                                className={`w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group ${isBill
-                                    ? 'bg-gradient-to-r from-slate-900 to-indigo-950/30 border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.15)]'
-                                    : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
-                                    }`}
-                            >
-                                <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
-                                    {thumbUrl ? (
-                                        <img
-                                            src={thumbUrl}
-                                            alt="Receipt"
-                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-700">
-                                            <ReceiptIcon size={24} />
-                                        </div>
-                                    )}
-                                    {isBill && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>}
-                                </div>
-
-                                <div className="flex-1 min-w-0 text-left">
-                                    <div className="flex justify-between items-start mb-0.5">
-                                        <h3 className="text-slate-200 font-bold text-sm truncate pr-2 tracking-tight group-hover:text-white transition-colors duration-300">{receipt.storeName}</h3>
-                                        <span className={`font-bold text-sm tabular-nums tracking-tight transition-colors duration-300 ${isBill ? 'text-indigo-400 group-hover:text-indigo-300' : 'text-white'}`}>€{effectiveTotal.toFixed(2)}</span>
-                                    </div>
-
-                                    {isBill && receipt.referenceCode && (
-                                        <p className="text-[10px] font-mono text-indigo-300/80 truncate mb-1">
-                                            Ref: {receipt.referenceCode}
-                                        </p>
-                                    )}
-
-                                    <div className="flex justify-between items-end mt-1">
-                                        <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
-                                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
-                                            <span>{visibleItemCount} items</span>
-                                            <ChevronRight size={12} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })
-                )}
-            </div>
-        </div>
-    );
+                </div>
+            );
 };
 
-export default HistoryView;
+            export default HistoryView;
