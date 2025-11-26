@@ -4,6 +4,16 @@ import { Camera, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine } f
 import { analyzeReceiptImage } from '../services/geminiService';
 import { storageService } from '../services/storageService';
 import { Receipt, AnalysisResult } from '../types';
+const computeHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash.toString();
+};
+
 
 interface ReceiptScannerProps {
   onScanComplete: (receipts: Receipt[]) => void;
@@ -156,11 +166,15 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         try {
           storagePath = await storageService.uploadReceiptImage(processedBlob, userId);
           console.log('✅ Step 4 complete, path:', storagePath);
+          // Store base64 representation as fallback and for duplicate detection
+          imageUrl = `data:image/jpeg;base64,${base64ForAI}`;
         } catch (uploadError) {
           console.warn('⚠️ Storage upload failed (continuing anyway):', uploadError);
           // Fallback: store base64 data URL for display in history
           imageUrl = `data:image/jpeg;base64,${base64ForAI}`;
         }
+
+        const imageHash = computeHash(base64ForAI);
 
         newReceipts.push({
           id: generateId(),
@@ -172,7 +186,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           type: result.type || 'receipt',
           referenceCode: result.referenceCode,
           storagePath: storagePath, // May be empty if upload failed
-          imageUrl: imageUrl // Base64 fallback for history view
+          imageUrl: imageUrl, // Base64 fallback for history view
+          imageHash: imageHash,
         });
 
       } catch (err) {

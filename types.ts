@@ -28,6 +28,7 @@ export interface Receipt {
   type?: 'receipt' | 'bill';
   referenceCode?: string;
   imageUrl?: string; // Legacy Base64 string (Mock mode)
+  imageHash?: string; // Deterministic hash of image for duplicate detection
   storagePath?: string; // Path in Cloud Storage (Production mode)
 }
 

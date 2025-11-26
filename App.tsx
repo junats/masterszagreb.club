@@ -79,21 +79,22 @@ const App: React.FC = () => {
   const handleScanComplete = (newReceipts: Receipt[]) => {
     let duplicateCount = 0;
     setReceipts(prev => {
-      const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
+      // Combine receipt data signature and image signature for duplicate detection
+      const existingSignatures = new Set(prev.map(r => {
+        const imgSig = r.imageHash ? r.imageHash : '';
+        return `${getReceiptSignature(r)}|${imgSig}`;
+      }));
       const uniqueNewReceipts: Receipt[] = [];
 
       for (const receipt of newReceipts) {
-        const sig = getReceiptSignature(receipt);
+        const imgSig = receipt.storagePath ? receipt.storagePath : receipt.imageUrl ? receipt.imageUrl : '';
+        const sig = `${getReceiptSignature(receipt)}|${imgSig}`;
         if (!existingSignatures.has(sig)) {
           existingSignatures.add(sig);
           uniqueNewReceipts.push(receipt);
         } else {
+          // Duplicate detected; silently discard
           duplicateCount++;
-          // Prompt user to dismiss duplicate
-          const keep = window.confirm('Duplicate receipt detected. Do you want to keep it?');
-          if (keep) {
-            uniqueNewReceipts.push(receipt);
-          }
         }
       }
       if (duplicateCount > 0) {

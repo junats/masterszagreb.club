@@ -295,7 +295,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                         const effectiveTotal = getEffectiveTotal(receipt);
                         const visibleItemCount = getVisibleItems(receipt).length;
                         const isBill = receipt.type === 'bill';
-                        const thumbUrl = receipt.storagePath ? storageService.getPublicUrl(receipt.storagePath) : receipt.imageUrl;
+                        const thumbUrl = receipt.imageUrl || (receipt.storagePath ? storageService.getPublicUrl(receipt.storagePath) : '');
 
                         return (
                             <button
