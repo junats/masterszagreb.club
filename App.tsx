@@ -79,28 +79,35 @@ const App: React.FC = () => {
   const handleScanComplete = (newReceipts: Receipt[]) => {
     let duplicateCount = 0;
     setReceipts(prev => {
-      // Combine receipt data signature and image signature for duplicate detection
-      const existingSignatures = new Set(prev.map(r => {
-        const imgSig = r.imageHash ? r.imageHash : '';
-        return `${getReceiptSignature(r)}|${imgSig}`;
-      }));
+      const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
+      const existingImageHashes = new Set(prev.map(r => r.imageHash).filter(Boolean));
+      const existingFileHashes = new Set(prev.map(r => r.fileHash).filter(Boolean));
+
       const uniqueNewReceipts: Receipt[] = [];
 
       for (const receipt of newReceipts) {
-        const imgSig = receipt.storagePath ? receipt.storagePath : receipt.imageUrl ? receipt.imageUrl : '';
-        const sig = `${getReceiptSignature(receipt)}|${imgSig}`;
-        if (!existingSignatures.has(sig)) {
+        const sig = getReceiptSignature(receipt);
+        const imgHash = receipt.imageHash;
+        const fHash = receipt.fileHash;
+
+        const isDuplicateSig = existingSignatures.has(sig);
+        const isDuplicateImageHash = imgHash ? existingImageHashes.has(imgHash) : false;
+        const isDuplicateFileHash = fHash ? existingFileHashes.has(fHash) : false;
+
+        if (!isDuplicateSig && !isDuplicateImageHash && !isDuplicateFileHash) {
           existingSignatures.add(sig);
+          if (imgHash) existingImageHashes.add(imgHash);
+          if (fHash) existingFileHashes.add(fHash);
           uniqueNewReceipts.push(receipt);
         } else {
-          // Duplicate detected; silently discard
           duplicateCount++;
+          console.log(`Duplicate detected: Sig=${isDuplicateSig}, ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}`);
         }
       }
       if (duplicateCount > 0) {
         setTimeout(() => {
-          alert(`${duplicateCount} duplicate receipt(s) were identified.`);
-        }, 100);
+          alert(`${duplicateCount} duplicate receipt(s) were automatically removed.`);
+        }, 500);
       }
       return [...uniqueNewReceipts, ...prev];
     });
