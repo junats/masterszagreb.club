@@ -6,6 +6,8 @@
 	<string>TrueTrack needs photo library access to select receipt images</string>
 	<key>NSCameraUsageDescription</key>
 	<string>TrueTrack needs camera access to scan receipts</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>TrueTrack needs permission to save photos to your library</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>CFBundleDevelopmentRegion</key>

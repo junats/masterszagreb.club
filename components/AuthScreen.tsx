@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ArrowRight, Shield, FileText, User as UserIcon, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Shield, FileText, User as UserIcon, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { User } from '../types';
 import { authService } from '../services/authService';
+import { Preferences } from '@capacitor/preferences';
 
 interface AuthScreenProps {
     onLogin: (user: User) => void;
@@ -11,6 +12,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                     </div>
 
                     <h1 className="text-4xl font-heading font-bold text-white mb-2 tracking-tighter">TrueTrack</h1>
-                    <p className="text-slate-400 font-medium tracking-tight">Protecting fathers. Verifying provision.</p>
+                    <p className="text-slate-400 font-medium tracking-tight">Protecting single parents. Verifying provision.</p>
                     <p className="text-xs text-slate-500 mt-3 max-w-[280px] mx-auto leading-relaxed">
                         Secure your legal standing with AI-powered record keeping and restricted item filtering.
                     </p>
@@ -128,13 +130,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                             <div className="relative">
                                 <Lock className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="Password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-12 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3.5 top-3.5 text-slate-500 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
                             </div>
                         </div>
 
@@ -201,7 +210,61 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 <p className="text-center text-slate-600 text-[10px] mt-8 font-medium">
                     Your data is encrypted and secure. By continuing, you agree to our Terms of Service.
                 </p>
+
+                {/* DEBUG SECTION */}
+                <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
+                    <p className="text-white font-bold mb-1">DEBUG INFO:</p>
+                    <p>Mode: {authService === undefined ? 'Undefined' : (authService.hasOwnProperty('signInWithGoogle') ? 'Real (Supabase)' : 'Mock (Local)')}</p>
+                    <p>Build: v2 (Trim Fix)</p>
+                    <DebugUserCount />
+                </div>
             </div>
+        </div>
+    );
+};
+
+const DebugUserCount = () => {
+    const [users, setUsers] = useState<any[]>([]);
+    const [status, setStatus] = useState('Loading...');
+
+    const loadUsers = async () => {
+        try {
+            const { value } = await Preferences.get({ key: 'truetrack_mock_users' });
+            const parsed = value ? JSON.parse(value) : [];
+            setUsers(parsed);
+            setStatus('Loaded');
+        } catch (e) {
+            setStatus('Error reading storage');
+        }
+    };
+
+    React.useEffect(() => {
+        loadUsers();
+    }, []);
+
+    const handleReset = async () => {
+        await Preferences.remove({ key: 'truetrack_mock_users' });
+        await Preferences.remove({ key: 'truetrack_session' });
+        setUsers([]);
+        alert("Data reset. You can now create a new account.");
+        window.location.reload();
+    };
+
+    return (
+        <div className="mt-2">
+            <p>Status: {status}</p>
+            <p>Stored Users: {users.length}</p>
+            {users.map((u, i) => (
+                <p key={i} className="truncate text-[9px] text-slate-500">
+                    {u.email} (Pass: {u.password})
+                </p>
+            ))}
+            <button
+                onClick={handleReset}
+                className="mt-2 bg-red-500/20 text-red-300 border border-red-500/50 px-2 py-1 rounded text-[10px] w-full hover:bg-red-500/30"
+            >
+                RESET ALL DATA (Fix Login)
+            </button>
         </div>
     );
 };

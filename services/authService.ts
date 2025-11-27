@@ -1,62 +1,85 @@
 import { supabase } from '../lib/supabaseClient';
 import { User, SubscriptionTier } from '../types';
+import { Preferences } from '@capacitor/preferences';
 
 // Mock Data Storage Key
+// Mock Data Storage Key
 const MOCK_STORAGE_KEY = 'truetrack_mock_users';
-
-export const isMockMode = !supabase;
+const SESSION_KEY = 'truetrack_session';
 
 // --- MOCK IMPLEMENTATION (Runs if no API Keys) ---
 const mockAuthService = {
   async signUp(email: string, password: string, name: string): Promise<{ user: User | null; error: string | null }> {
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network
+    // await new Promise(resolve => setTimeout(resolve, 1000)); // Removed delay
 
-    const stored = localStorage.getItem(MOCK_STORAGE_KEY);
+    const { value: stored } = await Preferences.get({ key: MOCK_STORAGE_KEY });
     const users = stored ? JSON.parse(stored) : [];
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (users.find((u: any) => u.email === email)) {
+    if (users.find((u: any) => u.email === normalizedEmail)) {
       return { user: null, error: "User already exists" };
     }
 
     const newUser: User = {
       id: `user_${Date.now()}`,
-      email,
+      email: normalizedEmail,
       name,
       tier: SubscriptionTier.FREE
     };
 
     // Save "Password" (In reality, we just check existence in mock)
-    users.push({ ...newUser, password });
-    localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(users));
-    localStorage.setItem('truetrack_session', JSON.stringify(newUser));
+    users.push({ ...newUser, password: password.trim() });
+    await Preferences.set({ key: MOCK_STORAGE_KEY, value: JSON.stringify(users) });
+    await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(newUser) });
 
     return { user: newUser, error: null };
   },
 
   async signIn(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // await new Promise(resolve => setTimeout(resolve, 1000)); // Removed delay
 
-    const stored = localStorage.getItem(MOCK_STORAGE_KEY);
+    const { value: stored } = await Preferences.get({ key: MOCK_STORAGE_KEY });
     const users = stored ? JSON.parse(stored) : [];
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedPassword = password.trim(); // Fix for mobile auto-spacing
+
+    console.log(`MockAuth: Attempting sign in for '${normalizedEmail}'`);
+    console.log(`MockAuth: Stored users count: ${users.length}`);
+
+    if (users.length === 0) {
+      return { user: null, error: "No registered users found. Please sign up first." };
+    }
+
+    // Debug: Log available emails
+    const userExists = users.find((u: any) => u.email === normalizedEmail);
+
+    if (!userExists) {
+      console.log('MockAuth: Email not found in database.');
+      return { user: null, error: "Email not registered." };
+    }
 
     // Simple mock auth check
-    const foundUser = users.find((u: any) => u.email === email && u.password === password);
+    // Note: We compare against trimmed password now
+    const foundUser = users.find((u: any) => u.email === normalizedEmail && u.password === normalizedPassword);
 
     if (foundUser) {
       const { password, ...safeUser } = foundUser;
-      localStorage.setItem('truetrack_session', JSON.stringify(safeUser));
+      await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(safeUser) });
       return { user: safeUser, error: null };
     }
 
-    return { user: null, error: "Invalid email or password" };
+    console.log('MockAuth: Password incorrect.');
+    return { user: null, error: "Incorrect password." };
   },
 
   async signOut(): Promise<void> {
-    localStorage.removeItem('truetrack_session');
+    await Preferences.remove({ key: SESSION_KEY });
   },
 
   async getUser(): Promise<User | null> {
-    const session = localStorage.getItem('truetrack_session');
+    console.log('MockAuth: getUser called');
+    const { value: session } = await Preferences.get({ key: SESSION_KEY });
+    console.log('MockAuth: getUser session found:', !!session);
     return session ? JSON.parse(session) : null;
   },
 
@@ -68,7 +91,7 @@ const mockAuthService = {
       name: 'Mock Google User',
       tier: SubscriptionTier.FREE
     };
-    localStorage.setItem('truetrack_session', JSON.stringify(mockUser));
+    await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(mockUser) });
     return { user: mockUser, error: null };
   },
 
@@ -80,7 +103,7 @@ const mockAuthService = {
       name: 'Mock Apple User',
       tier: SubscriptionTier.FREE
     };
-    localStorage.setItem('truetrack_session', JSON.stringify(mockUser));
+    await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(mockUser) });
     return { user: mockUser, error: null };
   }
 };
@@ -176,4 +199,6 @@ const realAuthService = {
 };
 
 // Export the correct service based on configuration
-export const authService = supabase ? realAuthService : mockAuthService;
+// FORCING MOCK MODE for reliable local testing without email verification
+export const authService = mockAuthService;
+export const isMockMode = true;

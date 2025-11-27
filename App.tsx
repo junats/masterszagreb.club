@@ -18,6 +18,12 @@ const getReceiptSignature = (r: Receipt) => {
   return `${cleanStore}|${r.date}|${priceCents}|${r.type || 'receipt'}|${cleanRef}`;
 };
 
+import { Preferences } from '@capacitor/preferences';
+import { SplashScreen } from '@capacitor/splash-screen';
+
+const RECEIPT_STORAGE_KEY = 'truetrack_receipts';
+const SETTINGS_STORAGE_KEY = 'truetrack_settings';
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -29,51 +35,78 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const currentUser = await authService.getUser();
-      if (currentUser) {
-        setUser(currentUser);
+      console.log('App: initAuth starting...');
+      try {
+        const currentUser = await authService.getUser();
+        console.log('App: initAuth currentUser:', currentUser);
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      } catch (e) {
+        console.error('App: initAuth error:', e);
+      } finally {
+        setIsAuthLoading(false);
+        console.log('App: initAuth finished');
+        // Hide splash screen after auth check
+        await SplashScreen.hide();
       }
-      setIsAuthLoading(false);
     };
     initAuth();
+
+    // Safety timeout: Force hide splash screen after 3s if auth hangs
+    const safetyTimeout = setTimeout(async () => {
+      console.log('App: Safety timeout triggered, hiding splash screen');
+      await SplashScreen.hide();
+    }, 3000);
+
+    return () => clearTimeout(safetyTimeout);
   }, []);
 
   useEffect(() => {
-    const savedReceipts = localStorage.getItem('truetrack_receipts');
-    if (savedReceipts) {
-      try {
-        const parsed = JSON.parse(savedReceipts) as Receipt[];
-        const uniqueMap = new Map<string, Receipt>();
-        parsed.forEach(r => {
-          const sig = getReceiptSignature(r);
-          if (!uniqueMap.has(sig)) {
-            uniqueMap.set(sig, r);
-          }
-        });
-        setReceipts(Array.from(uniqueMap.values()));
-      } catch (e) {
-        console.error("Failed to parse receipts", e);
+    const loadData = async () => {
+      const { value: savedReceipts } = await Preferences.get({ key: RECEIPT_STORAGE_KEY });
+      if (savedReceipts) {
+        try {
+          const parsed = JSON.parse(savedReceipts) as Receipt[];
+          const uniqueMap = new Map<string, Receipt>();
+          parsed.forEach(r => {
+            const sig = getReceiptSignature(r);
+            if (!uniqueMap.has(sig)) {
+              uniqueMap.set(sig, r);
+            }
+          });
+          setReceipts(Array.from(uniqueMap.values()));
+        } catch (e) {
+          console.error("Failed to parse receipts", e);
+        }
       }
-    }
 
-    const savedSettings = localStorage.getItem('truetrack_settings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
-        if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
-      } catch (e) {
-        console.error("Failed to parse settings", e);
+      const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
+      if (savedSettings) {
+        try {
+          const parsed = JSON.parse(savedSettings);
+          if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
+          if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
+        } catch (e) {
+          console.error("Failed to parse settings", e);
+        }
       }
-    }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('truetrack_receipts', JSON.stringify(receipts));
+    const saveReceipts = async () => {
+      await Preferences.set({ key: RECEIPT_STORAGE_KEY, value: JSON.stringify(receipts) });
+    };
+    saveReceipts();
   }, [receipts]);
 
   useEffect(() => {
-    localStorage.setItem('truetrack_settings', JSON.stringify({ budget: monthlyBudget, ageRestricted }));
+    const saveSettings = async () => {
+      await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, ageRestricted }) });
+    };
+    saveSettings();
   }, [monthlyBudget, ageRestricted]);
 
   const handleScanComplete = (newReceipts: Receipt[]) => {
