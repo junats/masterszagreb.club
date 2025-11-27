@@ -181,9 +181,21 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                 </div>
                             )}
                         </div>
-                        <div className="text-right">
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
-                            <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
+                        <div className="text-right flex flex-col items-end gap-2">
+                            <div className="flex gap-2 mb-1">
+                                <button onClick={handleShare} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                    <Share2 size={16} />
+                                </button>
+                                {onDelete && (
+                                    <button onClick={handleDelete} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
+                                <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
+                            </div>
                         </div>
                     </div>
 
@@ -208,7 +220,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                         </div>
                     )}
 
-                    <div className="space-y-3 mb-6 max-h-[40vh] overflow-y-auto pr-1 no-scrollbar">
+                    <div className="space-y-3 mb-6 pr-1">
                         {visibleItems.map((item, idx) => {
                             const isHidden = ageRestricted && item.isRestricted;
                             if (isHidden) return null;
@@ -216,8 +228,15 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                             return (
                                 <div key={idx} className={`flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}>
                                     <div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-slate-200 text-sm font-medium">{item.name}</p>
+                                        <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                    item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                                        'bg-slate-800 border-slate-700 text-slate-400'
+                                                }`}>
+                                                {item.category}
+                                            </span>
                                             {item.isRestricted && !ageRestricted && (
                                                 <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
                                             )}
@@ -227,13 +246,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                                 </span>
                                             )}
                                         </div>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
-                                            item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
-                                                item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                                    'bg-slate-800 border-slate-700 text-slate-400'
-                                            }`}>
-                                            {item.category}
-                                        </span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
@@ -256,18 +268,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
 
                     <div className="flex justify-between items-center pt-4 border-t border-white/10">
                         <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
-                        <div className="flex gap-3">
-                            {onDelete && (
-                                <button onClick={handleDelete} className="flex items-center gap-1.5 text-xs text-red-400 font-bold hover:text-red-300 transition-colors duration-300 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 hover:shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                                    <Trash2 size={14} />
-                                    Delete
-                                </button>
-                            )}
-                            <button onClick={handleShare} className="flex items-center gap-1.5 text-xs text-primary font-bold hover:text-white transition-colors duration-300 bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 hover:shadow-[0_0_10px_rgba(56,189,248,0.2)]">
-                                <Share2 size={14} />
-                                Share
-                            </button>
-                        </div>
                     </div>
                 </div>
 

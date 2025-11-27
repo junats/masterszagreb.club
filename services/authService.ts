@@ -58,6 +58,11 @@ const mockAuthService = {
       return { user: null, error: "Email not registered." };
     }
 
+    console.log(`MockAuth: Checking password for ${normalizedEmail}`);
+    console.log(`MockAuth: Input password length: ${normalizedPassword.length}`);
+    console.log(`MockAuth: Stored password length: ${userExists.password.length}`);
+    // console.log(`MockAuth: Input: '${normalizedPassword}', Stored: '${userExists.password}'`); // Uncomment if desperate
+
     // Simple mock auth check
     // Note: We compare against trimmed password now
     const foundUser = users.find((u: any) => u.email === normalizedEmail && u.password === normalizedPassword);
@@ -81,6 +86,10 @@ const mockAuthService = {
     const { value: session } = await Preferences.get({ key: SESSION_KEY });
     console.log('MockAuth: getUser session found:', !!session);
     return session ? JSON.parse(session) : null;
+  },
+
+  async getCurrentSession(): Promise<User | null> {
+    return this.getUser();
   },
 
   async signInWithGoogle(): Promise<{ user: User | null; error: string | null }> {
@@ -173,6 +182,10 @@ const realAuthService = {
     return null;
   },
 
+  async getCurrentSession(): Promise<User | null> {
+    return this.getUser();
+  },
+
   async signInWithGoogle(): Promise<{ user: User | null; error: string | null }> {
     if (!supabase) return { user: null, error: "Database not connected" };
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -198,7 +211,71 @@ const realAuthService = {
   }
 };
 
-// Export the correct service based on configuration
-const isForceMock = typeof window !== 'undefined' && localStorage.getItem('force_mock_mode') === 'true';
-export const authService = (supabase && !isForceMock) ? realAuthService : mockAuthService;
-export const isMockMode = !supabase || isForceMock;
+// --- DYNAMIC SERVICE PROXY ---
+const MOCK_MODE_KEY = 'force_mock_mode';
+
+async function getService(): Promise<typeof mockAuthService> {
+  // 1. Check if Supabase is even available
+  if (!supabase) return mockAuthService;
+
+  // 2. Check Preference for forced mock mode
+  try {
+    const { value } = await Preferences.get({ key: MOCK_MODE_KEY });
+    if (value === 'true') return mockAuthService;
+  } catch (e) {
+    console.error("AuthService: Failed to check mode preference", e);
+  }
+
+  // 3. Default to Real if Supabase exists and no forced mock
+  return realAuthService;
+}
+
+export const authService = {
+  async signUp(email: string, password: string, name: string) {
+    const service = await getService();
+    return service.signUp(email, password, name);
+  },
+
+  async signIn(email: string, password: string) {
+    const service = await getService();
+    return service.signIn(email, password);
+  },
+
+  async signOut() {
+    const service = await getService();
+    return service.signOut();
+  },
+
+  async getUser() {
+    const service = await getService();
+    return service.getUser();
+  },
+
+  async getCurrentSession() {
+    const service = await getService();
+    return service.getUser(); // Both impls use getUser/getCurrentSession interchangeably now
+  },
+
+  async signInWithGoogle() {
+    const service = await getService();
+    return service.signInWithGoogle();
+  },
+
+  async signInWithApple() {
+    const service = await getService();
+    return service.signInWithApple();
+  },
+
+  // Helper to toggle mode
+  async setMockMode(enable: boolean) {
+    await Preferences.set({ key: MOCK_MODE_KEY, value: enable ? 'true' : 'false' });
+  },
+
+  async isMockMode(): Promise<boolean> {
+    const service = await getService();
+    return service === mockAuthService;
+  }
+};
+
+// Export a helper to check mode synchronously (best guess) or async
+export const isMockMode = !supabase; // Default fallback, but use authService.isMockMode() for accuracy

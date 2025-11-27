@@ -217,8 +217,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 {/* DEBUG SECTION */}
                 <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
                     <p className="text-white font-bold mb-1">DEBUG INFO:</p>
-                    <p>Mode: {isMockMode ? 'Mock (Local)' : 'Real (Supabase)'}</p>
-                    <p>Build: v2 (Trim Fix)</p>
                     <DebugUserCount />
                 </div>
             </div>
@@ -241,9 +239,22 @@ const DebugUserCount = () => {
         }
     };
 
+    const [isMock, setIsMock] = useState(false);
+
     React.useEffect(() => {
         loadUsers();
+        checkMode();
     }, []);
+
+    const checkMode = async () => {
+        const mock = await authService.isMockMode();
+        setIsMock(mock);
+    };
+
+    const toggleMode = async () => {
+        await authService.setMockMode(!isMock);
+        window.location.reload();
+    };
 
     const handleReset = async () => {
         await Preferences.remove({ key: 'truetrack_mock_users' });
@@ -253,18 +264,6 @@ const DebugUserCount = () => {
         window.location.reload();
     };
 
-    const toggleMode = () => {
-        const current = localStorage.getItem('force_mock_mode') === 'true';
-        if (current) {
-            localStorage.removeItem('force_mock_mode');
-        } else {
-            localStorage.setItem('force_mock_mode', 'true');
-        }
-        window.location.reload();
-    };
-
-    const isForceMock = localStorage.getItem('force_mock_mode') === 'true';
-
     return (
         <div className="mt-2 space-y-2">
             <div className="flex justify-between items-center">
@@ -273,7 +272,7 @@ const DebugUserCount = () => {
                     onClick={toggleMode}
                     className="text-[9px] underline text-blue-400 hover:text-blue-300"
                 >
-                    {isForceMock ? 'Switch to Real (Supabase)' : 'Switch to Mock (Local)'}
+                    {isMock ? 'Switch to Real (Supabase)' : 'Switch to Mock (Local)'}
                 </button>
             </div>
 
