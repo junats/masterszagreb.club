@@ -6,6 +6,7 @@ interface DashboardProps {
     receipts: Receipt[];
     monthlyBudget: number;
     ageRestricted: boolean;
+    onViewReceipt?: (receipt: Receipt) => void;
 }
 
 interface DrillDownState {
@@ -15,7 +16,7 @@ interface DrillDownState {
 
 type DateFilter = 'all' | 'this_month' | 'last_month';
 
-const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted }) => {
+const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, onViewReceipt }) => {
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
@@ -68,8 +69,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     if (!categoryItems['Luxury']) categoryItems['Luxury'] = [];
                     categoryItems['Luxury'].push({ name: item.name, price: item.price, date: r.date, store: r.storeName });
                 } else {
-                    // Essentials Calculation
-                    if ([Category.NECESSITY, Category.FOOD, Category.HEALTH, Category.HOUSEHOLD, Category.TRANSPORT, Category.EDUCATION].includes(cat)) {
+                    // Essentials Calculation (Stricter Provision Logic)
+                    // 1. Always include Child Related items
+                    if (item.isChildRelated) {
+                        provisionTotal += item.price;
+                    }
+                    // 2. Include strict essentials (Food=Groceries, Household, Health, Education)
+                    // Exclude Transport (Gas) unless child related, to avoid inflating score with personal travel
+                    else if ([Category.NECESSITY, Category.FOOD, Category.HEALTH, Category.HOUSEHOLD, Category.EDUCATION].includes(cat)) {
                         provisionTotal += item.price;
                     }
                 }
@@ -156,26 +163,28 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
         // --- NEW METRICS ---
 
-        // 1. Weekly Activity (Last 7 Days)
+        // 1. Daily Activity (Last 7 Days)
         const weeklyActivity = [];
-        const maxWeeklyValue = 0;
-
-        // Helper to get day start
-        const getDayStart = (d: Date) => {
-            const copy = new Date(d);
-            copy.setHours(0, 0, 0, 0);
-            return copy;
-        };
-
         let maxDayTotal = 0;
+
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            const dayStart = getDayStart(d);
 
             const dayTotal = receipts.reduce((acc, r) => {
-                const rDate = new Date(r.date);
-                if (getDayStart(rDate).getTime() === dayStart.getTime()) {
+                let rDate = new Date(r.date);
+
+                // Handle YYYY-MM-DD strings explicitly
+                if (r.date.length === 10 && r.date.includes('-')) {
+                    const [y, m, dt] = r.date.split('-').map(Number);
+                    rDate = new Date(y, m - 1, dt);
+                }
+
+                // Simple comparison of Day, Month, Year (Local Time)
+                if (rDate.getDate() === d.getDate() &&
+                    rDate.getMonth() === d.getMonth() &&
+                    rDate.getFullYear() === d.getFullYear()) {
+
                     const validItems = r.items.filter(item => !ageRestricted || !item.isRestricted);
                     return acc + validItems.reduce((sum, item) => sum + item.price, 0);
                 }
@@ -185,7 +194,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             if (dayTotal > maxDayTotal) maxDayTotal = dayTotal;
 
             weeklyActivity.push({
-                day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                day: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }), // "Mon 27"
                 date: d.getDate(),
                 value: dayTotal
             });
@@ -273,7 +282,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     const strokeDashoffset = circumference - (metrics.numericEvidenceScore / 100) * circumference;
 
     return (
-        <div className="flex flex-col h-full px-4 pt-4 pb-24 overflow-y-auto no-scrollbar bg-background">
+        <div className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar bg-background">
             {/* Header */}
             <div className="flex justify-between items-end mb-6">
                 <div>
@@ -362,7 +371,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         {metrics.weeklyActivity.map((day, idx) => {
                             const heightPercent = metrics.maxDayTotal > 0 ? (day.value / metrics.maxDayTotal) * 100 : 0;
                             return (
-                                <div key={idx} className="flex flex-col items-center gap-2 w-full group/bar">
+                                <div key={idx} className="flex flex-col items-center gap-2 w-full h-full group/bar">
                                     <div className="relative w-full flex-1 flex items-end">
                                         <div
                                             className="w-full bg-orange-500/20 rounded-t-lg transition-all duration-500 group-hover/bar:bg-orange-500 group-hover/bar:shadow-[0_0_15px_rgba(249,115,22,0.4)] relative"
@@ -559,16 +568,20 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     <h3 className="text-xs font-heading font-semibold text-slate-500 uppercase tracking-wide mb-3 ml-1 mt-2">Recent Logs</h3>
                     <div className="space-y-2">
                         {receipts.slice(0, 3).map(r => (
-                            <div key={r.id} className="bg-surface border border-white/5 rounded-2xl p-3 flex justify-between items-center shadow-sm hover:border-white/15 hover:bg-surfaceHighlight transition-all duration-300">
+                            <button
+                                key={r.id}
+                                onClick={() => onViewReceipt?.(r)}
+                                className="w-full bg-surface border border-white/5 rounded-2xl p-3 flex justify-between items-center shadow-sm hover:border-white/15 hover:bg-surfaceHighlight transition-all duration-300 text-left group"
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 ${r.type === 'bill'
-                                            ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-500/20 shadow-[0_0_8px_rgba(99,102,241,0.15)]'
-                                            : 'bg-surfaceHighlight text-slate-400 border border-white/5'
+                                        ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-500/20 shadow-[0_0_8px_rgba(99,102,241,0.15)]'
+                                        : 'bg-surfaceHighlight text-slate-400 border border-white/5'
                                         }`}>
                                         {r.type === 'bill' ? <FileText size={16} /> : r.storeName.charAt(0)}
                                     </div>
                                     <div>
-                                        <p className="text-slate-200 text-sm font-semibold tracking-tight">{r.storeName}</p>
+                                        <p className="text-slate-200 text-sm font-semibold tracking-tight group-hover:text-white transition-colors">{r.storeName}</p>
                                         <p className="text-[10px] text-slate-500 font-medium">{new Date(r.date).toLocaleDateString()}</p>
                                     </div>
                                 </div>
@@ -580,7 +593,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         €{r.items.reduce((acc, i) => (!ageRestricted || !i.isRestricted ? acc + i.price : acc), 0).toFixed(2)}
                                     </span>
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>

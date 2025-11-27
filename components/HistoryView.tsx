@@ -2,26 +2,63 @@ import React, { useState, useMemo } from 'react';
 import { Receipt, Category } from '../types';
 import { Search, ChevronRight, Share2, MapPin, Trash2, FileText, Receipt as ReceiptIcon, Copy, Image as ImageIcon, X, BarChart3, PieChart, TrendingUp, Baby } from 'lucide-react';
 import { storageService } from '../services/storageService';
+import { Share } from '@capacitor/share';
+import HistoryAnalytics from './HistoryAnalytics';
 
 interface HistoryViewProps {
     receipts: Receipt[];
     ageRestricted: boolean;
+    categoryBudgets: Record<string, number>;
     onDelete?: (id: string) => void;
     onUpdate?: (receipt: Receipt) => void;
+    selectedReceipt: Receipt | null;
+    onSelectReceipt: (receipt: Receipt | null) => void;
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDelete, onUpdate }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, categoryBudgets, onDelete, onUpdate, selectedReceipt, onSelectReceipt }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
     const [showFullImage, setShowFullImage] = useState(false);
     const [showStats, setShowStats] = useState(false);
 
+    // Filter States
+    const [dateFilter, setDateFilter] = useState<'all' | 'thisMonth' | 'lastMonth' | 'thisYear'>('all');
+    const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
+    const [childFilter, setChildFilter] = useState(false);
+
     const filteredReceipts = useMemo(() => {
-        return receipts.filter(r =>
-            r.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (r.referenceCode && r.referenceCode.toLowerCase().includes(searchTerm.toLowerCase()))
-        ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [receipts, searchTerm]);
+        return receipts.filter(r => {
+            // 1. Search Term
+            const matchesSearch = r.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (r.referenceCode && r.referenceCode.toLowerCase().includes(searchTerm.toLowerCase()));
+            if (!matchesSearch) return false;
+
+            // 2. Date Filter
+            const d = new Date(r.date);
+            const now = new Date();
+            if (dateFilter === 'thisMonth') {
+                if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+            } else if (dateFilter === 'lastMonth') {
+                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                if (d.getMonth() !== lastMonth.getMonth() || d.getFullYear() !== lastMonth.getFullYear()) return false;
+            } else if (dateFilter === 'thisYear') {
+                if (d.getFullYear() !== now.getFullYear()) return false;
+            }
+
+            // 3. Category Filter (Check if ANY item matches)
+            if (categoryFilter !== 'all') {
+                const hasCategory = r.items.some(i => i.category === categoryFilter && (!ageRestricted || !i.isRestricted));
+                if (!hasCategory) return false;
+            }
+
+            // 4. Child Filter (Check if ANY item is child related)
+            if (childFilter) {
+                const hasChildItem = r.items.some(i => i.isChildRelated && (!ageRestricted || !i.isRestricted));
+                if (!hasChildItem) return false;
+            }
+
+            return true;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [receipts, searchTerm, dateFilter, categoryFilter, childFilter, ageRestricted]);
 
     const stats = useMemo(() => {
         let childTotal = 0;
@@ -68,7 +105,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
         if (selectedReceipt && onDelete) {
             if (confirm("Are you sure you want to delete this record?")) {
                 onDelete(selectedReceipt.id);
-                setSelectedReceipt(null);
+                onSelectReceipt(null);
             }
         }
     };
@@ -81,7 +118,22 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                 isRestricted: !updatedItems[itemIndex].isRestricted
             };
             onUpdate({ ...selectedReceipt, items: updatedItems });
-            setSelectedReceipt({ ...selectedReceipt, items: updatedItems });
+            onSelectReceipt({ ...selectedReceipt, items: updatedItems });
+        }
+    };
+
+    const handleShare = async () => {
+        if (!selectedReceipt) return;
+        try {
+            const effectiveTotal = getEffectiveTotal(selectedReceipt);
+            await Share.share({
+                title: `Receipt from ${selectedReceipt.storeName}`,
+                text: `Store: ${selectedReceipt.storeName}\nDate: ${new Date(selectedReceipt.date).toLocaleDateString()}\nTotal: €${effectiveTotal.toFixed(2)}\n\nSent via TrueTrack`,
+                url: selectedReceipt.imageUrl || undefined,
+                dialogTitle: 'Share Receipt'
+            });
+        } catch (error) {
+            console.error('Error sharing:', error);
         }
     };
 
@@ -92,8 +144,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
         const displayImageUrl = selectedReceipt.storagePath ? storageService.getPublicUrl(selectedReceipt.storagePath) : selectedReceipt.imageUrl;
 
         return (
-            <div className="flex flex-col h-full px-4 pt-4 pb-24 animate-in slide-in-from-right duration-300 ease-out">
-                <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
+            <div className="flex flex-col h-full px-4 pt-4 pb-24 animate-in slide-in-from-right duration-300 ease-out overflow-y-auto no-scrollbar">
+                <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
                     &larr; Back to History
                 </button>
 
@@ -169,6 +221,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                                             {item.isRestricted && !ageRestricted && (
                                                 <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
                                             )}
+                                            {item.isChildRelated && (
+                                                <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
+                                                    <Baby size={10} /> Child
+                                                </span>
+                                            )}
                                         </div>
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
                                             item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
@@ -206,7 +263,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                                     Delete
                                 </button>
                             )}
-                            <button className="flex items-center gap-1.5 text-xs text-primary font-bold hover:text-white transition-colors duration-300 bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 hover:shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+                            <button onClick={handleShare} className="flex items-center gap-1.5 text-xs text-primary font-bold hover:text-white transition-colors duration-300 bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 hover:shadow-[0_0_10px_rgba(56,189,248,0.2)]">
                                 <Share2 size={14} />
                                 Share
                             </button>
@@ -234,58 +291,74 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
     }
 
     return (
-        <div className="flex flex-col h-full px-4 pt-4 pb-24 bg-background">
+        <div className="flex flex-col h-full px-4 pt-4 pb-32 bg-background">
             <div className="mb-6">
                 <h1 className="text-3xl font-heading font-extrabold text-white tracking-tight mb-2">History</h1>
                 <p className="text-slate-300 text-sm font-medium mb-4">Review receipts and bills {ageRestricted && <span className="text-amber-500">(Filtered)</span>}</p>
             </div>
 
-            <div className="flex items-center gap-2 mb-6">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-hover:text-slate-300 transition-colors duration-300" />
-                    <input
-                        type="text"
-                        placeholder="Search store or reference..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-surface border border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-200 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 placeholder:text-slate-600 font-medium hover:border-white/20 hover:shadow-sm"
-                    />
+            {/* Filters */}
+            <div className="mb-4 space-y-3">
+                {/* Search & Chart Toggle */}
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-hover:text-slate-300 transition-colors duration-300" />
+                        <input
+                            type="text"
+                            placeholder="Search store or reference..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-surface border border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-200 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 placeholder:text-slate-600 font-medium hover:border-white/20 hover:shadow-sm"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowStats(!showStats)}
+                        className={`p-3 rounded-xl border transition-all duration-300 ${showStats ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-surface border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-surfaceHighlight'}`}
+                    >
+                        <BarChart3 size={20} />
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowStats(!showStats)}
-                    className={`p-3 rounded-xl border transition-all duration-300 ${showStats ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-surface border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-surfaceHighlight'}`}
-                >
-                    <BarChart3 size={20} />
-                </button>
+
+                {/* Filter Chips */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {/* Date Filter */}
+                    <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as any)}
+                        className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
+                    >
+                        <option value="all">All Time</option>
+                        <option value="thisMonth">This Month</option>
+                        <option value="lastMonth">Last Month</option>
+                        <option value="thisYear">This Year</option>
+                    </select>
+
+                    {/* Category Filter */}
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value as any)}
+                        className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
+                    >
+                        <option value="all">All Categories</option>
+                        {Object.values(Category).map(c => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+
+                    {/* Child Filter Toggle */}
+                    <button
+                        onClick={() => setChildFilter(!childFilter)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-300 flex items-center gap-1 ${childFilter ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-surface border-white/10 text-slate-400 hover:text-slate-200'}`}
+                    >
+                        <Baby size={12} /> Child Items
+                    </button>
+                </div>
             </div>
 
-            {showStats && filteredReceipts.length > 0 && (
-                <div className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
-                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-white/10 shadow-lg">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <p className="text-slate-400 text-xs uppercase tracking-wider font-bold">Total in View</p>
-                                <h2 className="text-3xl font-heading font-bold text-white tabular-nums tracking-tight">€{stats.total.toFixed(2)}</h2>
-                            </div>
-                            <div className="text-right">
-                                <div className="flex items-center gap-1.5 justify-end text-emerald-400">
-                                    <Baby size={16} />
-                                    <span className="text-lg font-heading font-bold tabular-nums">{stats.childRatio.toFixed(0)}%</span>
-                                </div>
-                                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Child & Home</p>
-                            </div>
-                        </div>
-
-                        <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex mb-3 ring-1 ring-white/5">
-                            <div className="h-full bg-emerald-500" style={{ width: `${stats.childRatio}%` }}></div>
-                            <div className="h-full bg-slate-600" style={{ width: `${(stats.otherTotal / stats.total) * 100}%` }}></div>
-                            <div className="h-full bg-pink-500" style={{ width: `${(stats.luxuryTotal / stats.total) * 100}%` }}></div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                {showStats && filteredReceipts.length > 0 && (
+                    <HistoryAnalytics receipts={filteredReceipts} ageRestricted={ageRestricted} categoryBudgets={categoryBudgets} />
+                )}
                 {filteredReceipts.length === 0 ? (
                     <div className="text-center py-10">
                         <p className="text-slate-600 font-medium">No records found.</p>
@@ -300,7 +373,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, onDe
                         return (
                             <button
                                 key={receipt.id}
-                                onClick={() => setSelectedReceipt(receipt)}
+                                onClick={() => onSelectReceipt(receipt)}
                                 className={`w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group ${isBill
                                     ? 'bg-gradient-to-r from-slate-900 to-indigo-950/30 border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.15)]'
                                     : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'

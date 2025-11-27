@@ -6,6 +6,8 @@ PODS:
   - CapacitorCordova (7.4.4)
   - CapacitorPreferences (7.0.2):
     - Capacitor
+  - CapacitorShare (7.0.2):
+    - Capacitor
   - CapacitorSplashScreen (7.0.3):
     - Capacitor
 
@@ -14,6 +16,7 @@ DEPENDENCIES:
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
+  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
 
 EXTERNAL SOURCES:
@@ -25,6 +28,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorPreferences:
     :path: "../../node_modules/@capacitor/preferences"
+  CapacitorShare:
+    :path: "../../node_modules/@capacitor/share"
   CapacitorSplashScreen:
     :path: "../../node_modules/@capacitor/splash-screen"
 
@@ -33,8 +38,9 @@ SPEC CHECKSUMS:
   CapacitorCamera: c1e750985b80773098d51ec66cd5154a8a2d061f
   CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
   CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
+  CapacitorShare: be166411fa995ead2d39b104aa0aae56d8615c66
   CapacitorSplashScreen: e388b8e0ed0e982a9d3a40417f478e7a018a8763
 
-PODFILE CHECKSUM: 3c8028c8f3edc3ebbe75f888b6ee7076aa417165
+PODFILE CHECKSUM: dbae9e510d953b68628771b9dccb5396647b3f99
 
 COCOAPODS: 1.16.2

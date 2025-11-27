@@ -16,6 +16,7 @@ export interface ReceiptItem {
   category: Category;
   quantity?: number;
   isRestricted?: boolean;
+  isChildRelated?: boolean;
 }
 
 export interface Receipt {
@@ -27,10 +28,10 @@ export interface Receipt {
   scannedAt: string; // ISO date string
   type?: 'receipt' | 'bill';
   referenceCode?: string;
+  transactionId?: string; // Unique ID from the receipt (e.g. TRx number)
   imageUrl?: string; // Legacy Base64 string (Mock mode)
   imageHash?: string; // Deterministic hash of image for duplicate detection
   storagePath?: string; // Path in Cloud Storage (Production mode)
-  imageHash?: string; // Hash of the image content
   fileHash?: string; // Hash of the file metadata
 }
 
@@ -40,6 +41,7 @@ export interface AnalysisResult {
   total: number;
   items: ReceiptItem[];
   referenceCode?: string;
+  transactionId?: string;
   type?: 'receipt' | 'bill';
 }
 

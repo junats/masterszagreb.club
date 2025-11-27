@@ -199,6 +199,6 @@ const realAuthService = {
 };
 
 // Export the correct service based on configuration
-// FORCING MOCK MODE for reliable local testing without email verification
-export const authService = mockAuthService;
-export const isMockMode = true;
+const isForceMock = typeof window !== 'undefined' && localStorage.getItem('force_mock_mode') === 'true';
+export const authService = (supabase && !isForceMock) ? realAuthService : mockAuthService;
+export const isMockMode = !supabase || isForceMock;

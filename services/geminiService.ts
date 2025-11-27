@@ -65,6 +65,10 @@ const receiptSchema: Schema = {
       type: Type.STRING,
       description: "For bills/invoices: Extract the Payment Reference, Invoice Number, or Student ID Code. Return null for regular receipts.",
     },
+    transactionId: {
+      type: Type.STRING,
+      description: "For retail receipts: Extract the Transaction ID, Receipt Number, Slip #, or any unique identifier printed on the receipt. This is critical for duplicate detection.",
+    },
     items: {
       type: Type.ARRAY,
       description: "List of items purchased or services billed.",
@@ -91,6 +95,10 @@ const receiptSchema: Schema = {
           isRestricted: {
             type: Type.BOOLEAN,
             description: "Set to true if the item is alcohol, tobacco, nicotine, gambling, or adult-only products. Otherwise false.",
+          },
+          isChildRelated: {
+            type: Type.BOOLEAN,
+            description: "Set to true if the item is meant for children (18 and younger), e.g., toys, baby food, kids clothes, school supplies, diapers. Otherwise false.",
           },
         },
         required: ["name", "price", "category"],
@@ -135,11 +143,18 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
     1. Extract the Store or Provider Name, Date, and Total Amount. Prices are in Euro (€).
     2. Classify the document type: 'bill' if it is an invoice or has a payment reference code; 'receipt' if it is retail shopping.
     3. If it is a bill, extract the 'Reference Code', 'Invoice Number', or 'Payment ID' if visible.
-    4. Extract all line items. 
-    5. Categorize each item strictly into: Necessity, Food, Luxury, Household, Health, Transport, Education, or Other.
-       - Note: Kindergarten/Tuition/Childcare fees should be 'Education'.
-    6. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true.
-    7. Ensure numeric values handle commas as decimals if standard in the receipt region.
+    4. If it is a retail receipt, extract the 'Transaction ID', 'Receipt Number', 'Slip #', or any unique alphanumeric code that identifies this specific transaction.
+    5. Extract all line items individually. DO NOT just return a single 'Total' item. Break down the receipt as much as possible.
+    6. Categorize each item strictly into: Necessity, Food, Luxury, Household, Health, Transport, Education, or Other.
+       - 'Food': STRICTLY Groceries and Supermarket food items (Ingredients, Bread, Milk).
+       - 'Luxury': Dining Out, Restaurants, Fast Food, Takeaway, Coffee Shops, Alcohol, Tobacco, Electronics, Decor, Toys (unless educational).
+       - 'Household': Cleaning supplies, Toiletries, Maintenance.
+       - 'Transport': Fuel, Public Transit. Taxis/Uber are 'Luxury' unless clearly medical/school.
+       - 'Education': Tuition, School Fees, Books, School Supplies.
+    7. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true.
+    8. IMPORTANT: Identify items meant for children (18 and younger) such as toys, baby products, kids clothing, school supplies, diapers, etc., and set 'isChildRelated' to true.
+    9. Ensure numeric values handle commas as decimals if standard in the receipt region.
+    10. If the image is blurry or items are unclear, try to infer the category from the store type (e.g., a Pharmacy receipt with unclear items should have items categorized as Health).
   `;
 
   try {

@@ -26,11 +26,22 @@ const SETTINGS_STORAGE_KEY = 'truetrack_settings';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [user, setUser] = useState<User | null>(null);
+
+  // ... (existing code)
+
+  const handleViewReceipt = (receipt: Receipt) => {
+    setSelectedReceipt(receipt);
+    setCurrentView('history');
+  };
+
+  // ...
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [monthlyBudget, setMonthlyBudget] = useState<number>(300);
-  const [ageRestricted, setAgeRestricted] = useState<boolean>(false);
+  const [monthlyBudget, setMonthlyBudget] = useState(1000);
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
+  const [ageRestricted, setAgeRestricted] = useState(false);
   const [showDevBanner, setShowDevBanner] = useState(true);
 
   useEffect(() => {
@@ -86,6 +97,7 @@ const App: React.FC = () => {
         try {
           const parsed = JSON.parse(savedSettings);
           if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
+          if (parsed.categoryBudgets !== undefined) setCategoryBudgets(parsed.categoryBudgets);
           if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
         } catch (e) {
           console.error("Failed to parse settings", e);
@@ -104,45 +116,80 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const saveSettings = async () => {
-      await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, ageRestricted }) });
+      await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted }) });
     };
     saveSettings();
-  }, [monthlyBudget, ageRestricted]);
+  }, [monthlyBudget, categoryBudgets, ageRestricted]);
 
   const handleScanComplete = (newReceipts: Receipt[]) => {
     let duplicateCount = 0;
+    let potentialDuplicates: Receipt[] = [];
+    let confirmedNewReceipts: Receipt[] = [];
+
     setReceipts(prev => {
       const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
       const existingImageHashes = new Set(prev.map(r => r.imageHash).filter(Boolean));
       const existingFileHashes = new Set(prev.map(r => r.fileHash).filter(Boolean));
+      const existingTransactionIds = new Set(prev.map(r => r.transactionId).filter(Boolean));
 
-      const uniqueNewReceipts: Receipt[] = [];
+      // Helper to check for existing receipt with same Date + Total (Weak Match)
+      const findWeakMatch = (r: Receipt) => {
+        return prev.find(existing =>
+          existing.date === r.date &&
+          Math.abs(existing.total - r.total) < 0.01 &&
+          existing.id !== r.id
+        );
+      };
 
       for (const receipt of newReceipts) {
         const sig = getReceiptSignature(receipt);
         const imgHash = receipt.imageHash;
         const fHash = receipt.fileHash;
+        const txId = receipt.transactionId;
 
+        // 1. Strong Checks (Definite Duplicates)
         const isDuplicateSig = existingSignatures.has(sig);
         const isDuplicateImageHash = imgHash ? existingImageHashes.has(imgHash) : false;
         const isDuplicateFileHash = fHash ? existingFileHashes.has(fHash) : false;
+        const isDuplicateTxId = txId ? existingTransactionIds.has(txId) : false;
 
-        if (!isDuplicateSig && !isDuplicateImageHash && !isDuplicateFileHash) {
-          existingSignatures.add(sig);
-          if (imgHash) existingImageHashes.add(imgHash);
-          if (fHash) existingFileHashes.add(fHash);
-          uniqueNewReceipts.push(receipt);
-        } else {
+        if (isDuplicateSig || isDuplicateImageHash || isDuplicateFileHash || isDuplicateTxId) {
           duplicateCount++;
-          console.log(`Duplicate detected: Sig=${isDuplicateSig}, ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}`);
+          console.log(`Duplicate blocked: Sig=${isDuplicateSig}, ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}, TxId=${isDuplicateTxId}`);
+          continue;
+        }
+
+        // 2. Weak Check (Potential Duplicate -> Ask User)
+        const weakMatch = findWeakMatch(receipt);
+        if (weakMatch) {
+          // We can't use window.confirm inside the loop easily for multiple items without blocking UI weirdly.
+          // For simplicity in this iteration, we'll use confirm() which blocks execution.
+          // In a real app, we'd queue these for a custom modal.
+          const confirmMessage = `Potential duplicate detected:\n\nStore: ${receipt.storeName}\nDate: ${receipt.date}\nTotal: €${receipt.total.toFixed(2)}\n\nThis matches an existing receipt from "${weakMatch.storeName}".\n\nDo you want to add it anyway?`;
+
+          if (window.confirm(confirmMessage)) {
+            confirmedNewReceipts.push(receipt);
+            // Add to sets to prevent self-duplicates in this batch
+            existingSignatures.add(sig);
+            if (txId) existingTransactionIds.add(txId);
+          } else {
+            duplicateCount++;
+          }
+        } else {
+          // No match found, add it
+          confirmedNewReceipts.push(receipt);
+          existingSignatures.add(sig);
+          if (txId) existingTransactionIds.add(txId);
         }
       }
+
       if (duplicateCount > 0) {
         setTimeout(() => {
-          alert(`${duplicateCount} duplicate receipt(s) were automatically removed.`);
+          alert(`${duplicateCount} duplicate receipt(s) were removed.`);
         }, 500);
       }
-      return [...uniqueNewReceipts, ...prev];
+
+      return [...confirmedNewReceipts, ...prev];
     });
     setCurrentView('dashboard');
   };
@@ -186,14 +233,19 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} />;
+        return (
+          <Dashboard
+            receipts={receipts}
+            monthlyBudget={monthlyBudget}
+            ageRestricted={ageRestricted}
+            onViewReceipt={handleViewReceipt}
+          />
+        );
       case 'scan':
         return (
           <ReceiptScanner
             onScanComplete={handleScanComplete}
             onCancel={() => setCurrentView('dashboard')}
-            ageRestricted={ageRestricted}
-            userId={user.id}
           />
         );
       case 'history':
@@ -201,8 +253,11 @@ const App: React.FC = () => {
           <HistoryView
             receipts={receipts}
             ageRestricted={ageRestricted}
+            categoryBudgets={categoryBudgets}
             onDelete={handleDeleteReceipt}
             onUpdate={handleUpdateReceipt}
+            selectedReceipt={selectedReceipt}
+            onSelectReceipt={setSelectedReceipt}
           />
         );
       case 'support':
@@ -212,6 +267,8 @@ const App: React.FC = () => {
           <Settings
             monthlyBudget={monthlyBudget}
             setMonthlyBudget={setMonthlyBudget}
+            categoryBudgets={categoryBudgets}
+            setCategoryBudgets={setCategoryBudgets}
             ageRestricted={ageRestricted}
             setAgeRestricted={setAgeRestricted}
             user={user}
@@ -220,12 +277,12 @@ const App: React.FC = () => {
           />
         );
       default:
-        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} />;
+        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} onViewReceipt={handleViewReceipt} />;
     }
   };
 
   return (
-    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-16 safe-area-top">
+    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-2 safe-area-top">
       <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
 

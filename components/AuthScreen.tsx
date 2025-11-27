@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, Shield, FileText, User as UserIcon, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { User } from '../types';
-import { authService } from '../services/authService';
+import { authService, isMockMode } from '../services/authService';
 import { Preferences } from '@capacitor/preferences';
 
 interface AuthScreenProps {
@@ -109,6 +109,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                         onChange={(e) => setName(e.target.value)}
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
                                         required={!isLogin}
+                                        autoComplete="name"
                                     />
                                 </div>
                             </div>
@@ -123,6 +124,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
                                     required
+                                    autoComplete="email"
                                 />
                             </div>
                         </div>
@@ -136,6 +138,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-12 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
                                     required
+                                    autoComplete={isLogin ? "current-password" : "new-password"}
                                 />
                                 <button
                                     type="button"
@@ -214,7 +217,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 {/* DEBUG SECTION */}
                 <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
                     <p className="text-white font-bold mb-1">DEBUG INFO:</p>
-                    <p>Mode: {authService === undefined ? 'Undefined' : (authService.hasOwnProperty('signInWithGoogle') ? 'Real (Supabase)' : 'Mock (Local)')}</p>
+                    <p>Mode: {isMockMode ? 'Mock (Local)' : 'Real (Supabase)'}</p>
                     <p>Build: v2 (Trim Fix)</p>
                     <DebugUserCount />
                 </div>
@@ -250,10 +253,31 @@ const DebugUserCount = () => {
         window.location.reload();
     };
 
+    const toggleMode = () => {
+        const current = localStorage.getItem('force_mock_mode') === 'true';
+        if (current) {
+            localStorage.removeItem('force_mock_mode');
+        } else {
+            localStorage.setItem('force_mock_mode', 'true');
+        }
+        window.location.reload();
+    };
+
+    const isForceMock = localStorage.getItem('force_mock_mode') === 'true';
+
     return (
-        <div className="mt-2">
-            <p>Status: {status}</p>
-            <p>Stored Users: {users.length}</p>
+        <div className="mt-2 space-y-2">
+            <div className="flex justify-between items-center">
+                <p>Status: {status}</p>
+                <button
+                    onClick={toggleMode}
+                    className="text-[9px] underline text-blue-400 hover:text-blue-300"
+                >
+                    {isForceMock ? 'Switch to Real (Supabase)' : 'Switch to Mock (Local)'}
+                </button>
+            </div>
+
+            <p>Stored Users (Mock Only): {users.length}</p>
             {users.map((u, i) => (
                 <p key={i} className="truncate text-[9px] text-slate-500">
                     {u.email} (Pass: {u.password})
