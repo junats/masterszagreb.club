@@ -144,11 +144,13 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
     2. Classify the document type: 'bill' if it is an invoice or has a payment reference code; 'receipt' if it is retail shopping.
     3. If it is a bill, extract the 'Reference Code', 'Invoice Number', or 'Payment ID' if visible.
     4. If it is a retail receipt, extract the 'Transaction ID', 'Receipt Number', 'Slip #', or any unique alphanumeric code that identifies this specific transaction.
-    5. Extract all line items individually. DO NOT just return a single 'Total' item. Break down the receipt as much as possible.
+    5. Extract EVERY single line item individually. Do not group items. Do not return a single 'Total' item. If the receipt has 20 items, return 20 items.
     6. Categorize each item strictly into: Necessity, Food, Luxury, Household, Health, Transport, Education, or Other.
-       - 'Food': STRICTLY Groceries and Supermarket food items (Ingredients, Bread, Milk).
+       - 'Food': STRICTLY for edible items, groceries, supermarkets, bakery, meat, veg, snacks, drinks. If it goes in your mouth and isn't medicine/alcohol, it is Food.
+       - 'Necessity': Only for essential non-food items (e.g. clothes, basic utilities). DO NOT use this for Food.
        - 'Luxury': Dining Out, Restaurants, Fast Food, Takeaway, Coffee Shops, Alcohol, Tobacco, Electronics, Decor, Toys (unless educational).
-       - 'Household': Cleaning supplies, Toiletries, Maintenance.
+       - 'Household': Cleaning supplies, Toiletries, Maintenance, Kitchenware.
+       - 'Health': Medicine, Pharmacy, Doctor, Dentist, Vitamins.
        - 'Transport': Fuel, Public Transit. Taxis/Uber are 'Luxury' unless clearly medical/school.
        - 'Education': Tuition, School Fees, Books, School Supplies.
     7. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true.
@@ -159,7 +161,7 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash-exp",
       contents: {
         parts: [
           {

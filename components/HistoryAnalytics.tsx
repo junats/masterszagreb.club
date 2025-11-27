@@ -4,7 +4,7 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
-import { TrendingUp, PieChart as PieIcon, Activity, Wallet } from 'lucide-react';
+import { TrendingUp, PieChart as PieIcon, Activity, Wallet, Baby } from 'lucide-react';
 
 interface HistoryAnalyticsProps {
     receipts: Receipt[];
@@ -24,7 +24,7 @@ const COLORS = {
 };
 
 const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestricted, categoryBudgets }) => {
-    const [activeTab, setActiveTab] = useState<'trend' | 'dist' | 'sources' | 'budgets'>('trend');
+    const [activeTab, setActiveTab] = useState<'trend' | 'child' | 'dist' | 'sources' | 'budgets'>('trend');
 
     // 1. Trend Data (Stacked Area: Essentials vs Luxury/Other)
     const trendData = useMemo(() => {
@@ -52,6 +52,34 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                         data[key].essentials += item.price;
                     } else {
                         data[key].discretionary += item.price;
+                    }
+                });
+            }
+        });
+
+        return Object.values(data);
+    }, [receipts, ageRestricted]);
+
+    // 1b. Child Trend Data (Area Chart)
+    const childTrendData = useMemo(() => {
+        const data: Record<string, { name: string; child: number }> = {};
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        const today = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
+            data[key] = { name: key, child: 0 };
+        }
+
+        receipts.forEach(r => {
+            const d = new Date(r.date);
+            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
+            if (data.hasOwnProperty(key)) {
+                r.items.forEach(item => {
+                    if (ageRestricted && item.isRestricted) return;
+                    if (item.isChildRelated) {
+                        data[key].child += item.price;
                     }
                 });
             }
@@ -98,7 +126,6 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 5); // Top 5
-        // Ensure we have at least one item to avoid chart errors, or handle empty in render
     }, [receipts, ageRestricted]);
 
     // 4. Budget Data
@@ -145,6 +172,12 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                     <TrendingUp size={14} /> Trend
                 </button>
                 <button
+                    onClick={() => setActiveTab('child')}
+                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'child' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                    <Baby size={14} /> Child
+                </button>
+                <button
                     onClick={() => setActiveTab('dist')}
                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'dist' ? 'bg-pink-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                 >
@@ -152,7 +185,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 </button>
                 <button
                     onClick={() => setActiveTab('sources')}
-                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'sources' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'sources' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                     <Activity size={14} /> Sources
                 </button>
@@ -193,6 +226,33 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                     <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                     <Area type="monotone" dataKey="discretionary" name="Wants" stackId="1" stroke="#f472b6" fill="url(#colorDiscretionary)" />
                                     <Area type="monotone" dataKey="essentials" name="Needs" stackId="1" stroke="#34d399" fill="url(#colorEssentials)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'child' && (
+                    <div className="h-64 w-full animate-in fade-in duration-300">
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Child Spending Trend</h4>
+                        </div>
+                        <div className="h-[85%]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={childTrendData}>
+                                    <defs>
+                                        <linearGradient id="colorChild" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                                        itemStyle={{ color: '#fff' }}
+                                    />
+                                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                    <Area type="monotone" dataKey="child" name="Child Expenses" stroke="#10b981" fill="url(#colorChild)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -243,6 +303,12 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                         <div className="h-[90%]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart layout="vertical" data={storeData} margin={{ left: 0, right: 30 }}>
+                                    <defs>
+                                        <linearGradient id="colorSource" x1="0" y1="0" x2="1" y2="0">
+                                            <stop offset="0%" stopColor="#06b6d4" />
+                                            <stop offset="100%" stopColor="#3b82f6" />
+                                        </linearGradient>
+                                    </defs>
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                     <Tooltip
@@ -251,11 +317,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                     />
                                     <Legend wrapperStyle={{ fontSize: '10px' }} />
-                                    <Bar dataKey="value" name="Spend (€)" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20}>
-                                        {storeData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#34d399'} />
-                                        ))}
-                                    </Bar>
+                                    <Bar dataKey="value" name="Spend (€)" fill="url(#colorSource)" radius={[0, 4, 4, 0]} barSize={20} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>

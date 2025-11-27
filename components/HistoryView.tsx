@@ -144,148 +144,151 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
         const displayImageUrl = selectedReceipt.storagePath ? storageService.getPublicUrl(selectedReceipt.storagePath) : selectedReceipt.imageUrl;
 
         return (
-            <div className="flex flex-col h-full px-4 pt-4 pb-24 animate-in slide-in-from-right duration-300 ease-out overflow-y-auto no-scrollbar">
-                <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
-                    &larr; Back to History
-                </button>
 
-                <div className={`rounded-3xl p-6 shadow-2xl border ${isBill ? 'bg-slate-900 border-indigo-500/50' : 'bg-surface border-white/10'} relative overflow-hidden`}>
-                    <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
+            <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out">
+                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-4 pb-24">
+                    <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
+                        &larr; Back to History
+                    </button>
 
-                    <div className="flex justify-between items-start mb-6 mt-2">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                {isBill && <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded uppercase tracking-wide">Invoice / Bill</span>}
-                            </div>
-                            <h2 className="text-2xl font-heading font-bold text-white tracking-tight">{selectedReceipt.storeName}</h2>
+                    <div className={`rounded-3xl p-6 shadow-2xl border ${isBill ? 'bg-slate-900 border-indigo-500/50' : 'bg-surface border-white/10'} relative overflow-hidden`}>
+                        <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
 
-                            {isBill && selectedReceipt.referenceCode && (
-                                <div className="mt-2 bg-black/30 border border-white/10 rounded-lg p-2 flex items-center gap-3 w-fit hover:border-white/30 transition-colors duration-300">
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">Payment Code</p>
-                                        <p className="text-sm font-mono text-white tracking-wide">{selectedReceipt.referenceCode}</p>
+                        <div className="flex justify-between items-start mb-6 mt-2">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    {isBill && <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded uppercase tracking-wide">Invoice / Bill</span>}
+                                </div>
+                                <h2 className="text-2xl font-heading font-bold text-white tracking-tight">{selectedReceipt.storeName}</h2>
+
+                                {isBill && selectedReceipt.referenceCode && (
+                                    <div className="mt-2 bg-black/30 border border-white/10 rounded-lg p-2 flex items-center gap-3 w-fit hover:border-white/30 transition-colors duration-300">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">Payment Code</p>
+                                            <p className="text-sm font-mono text-white tracking-wide">{selectedReceipt.referenceCode}</p>
+                                        </div>
+                                        <button className="text-slate-400 hover:text-white transition-colors duration-300" onClick={() => navigator.clipboard.writeText(selectedReceipt.referenceCode!)}>
+                                            <Copy size={14} />
+                                        </button>
                                     </div>
-                                    <button className="text-slate-400 hover:text-white transition-colors duration-300" onClick={() => navigator.clipboard.writeText(selectedReceipt.referenceCode!)}>
-                                        <Copy size={14} />
-                                    </button>
-                                </div>
-                            )}
+                                )}
 
-                            <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
-                                <MapPin size={12} />
-                                <span>{isBill ? 'Provider Address' : 'Main St. Branch'}</span>
-                            </div>
-                            {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
-                                <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-medium">
-                                    <span>Restricted items hidden from totals</span>
+                                <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
+                                    <MapPin size={12} />
+                                    <span>{isBill ? 'Provider Address' : 'Main St. Branch'}</span>
                                 </div>
-                            )}
-                        </div>
-                        <div className="text-right flex flex-col items-end gap-2">
-                            <div className="flex gap-2 mb-1">
-                                <button onClick={handleShare} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                                    <Share2 size={16} />
-                                </button>
-                                {onDelete && (
-                                    <button onClick={handleDelete} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
-                                        <Trash2 size={16} />
-                                    </button>
+                                {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
+                                    <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-medium">
+                                        <span>Restricted items hidden from totals</span>
+                                    </div>
                                 )}
                             </div>
-                            <div>
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
-                                <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {displayImageUrl && (
-                        <div className="mb-6">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Original Scan</p>
-                            <div
-                                className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
-                                onClick={() => setShowFullImage(true)}
-                            >
-                                <img
-                                    src={displayImageUrl}
-                                    alt="Receipt Scan"
-                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
-                                    <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
-                                        <ImageIcon size={14} /> View Full Image
-                                    </span>
+                            <div className="text-right flex flex-col items-end gap-2">
+                                <div className="flex gap-2 mb-1">
+                                    <button onClick={handleShare} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                        <Share2 size={16} />
+                                    </button>
+                                    {onDelete && (
+                                        <button onClick={handleDelete} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
+                                    <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
                                 </div>
                             </div>
                         </div>
-                    )}
 
-                    <div className="space-y-3 mb-6 pr-1">
-                        {visibleItems.map((item, idx) => {
-                            const isHidden = ageRestricted && item.isRestricted;
-                            if (isHidden) return null;
+                        {displayImageUrl && (
+                            <div className="mb-6">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Original Scan</p>
+                                <div
+                                    className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
+                                    onClick={() => setShowFullImage(true)}
+                                >
+                                    <img
+                                        src={displayImageUrl}
+                                        alt="Receipt Scan"
+                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
+                                        <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
+                                            <ImageIcon size={14} /> View Full Image
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                            return (
-                                <div key={idx} className={`flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}>
-                                    <div>
-                                        <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
-                                                item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
-                                                    item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                                        'bg-slate-800 border-slate-700 text-slate-400'
-                                                }`}>
-                                                {item.category}
-                                            </span>
-                                            {item.isRestricted && !ageRestricted && (
-                                                <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
-                                            )}
-                                            {item.isChildRelated && (
-                                                <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
-                                                    <Baby size={10} /> Child
+                        <div className="space-y-3 mb-6 pr-1">
+                            {visibleItems.map((item, idx) => {
+                                const isHidden = ageRestricted && item.isRestricted;
+                                if (isHidden) return null;
+
+                                return (
+                                    <div key={idx} className={`flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}>
+                                        <div>
+                                            <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                    item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                        item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                                            'bg-slate-800 border-slate-700 text-slate-400'
+                                                    }`}>
+                                                    {item.category}
                                                 </span>
+                                                {item.isRestricted && !ageRestricted && (
+                                                    <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
+                                                )}
+                                                {item.isChildRelated && (
+                                                    <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
+                                                        <Baby size={10} /> Child
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
+                                                €{item.price.toFixed(2)}
+                                            </span>
+                                            {onUpdate && !ageRestricted && (
+                                                <button
+                                                    onClick={() => handleToggleRestriction(idx)}
+                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
+                                                    title="Toggle Restriction (18+)"
+                                                >
+                                                    <X size={14} />
+                                                </button>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
-                                            €{item.price.toFixed(2)}
-                                        </span>
-                                        {onUpdate && !ageRestricted && (
-                                            <button
-                                                onClick={() => handleToggleRestriction(idx)}
-                                                className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
-                                                title="Toggle Restriction (18+)"
-                                            >
-                                                <X size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                            <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
+                        </div>
                     </div>
 
-                    <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                        <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
-                    </div>
+                    {showFullImage && displayImageUrl && (
+                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-sm">
+                            <button
+                                onClick={() => setShowFullImage(false)}
+                                className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
+                            >
+                                <X size={24} />
+                            </button>
+                            <img
+                                src={displayImageUrl}
+                                alt="Full Receipt"
+                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                            />
+                        </div>
+                    )}
                 </div>
-
-                {showFullImage && displayImageUrl && (
-                    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-sm">
-                        <button
-                            onClick={() => setShowFullImage(false)}
-                            className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
-                        >
-                            <X size={24} />
-                        </button>
-                        <img
-                            src={displayImageUrl}
-                            alt="Full Receipt"
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                        />
-                    </div>
-                )}
             </div>
         );
     }
