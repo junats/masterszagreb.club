@@ -272,7 +272,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   }
 
   return (
-    <div className="flex flex-col h-full px-4 pt-4 pb-24 animate-in slide-in-from-bottom-5 duration-500 ease-out bg-background">
+    <div className="flex flex-col h-full px-4 pt-4 pb-40 animate-in slide-in-from-bottom-5 duration-500 ease-out bg-background">
       <div className="mb-6 text-center">
         <div className="w-16 h-16 bg-surfaceHighlight rounded-2xl mx-auto flex items-center justify-center mb-4 ring-1 ring-white/10 shadow-lg shadow-black/50">
           <ScanLine size={32} className="text-primary" />

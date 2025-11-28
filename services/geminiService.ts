@@ -157,7 +157,12 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
     8. IMPORTANT: Identify items meant for children (18 and younger) such as toys, baby products, kids clothing, school supplies, diapers, etc., and set 'isChildRelated' to true.
     9. Ensure numeric values handle commas as decimals if standard in the receipt region.
     10. If the image is blurry or items are unclear, try to infer the category from the store type (e.g., a Pharmacy receipt with unclear items should have items categorized as Health).
-  `;
+    
+    CRITICAL FOR TOTAL EXTRACTION:
+    - The 'Total' must be the POSITIVE amount to be paid.
+    - IGNORE any lines labeled "Preplata" (Overpayment), "Credit", or negative numbers. These are NOT the total.
+    - Look for "Iznos", "Za platiti", "Ukupno", or "Total" to find the correct amount.
+    - If you see "-120,17" or similar negative values, that is a credit balance, NOT the bill amount. Find the positive charge amount (e.g., 39.82).`;
 
   try {
     const response = await ai.models.generateContent({

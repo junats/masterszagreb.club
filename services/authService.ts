@@ -244,13 +244,14 @@ async function getService(): Promise<typeof mockAuthService> {
   // 2. Check Preference for forced mock mode
   try {
     const { value } = await Preferences.get({ key: MOCK_MODE_KEY });
-    if (value === 'true') return mockAuthService;
+    // If explicitly set to 'false', use Real. Otherwise (null or 'true'), use Mock.
+    if (value === 'false') return realAuthService;
   } catch (e) {
     console.error("AuthService: Failed to check mode preference", e);
   }
 
-  // 3. Default to Real if Supabase exists and no forced mock
-  return realAuthService;
+  // 3. Default to Mock (Safety first for development/testing)
+  return mockAuthService;
 }
 
 export const authService = {

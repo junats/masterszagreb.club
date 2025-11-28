@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Receipt, Category } from '../types';
 import { ShoppingBag, X, ShieldCheck, FileText, Calendar, Store, ArrowUp, BarChart3, Check, Shield, Sparkles, TrendingUp, TrendingDown, Minus, Wallet, Hash, ArrowUpRight, AlertTriangle, CalendarDays, ArrowRight, Activity } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 
 interface DashboardProps {
     receipts: Receipt[];
@@ -91,6 +91,9 @@ const COLORS: Record<string, string> = {
 const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, onViewReceipt, onProvisionClick }) => {
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+
+    const [chartView, setChartView] = useState<'daily' | 'monthly'>('daily');
+    const [insightView, setInsightView] = useState<'daily' | 'monthly'>('monthly');
 
     // Calculate Metrics
     const metrics = useMemo(() => {
@@ -255,66 +258,104 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         }
 
         // 1. Daily Activity (Last 7 Days) - FIXED DATE LOGIC
+        // 1. Daily Activity (Last 7 Days)
         const weeklyActivity = [];
         let maxDayTotal = 0;
 
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            // Use local YYYY-MM-DD format
             const offset = d.getTimezoneOffset();
             const localDate = new Date(d.getTime() - (offset * 60 * 1000));
             const dStr = localDate.toISOString().split('T')[0];
 
-            const dayTotal = receipts.reduce((acc, r) => {
-                // Normalize receipt date to YYYY-MM-DD
+            // Initialize day entry with 0 for all categories
+            const dayEntry: any = {
+                day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                fullDate: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+                total: 0
+            };
+            Object.values(Category).forEach(cat => {
+                dayEntry[cat] = 0;
+            });
+            if (dayEntry[Category.OTHER] === undefined) dayEntry[Category.OTHER] = 0;
+
+            receipts.forEach(r => {
                 let rDateStr = r.date;
                 if (r.date.includes('T')) {
                     rDateStr = r.date.split('T')[0];
                 } else if (r.date.length === 10 && r.date.includes('-')) {
-                    // Already YYYY-MM-DD, no change needed
+                    // Already YYYY-MM-DD
                 } else {
-                    // Attempt to parse and format if it's a different format
                     try {
                         rDateStr = new Date(r.date).toISOString().split('T')[0];
                     } catch (e) {
-                        console.warn("Could not parse receipt date:", r.date, e);
-                        rDateStr = ''; // Fallback
+                        rDateStr = '';
                     }
                 }
 
                 if (rDateStr === dStr) {
-                    const validItems = r.items.filter(item => !ageRestricted || !item.isRestricted);
-                    return acc + validItems.reduce((sum, item) => sum + item.price, 0);
+                    r.items.forEach(item => {
+                        if (ageRestricted && item.isRestricted) return;
+
+                        // Normalize Category
+                        let cat = item.category || Category.OTHER;
+                        if (typeof cat === 'string') {
+                            const lower = cat.toLowerCase();
+                            if (['groceries', 'food', 'dining', 'alcohol'].includes(lower)) cat = Category.FOOD;
+                            else if (['health', 'pharmacy', 'medical'].includes(lower)) cat = Category.HEALTH;
+                            else if (['household', 'cleaning', 'furniture'].includes(lower)) cat = Category.HOUSEHOLD;
+                            else if (['education', 'school', 'tuition', 'child'].includes(lower)) cat = Category.EDUCATION;
+                            else if (['transport', 'fuel', 'parking'].includes(lower)) cat = Category.TRANSPORT;
+                            else if (['luxury', 'electronics', 'entertainment'].includes(lower)) cat = Category.LUXURY;
+                            else if (['necessity'].includes(lower)) cat = Category.NECESSITY;
+                        }
+                        if (dayEntry[cat] === undefined) cat = Category.OTHER;
+
+                        dayEntry[cat] += item.price;
+                        dayEntry.total += item.price;
+                    });
                 }
-                return acc;
-            }, 0);
-
-            if (dayTotal > maxDayTotal) maxDayTotal = dayTotal;
-
-            weeklyActivity.push({
-                day: d.toLocaleDateString('en-US', { weekday: 'short' }), // "Mon"
-                fullDate: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
-                value: dayTotal
             });
+
+            if (dayEntry.total > maxDayTotal) maxDayTotal = dayEntry.total;
+            weeklyActivity.push(dayEntry);
         }
 
         console.log("Weekly Activity:", weeklyActivity); // Debug log
 
         // 2. Monthly Comparison
+        // 2. Monthly Comparison
         const thisMonthReceipts = receipts.filter(r => {
-            const d = new Date(r.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            // Robust Date Parsing
+            let rDate = new Date(r.date);
+            if (r.date.includes('-') && !r.date.includes('T')) {
+                // Handle YYYY-MM-DD manually to avoid UTC shift
+                const parts = r.date.split('-');
+                rDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
+            return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
         });
         const lastMonthReceipts = receipts.filter(r => {
-            const d = new Date(r.date);
+            let rDate = new Date(r.date);
+            if (r.date.includes('-') && !r.date.includes('T')) {
+                const parts = r.date.split('-');
+                rDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
             const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
             const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-            return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+            return rDate.getMonth() === lastMonth && rDate.getFullYear() === lastMonthYear;
         });
 
-        const thisMonthTotal = thisMonthReceipts.reduce((acc, r) => acc + r.items.reduce((s, i) => !ageRestricted || !i.isRestricted ? s + i.price : s, 0), 0);
-        const lastMonthTotal = lastMonthReceipts.reduce((acc, r) => acc + r.items.reduce((s, i) => !ageRestricted || !i.isRestricted ? s + i.price : s, 0), 0);
+        const thisMonthTotal = thisMonthReceipts.reduce((acc, r) => {
+            if (!ageRestricted) return acc + r.total;
+            return acc + r.items.reduce((s, i) => !i.isRestricted ? s + i.price : s, 0);
+        }, 0);
+
+        const lastMonthTotal = lastMonthReceipts.reduce((acc, r) => {
+            if (!ageRestricted) return acc + r.total;
+            return acc + r.items.reduce((s, i) => !i.isRestricted ? s + i.price : s, 0);
+        }, 0);
 
         const monthDiff = lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0;
 
@@ -331,7 +372,16 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         for (let i = 5; i >= 0; i--) {
             const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
             const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
-            trendData.push({ name: key, total: 0, essentials: 0, discretionary: 0 });
+
+            // Initialize with all categories set to 0
+            const monthEntry: any = { name: key, total: 0 };
+            Object.values(Category).forEach(cat => {
+                monthEntry[cat] = 0;
+            });
+            // Ensure 'Other' is initialized if it's not in the enum values loop (it is in types.ts but let's be safe)
+            if (monthEntry[Category.OTHER] === undefined) monthEntry[Category.OTHER] = 0;
+
+            trendData.push(monthEntry);
         }
 
         receipts.forEach(r => {
@@ -341,9 +391,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
             if (monthData) {
                 r.items.forEach(item => {
-                    if (ageRestricted && item.isRestricted) return;
-
-                    // Normalize Category (reuse logic if possible, or just check raw/normalized)
+                    // Normalize Category
                     let cat = item.category || Category.OTHER;
                     if (typeof cat === 'string') {
                         const lower = cat.toLowerCase();
@@ -356,14 +404,11 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         else if (['necessity'].includes(lower)) cat = Category.NECESSITY;
                     }
 
-                    const isEssential = [Category.FOOD, Category.NECESSITY, Category.HEALTH, Category.EDUCATION, Category.HOUSEHOLD, Category.TRANSPORT].includes(cat as any);
+                    // If category is not in our known list (e.g. from old data), fallback to OTHER
+                    if (monthData[cat] === undefined) cat = Category.OTHER;
 
                     monthData.total += item.price;
-                    if (isEssential) {
-                        monthData.essentials += item.price;
-                    } else {
-                        monthData.discretionary += item.price;
-                    }
+                    monthData[cat] += item.price;
                 });
             }
         });
@@ -392,9 +437,30 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             monthDiff,
             projectedTotal,
             thisMonthTotal,
-            trendData // Add this
+            trendData,
+            thisMonthReceipts, // Export for debug
+            dailyAverage: daysPassed > 0 ? thisMonthTotal / daysPassed : 0,
+            foodRatio: totalSpent > 0 ? ((categoryTotals[Category.FOOD] || 0) / totalSpent) * 100 : 0,
+            luxuryRatio: totalSpent > 0 ? (luxuryTotal / totalSpent) * 100 : 0,
+            educationRatio: totalSpent > 0 ? ((categoryTotals[Category.EDUCATION] || 0) / totalSpent) * 100 : 0,
+            healthRatio: totalSpent > 0 ? ((categoryTotals[Category.HEALTH] || 0) / totalSpent) * 100 : 0,
+
+            // Daily Metrics
+            todayTotal: weeklyActivity[weeklyActivity.length - 1]?.total || 0,
+            yesterdayTotal: weeklyActivity[weeklyActivity.length - 2]?.total || 0,
+            dailyRatios: (() => {
+                const today = weeklyActivity[weeklyActivity.length - 1];
+                if (!today || today.total === 0) return { education: 0, food: 0, activities: 0, health: 0 };
+                return {
+                    education: (today[Category.EDUCATION] / today.total) * 100,
+                    food: (today[Category.FOOD] / today.total) * 100,
+                    activities: (today[Category.LUXURY] / today.total) * 100,
+                    health: (today[Category.HEALTH] / today.total) * 100
+                };
+            })()
         };
     }, [receipts, monthlyBudget, ageRestricted]);
+
 
     // COLORS moved outside
     console.log("Dashboard Render - Category Data:", metrics.categoryData);
@@ -436,10 +502,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         <Shield className="w-6 h-6 text-white fill-white/10" strokeWidth={2} />
                         <h1 className="text-2xl font-heading font-bold text-white tracking-tighter">TrueTrack</h1>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                        <p className="text-slate-400 text-xs font-medium tracking-tight">Safe Harbor Active</p>
-                    </div>
+
                 </div>
                 <div className="flex items-center gap-3">
                     {ageRestricted && (
@@ -497,108 +560,168 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             {/* BENTO GRID LAYOUT */}
             <div className="grid grid-cols-2 gap-3 mb-6">
 
-                {/* Daily Activity */}
-                <AnimatedSection delay={200} className="col-span-2" animateContainer={false}>
-                    {({ isInView }: { isInView?: boolean } = {}) => (
-                        <div className="rounded-2xl border border-slate-800 bg-card p-5 shadow-lg">
-                            <h3 className="text-sm font-medium text-slate-400 mb-4 flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-blue-500" />
-                                Daily Activity
-                            </h3>
-                            <div className="h-32 flex items-end gap-2">
-                                {metrics.weeklyActivity.map((day, idx) => {
-                                    const maxVal = Math.max(...metrics.weeklyActivity.map(d => d.value), 1);
-                                    const heightPercent = (day.value / maxVal) * 100;
 
-                                    return (
-                                        <div key={idx} className="flex flex-col items-center gap-2 w-full h-full group/bar">
-                                            <div className="relative w-full flex-1 flex items-end">
-                                                <div
-                                                    className="w-full bg-blue-500/20 rounded-t-sm transition-all duration-1000 ease-out group-hover/bar:bg-blue-500 group-hover/bar:shadow-[0_0_15px_rgba(59,130,246,0.4)] relative"
-                                                    style={{ height: `${isInView ? Math.max(heightPercent, 5) : 0}%` }}
+
+                {/* Monthly Insights (Expanded) */}
+                {/* Monthly Insights (Expanded) */}
+                <AnimatedSection delay={300} className="col-span-2" animateContainer={false}>
+                    {({ isInView }: { isInView?: boolean } = {}) => (
+                        <div
+                            onClick={onProvisionClick}
+                            className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg cursor-pointer hover:border-slate-700 transition-all"
+                        >
+                            <div className="mb-6">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-yellow-500" />
+                                        {insightView === 'monthly' ? 'Monthly Insights' : 'Daily Insights'}
+                                    </h3>
+                                    <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setInsightView('daily'); }}
+                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'daily' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                        >
+                                            Daily
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setInsightView('monthly'); }}
+                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'monthly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                        >
+                                            Monthly
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-4">
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{insightView === 'monthly' ? 'Daily Avg' : 'Today'}</p>
+                                        <p className="text-xl font-bold text-white tabular-nums">€{insightView === 'monthly' ? metrics.dailyAverage.toFixed(0) : metrics.todayTotal.toFixed(0)}</p>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-800"></div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{insightView === 'monthly' ? 'Forecast' : 'Yesterday'}</p>
+                                        <p className="text-xl font-bold text-blue-400 tabular-nums">€{insightView === 'monthly' ? metrics.projectedTotal.toFixed(0) : metrics.yesterdayTotal.toFixed(0)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-4">
+                                {/* Helper for Gauges */}
+                                {[
+                                    { label: 'Education', value: insightView === 'monthly' ? metrics.educationRatio : metrics.dailyRatios.education, color: '#818cf8' }, // Indigo
+                                    { label: 'Food', value: insightView === 'monthly' ? metrics.foodRatio : metrics.dailyRatios.food, color: '#fbbf24' }, // Amber
+                                    { label: 'Activities', value: insightView === 'monthly' ? metrics.luxuryRatio : metrics.dailyRatios.activities, color: '#f472b6' }, // Pink
+                                    { label: 'Health', value: insightView === 'monthly' ? metrics.healthRatio : metrics.dailyRatios.health, color: '#34d399' } // Emerald
+                                ].map((gauge, idx) => (
+                                    <div key={idx} className="flex flex-col items-center relative">
+                                        <div className="h-20 w-20 relative">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <RadialBarChart
+                                                    key={`${isInView ? 'visible' : 'hidden'}-${idx}`}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius="65%"
+                                                    outerRadius="100%"
+                                                    barSize={8}
+                                                    data={[{ value: Math.min(gauge.value, 100), fill: gauge.color }]}
+                                                    startAngle={90}
+                                                    endAngle={-270}
                                                 >
-                                                    {/* Tooltip */}
-                                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 border border-white/10 font-bold tabular-nums">
-                                                        €{day.value.toFixed(2)}
-                                                    </div>
-                                                </div>
+                                                    <PolarAngleAxis
+                                                        type="number"
+                                                        domain={[0, 100]}
+                                                        angleAxisId={0}
+                                                        tick={false}
+                                                    />
+                                                    <RadialBar
+                                                        background={{ fill: '#1e293b' }}
+                                                        dataKey="value"
+                                                        cornerRadius={10}
+                                                        isAnimationActive={true}
+                                                        animationDuration={1500}
+                                                        animationEasing="ease-out"
+                                                    />
+                                                </RadialBarChart>
+                                            </ResponsiveContainer>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-sm font-bold" style={{ color: gauge.color }}>{gauge.value.toFixed(0)}%</span>
                                             </div>
-                                            <span className="text-[10px] text-slate-500 font-medium">{day.day}</span>
                                         </div>
-                                    )
-                                })}
+                                        <span className="text-[10px] text-slate-400 uppercase tracking-wide mt-1 font-bold text-center">{gauge.label}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
                 </AnimatedSection>
 
-                {/* Simplified Provision Stats */}
-                <AnimatedSection delay={300} className="col-span-2" animateContainer={false}>
-                    <div
-                        onClick={onProvisionClick}
-                        className="grid grid-cols-3 gap-4 rounded-2xl border border-blue-500/20 bg-card p-4 shadow-lg cursor-pointer hover:border-blue-500/40 transition-all"
-                    >
-                        <div className="flex flex-col items-center justify-center border-r border-slate-800 pr-4">
-                            <span className="text-xs text-slate-400 uppercase tracking-wide mb-1">Provision</span>
-                            <span className="text-2xl font-bold text-blue-500">{metrics.numericEvidenceScore}</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center border-r border-slate-800 pr-4">
-                            <span className="text-xs text-slate-400 uppercase tracking-wide mb-1">Child %</span>
-                            <span className="text-2xl font-bold text-green-500">{metrics.provisionRatio.toFixed(0)}%</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center">
-                            <span className="text-xs text-slate-400 uppercase tracking-wide mb-1">Trend</span>
-                            <span className={`text-2xl font-bold ${metrics.monthDiff > 0 ? 'text-blue-400' : 'text-slate-300'}`}>
-                                {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
-                            </span>
-                        </div>
-                    </div>
-                </AnimatedSection>
-
                 {/* Trend (Area Chart) & Top Vendors */}
                 <div className="grid grid-cols-2 gap-3 col-span-2">
-                    <AnimatedSection className="col-span-1" delay={400} animateContainer={false}>
+                    <AnimatedSection className="col-span-2" delay={400} animateContainer={false}>
                         {({ isInView }: { isInView?: boolean } = {}) => (
-                            <div className="h-full rounded-2xl border border-slate-800 bg-card p-4 shadow-lg flex flex-col min-h-[180px]">
-                                <h3 className="text-sm font-medium text-slate-400 mb-2">Monthly Trend</h3>
+                            <div className="h-full rounded-2xl border border-slate-800 bg-card p-4 shadow-lg flex flex-col min-h-[300px]">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-blue-400" />
+                                        Spending Trends
+                                    </h3>
+                                    <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                        <button
+                                            onClick={() => setChartView('daily')}
+                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'daily' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                        >
+                                            Daily
+                                        </button>
+                                        <button
+                                            onClick={() => setChartView('monthly')}
+                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'monthly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                        >
+                                            Monthly
+                                        </button>
+                                    </div>
+                                </div>
                                 <div className="flex-1 w-full -ml-2">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={metrics.trendData} key={isInView ? 'visible' : 'hidden'}>
+                                        <AreaChart
+                                            data={chartView === 'daily' ? metrics.weeklyActivity : metrics.trendData}
+                                            key={`${chartView}-${isInView ? 'visible' : 'hidden'}`}
+                                        >
                                             <defs>
-                                                <linearGradient id="dashboardEssentials" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                                                </linearGradient>
-                                                <linearGradient id="dashboardDiscretionary" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#f472b6" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#f472b6" stopOpacity={0} />
-                                                </linearGradient>
+                                                {Object.keys(COLORS).map((cat, index) => (
+                                                    <linearGradient key={cat} id={`gradient-${cat}`} x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor={COLORS[cat]} stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor={COLORS[cat]} stopOpacity={0} />
+                                                    </linearGradient>
+                                                ))}
                                             </defs>
                                             <Tooltip
                                                 contentStyle={{ backgroundColor: '#1e293b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
                                                 itemStyle={{ color: '#fff' }}
+                                                formatter={(value: number, name: string) => [`€${value.toFixed(2)}`, name]}
+                                                labelStyle={{ color: '#94a3b8' }}
+                                                wrapperStyle={{ zIndex: 1000 }}
+                                            />
+                                            <XAxis
+                                                dataKey={chartView === 'daily' ? "day" : "name"}
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fill: '#64748b', fontSize: 10 }}
+                                                dy={10}
                                             />
                                             <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="essentials"
-                                                name="Essentials"
-                                                stackId="1"
-                                                stroke="#38bdf8"
-                                                fill="url(#dashboardEssentials)"
-                                                strokeWidth={2}
-                                                animationDuration={1500}
-                                            />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="discretionary"
-                                                name="Discretionary"
-                                                stackId="1"
-                                                stroke="#f472b6"
-                                                fill="url(#dashboardDiscretionary)"
-                                                strokeWidth={2}
-                                                animationDuration={1500}
-                                            />
+                                            {Object.keys(COLORS).map((cat) => (
+                                                <Area
+                                                    key={cat}
+                                                    type="monotone"
+                                                    dataKey={cat}
+                                                    name={cat}
+                                                    stackId="1"
+                                                    stroke={COLORS[cat]}
+                                                    fill={`url(#gradient-${cat})`}
+                                                    strokeWidth={2}
+                                                    animationDuration={1500}
+                                                />
+                                            ))}
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -606,7 +729,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         )}
                     </AnimatedSection>
 
-                    <AnimatedSection className="col-span-1" delay={500} animateContainer={false}>
+                    <AnimatedSection className="col-span-2" delay={500} animateContainer={false}>
                         {({ isInView }: { isInView?: boolean } = {}) => (
                             <div className="h-full rounded-2xl border border-slate-800 bg-card p-5 shadow-lg">
                                 <h3 className="text-sm font-medium text-slate-400 mb-4">Top Vendors</h3>
@@ -615,7 +738,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         metrics.topStores.map((store, idx) => (
                                             <div key={idx} className="space-y-1">
                                                 <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-300 truncate max-w-[60px]">{store.name}</span>
+                                                    <span className="text-slate-300 truncate max-w-[200px]">{store.name}</span>
                                                     <span className="text-slate-400 tabular-nums">€{store.value.toFixed(0)}</span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -804,6 +927,34 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 </div>
             )}
+            {/* DEBUG SECTION */}
+            <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
+                <p className="text-white font-bold mb-2">DEBUG CALCULATION:</p>
+                <p>Age Restricted: {ageRestricted ? 'ON' : 'OFF'}</p>
+                <p>Calculated Total: €{metrics.thisMonthTotal.toFixed(2)}</p>
+                <p className="mt-2 mb-1 text-white">Receipts included in this month:</p>
+                <div className="space-y-1">
+                    {metrics.thisMonthReceipts.map((r, i) => (
+                        <div key={i} className="flex justify-between border-b border-white/5 pb-1">
+                            <span>{r.date} - {r.storeName}</span>
+                            <span>€{r.total.toFixed(2)}</span>
+                        </div>
+                    ))}
+                    {metrics.thisMonthReceipts.length === 0 && <p>No receipts found for this month.</p>}
+                </div>
+
+                <p className="mt-4 mb-1 text-white border-t border-white/10 pt-2">Last 5 Receipts (All Time):</p>
+                <div className="space-y-1">
+                    {receipts.slice(0, 5).map((r, i) => (
+                        <div key={i} className="flex justify-between border-b border-white/5 pb-1">
+                            <span>{r.date} - {r.storeName}</span>
+                            <span>€{r.total.toFixed(2)}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="h-20"></div>
         </div>
     );
 };

@@ -40,7 +40,7 @@ const App: React.FC = () => {
 
   // ...
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [monthlyBudget, setMonthlyBudget] = useState(1000);
+  const [monthlyBudget, setMonthlyBudget] = useState(300);
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
   const [ageRestricted, setAgeRestricted] = useState(false);
   const [showDevBanner, setShowDevBanner] = useState(true);
@@ -298,7 +298,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-14 safe-area-top">
+    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-safe safe-area-top">
       <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
 

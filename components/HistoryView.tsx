@@ -19,6 +19,62 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
     const [searchTerm, setSearchTerm] = useState('');
     const [showFullImage, setShowFullImage] = useState(false);
     const [showStats, setShowStats] = useState(false);
+    const [isEditingDate, setIsEditingDate] = useState(false);
+
+    // Zoom & Pan State
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    const handleImageClick = (e: React.MouseEvent) => {
+        if (isDragging) return;
+        if (zoomLevel === 1) {
+            setZoomLevel(2.5);
+        } else {
+            setZoomLevel(1);
+            setPanPosition({ x: 0, y: 0 });
+        }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (zoomLevel > 1) {
+            setIsDragging(true);
+            setDragStart({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDragging && zoomLevel > 1) {
+            e.preventDefault();
+            setPanPosition({
+                x: e.clientX - dragStart.x,
+                y: e.clientY - dragStart.y
+            });
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    // Touch support for mobile
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (zoomLevel > 1) {
+            setIsDragging(true);
+            setDragStart({ x: e.touches[0].clientX - panPosition.x, y: e.touches[0].clientY - panPosition.y });
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (isDragging && zoomLevel > 1) {
+            // e.preventDefault(); // Passive listener issue, better to avoid
+            setPanPosition({
+                x: e.touches[0].clientX - dragStart.x,
+                y: e.touches[0].clientY - dragStart.y
+            });
+        }
+    };
 
     // Filter States
     const [dateFilter, setDateFilter] = useState<'all' | 'thisMonth' | 'lastMonth' | 'thisYear'>('all');
@@ -269,23 +325,94 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                         </div>
 
                         <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                            <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
+                            {isEditingDate ? (
+                                <div className="flex items-center gap-2 w-full">
+                                    <input
+                                        type="date"
+                                        value={new Date(selectedReceipt.date).toISOString().split('T')[0]}
+                                        onChange={(e) => {
+                                            if (onUpdate && e.target.value) {
+                                                onUpdate({ ...selectedReceipt, date: e.target.value });
+                                                onSelectReceipt({ ...selectedReceipt, date: e.target.value });
+                                            }
+                                        }}
+                                        className="bg-surfaceHighlight border border-white/20 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-primary"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            if (onUpdate) {
+                                                onUpdate({ ...selectedReceipt, date: today });
+                                                onSelectReceipt({ ...selectedReceipt, date: today });
+                                            }
+                                        }}
+                                        className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-bold hover:bg-primary/30"
+                                    >
+                                        Today
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditingDate(false)}
+                                        className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold hover:bg-white/20"
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
+                                    {onUpdate && (
+                                        <button
+                                            onClick={() => setIsEditingDate(true)}
+                                            className="text-[10px] text-primary hover:text-primary/80 font-medium underline"
+                                        >
+                                            Edit Date
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {showFullImage && displayImageUrl && (
-                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-sm">
+                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-sm">
                             <button
-                                onClick={() => setShowFullImage(false)}
-                                className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
+                                onClick={() => {
+                                    setShowFullImage(false);
+                                    setZoomLevel(1);
+                                    setPanPosition({ x: 0, y: 0 });
+                                }}
+                                className="absolute top-6 right-6 z-[110] text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
                             >
                                 <X size={24} />
                             </button>
-                            <img
-                                src={displayImageUrl}
-                                alt="Full Receipt"
-                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                            />
+
+                            <div
+                                className="relative w-full h-full flex items-center justify-center touch-none"
+                                onMouseDown={handleMouseDown}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseUp}
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleMouseUp}
+                            >
+                                <img
+                                    src={displayImageUrl}
+                                    alt="Full Receipt"
+                                    draggable={false}
+                                    style={{
+                                        transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
+                                        cursor: zoomLevel > 1 ? 'grab' : 'zoom-in',
+                                        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                                    }}
+                                    onClick={handleImageClick}
+                                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
+                                />
+                            </div>
+
+                            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-medium border border-white/10 pointer-events-none">
+                                {zoomLevel === 1 ? 'Tap to Zoom' : 'Drag to Pan • Tap to Reset'}
+                            </div>
                         </div>
                     )}
                 </div>
