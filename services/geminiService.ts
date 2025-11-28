@@ -189,9 +189,55 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
 
     const data = JSON.parse(text) as AnalysisResult;
 
-    // Ensure date defaults to today if missing or invalid
+    // --- ROBUST VALIDATION & NORMALIZATION ---
+
+    // 1. Validate Date (YYYY-MM-DD)
+    const todayStr = new Date().toISOString().split('T')[0];
     if (!data.date) {
-      data.date = new Date().toISOString().split('T')[0];
+      console.warn("⚠️ Date missing from AI response, defaulting to today.");
+      data.date = todayStr;
+    } else {
+      // Attempt to normalize date
+      const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+      if (!datePattern.test(data.date)) {
+        console.warn(`⚠️ Invalid date format received: "${data.date}". Attempting to fix...`);
+        const parsedDate = new Date(data.date);
+        if (!isNaN(parsedDate.getTime())) {
+          data.date = parsedDate.toISOString().split('T')[0];
+          console.log(`✅ Fixed date to: ${data.date}`);
+        } else {
+          console.error("❌ Could not parse date, defaulting to today.");
+          data.date = todayStr;
+        }
+      }
+    }
+
+    // 2. Validate Total (Number)
+    if (typeof data.total !== 'number' || isNaN(data.total)) {
+      console.warn(`⚠️ Invalid total received: "${data.total}". Attempting to extract number...`);
+      if (typeof data.total === 'string') {
+        const extracted = parseFloat((data.total as string).replace(/[^0-9.]/g, ''));
+        if (!isNaN(extracted)) {
+          data.total = extracted;
+          console.log(`✅ Fixed total to: ${data.total}`);
+        } else {
+          throw new Error("Could not read the total amount (invalid format).");
+        }
+      } else {
+        throw new Error("Could not read the total amount (missing).");
+      }
+    }
+
+    // 3. Validate Items (Array)
+    if (!Array.isArray(data.items)) {
+      console.warn("⚠️ Items is not an array, defaulting to empty array.");
+      data.items = [];
+    }
+
+    // 4. Ensure Store Name
+    if (!data.storeName || data.storeName.trim() === '') {
+      console.warn("⚠️ Store name missing, defaulting to 'Unknown Store'.");
+      data.storeName = 'Unknown Store';
     }
 
     return data;

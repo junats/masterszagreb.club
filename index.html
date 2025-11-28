@@ -36,6 +36,29 @@
     }
   </script>
   <style>
+    :root {
+      --background: 224 71.4% 4.1%;
+      --foreground: 210 40% 98%;
+      --card: 224 71.4% 6.1%;
+      --card-foreground: 210 40% 98%;
+      --popover: 224 71.4% 4.1%;
+      --popover-foreground: 210 40% 98%;
+      --primary: 217 91% 60%;
+      --primary-foreground: 222.2 47.4% 11.2%;
+      --secondary: 217.2 32.6% 17.5%;
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%;
+      --accent: 217.2 32.6% 17.5%;
+      --accent-foreground: 210 40% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%;
+      --input: 217.2 32.6% 17.5%;
+      --ring: 212.7 26.8% 83.9%;
+      --radius: 0.75rem;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -46,14 +69,24 @@
       font-family: 'Inter', sans-serif;
       font-weight: 600;
       /* Bolder base weight */
-      background-color: #020617;
-      color: white;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
       overflow: hidden;
       /* iOS safe area support */
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glow-text {
+      text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
     }
 
     #root {
@@ -73,6 +106,62 @@
       /* IE and Edge */
       scrollbar-width: none;
       /* Firefox */
+    }
+
+    /* Global Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    .animate-slide-up {
+      animation: slideUp 0.4s ease-out forwards;
+    }
+
+    .animate-scale-in {
+      animation: scaleIn 0.3s ease-out forwards;
+    }
+
+    /* Smooth transitions for data updates */
+    .transition-width {
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .transition-all-data {
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
   <script type="importmap">

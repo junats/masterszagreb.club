@@ -37,7 +37,7 @@ const Settings: React.FC<SettingsProps> = ({
         }
     };
 
-    const handleExportData = () => {
+    const handleExportData = async () => {
         if (user.tier !== SubscriptionTier.PRO) {
             setShowPaywall(true);
             return;
@@ -51,8 +51,7 @@ const Settings: React.FC<SettingsProps> = ({
 
         try {
             const receipts: Receipt[] = JSON.parse(receiptsData);
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Date,Store,Category,Item Name,Price,Restricted\n";
+            let csvContent = "Date,Store,Category,Item Name,Price,Restricted\n";
 
             receipts.forEach(r => {
                 r.items.forEach(i => {
@@ -68,13 +67,41 @@ const Settings: React.FC<SettingsProps> = ({
                 });
             });
 
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `truetrack_export_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Native Export using Capacitor Filesystem & Share
+            const fileName = `truetrack_export_${new Date().toISOString().split('T')[0]}.csv`;
+
+            try {
+                const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+                const { Share } = await import('@capacitor/share');
+
+                // Write file to cache directory
+                const result = await Filesystem.writeFile({
+                    path: fileName,
+                    data: csvContent,
+                    directory: Directory.Cache,
+                    encoding: Encoding.UTF8
+                });
+
+                // Share the file
+                await Share.share({
+                    title: 'TrueTrack Export',
+                    text: 'Here is my spending data from TrueTrack.',
+                    url: result.uri,
+                    dialogTitle: 'Export Data'
+                });
+
+            } catch (nativeError) {
+                console.warn("Native export failed, falling back to web download", nativeError);
+                // Fallback for Web
+                const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", fileName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
         } catch (e) {
             console.error("Export failed", e);
             alert("Failed to export data.");

@@ -58,4 +58,4 @@ export interface User {
   avatarUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'scan' | 'history' | 'support' | 'settings';
+export type ViewState = 'dashboard' | 'scan' | 'history' | 'support' | 'settings' | 'provision';

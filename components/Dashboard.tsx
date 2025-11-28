@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Receipt, Category } from '../types';
-import { ShoppingBag, X, ShieldCheck, FileText, Calendar, Store, ArrowUp, BarChart3, Check, Shield, Sparkles, TrendingUp, TrendingDown, Minus, Wallet, Hash, ArrowUpRight, AlertTriangle, CalendarDays, ArrowRight } from 'lucide-react';
+import { ShoppingBag, X, ShieldCheck, FileText, Calendar, Store, ArrowUp, BarChart3, Check, Shield, Sparkles, TrendingUp, TrendingDown, Minus, Wallet, Hash, ArrowUpRight, AlertTriangle, CalendarDays, ArrowRight, Activity } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface DashboardProps {
     receipts: Receipt[];
     monthlyBudget: number;
     ageRestricted: boolean;
     onViewReceipt?: (receipt: Receipt) => void;
+    onProvisionClick?: () => void;
 }
 
 interface DrillDownState {
@@ -16,12 +18,84 @@ interface DrillDownState {
 
 type DateFilter = 'all' | 'this_month' | 'last_month';
 
-const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, onViewReceipt }) => {
+// Hook for scroll animations
+function useInView(options = { threshold: 0.1, rootMargin: '0px' }, triggerOnce = false) {
+    const [ref, setRef] = useState<HTMLDivElement | null>(null);
+    const [isInView, setIsInView] = useState(false);
+
+    React.useEffect(() => {
+        if (!ref) return;
+
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setIsInView(true);
+                if (triggerOnce) observer.disconnect();
+            } else {
+                if (!triggerOnce) setIsInView(false);
+            }
+        }, options);
+
+        observer.observe(ref);
+
+        // Fallback: Force visible after 100ms to ensure content shows even if observer fails
+        const timeout = setTimeout(() => {
+            setIsInView(true);
+        }, 100);
+
+        return () => {
+            observer.disconnect();
+            clearTimeout(timeout);
+        };
+    }, [ref, options.threshold, options.rootMargin, triggerOnce]);
+
+    return [setRef, isInView] as const;
+}
+
+const AnimatedSection: React.FC<{ children: React.ReactNode | ((props: { isInView: boolean }) => React.ReactNode); className?: string; delay?: number; triggerOnce?: boolean; animateContainer?: boolean }> = ({ children, className = "", delay = 0, triggerOnce = false, animateContainer = true }) => {
+    const [ref, isInView] = useInView({ threshold: 0.1, rootMargin: '0px' }, triggerOnce);
+
+    const containerClasses = animateContainer
+        ? `transition-all duration-1000 ease-out transform ${isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`
+        : '';
+
+    return (
+        <div
+            ref={ref}
+            className={`${containerClasses} ${className}`}
+            style={animateContainer ? { transitionDelay: `${delay}ms` } : {}}
+        >
+            {typeof children === 'function'
+                ? children({ isInView })
+                : React.Children.map(children, child => {
+                    if (React.isValidElement(child)) {
+                        return React.cloneElement(child as React.ReactElement<any>, { isInView });
+                    }
+                    return child;
+                })
+            }
+        </div>
+    );
+};
+
+const COLORS: Record<string, string> = {
+    [Category.NECESSITY]: '#38bdf8', // Sky
+    [Category.FOOD]: '#4ade80',      // Green
+    [Category.LUXURY]: '#f472b6',    // Pink
+    [Category.HOUSEHOLD]: '#818cf8', // Indigo
+    [Category.HEALTH]: '#fb7185',    // Rose
+    [Category.TRANSPORT]: '#facc15', // Yellow
+    [Category.EDUCATION]: '#6366f1', // Indigo
+    [Category.OTHER]: '#94a3b8',     // Slate
+};
+
+const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, onViewReceipt, onProvisionClick }) => {
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
     // Calculate Metrics
     const metrics = useMemo(() => {
+        console.log("Dashboard Receipts:", receipts);
+
         // 1. Filter Receipts based on Date Filter
         const now = new Date();
         const currentMonth = now.getMonth();
@@ -49,54 +123,73 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         const storeTotals: Record<string, number> = {};
 
         filteredReceipts.forEach(r => {
-            const validItems = r.items.filter(item => !ageRestricted || !item.isRestricted);
-            const effectiveReceiptTotal = validItems.reduce((sum, item) => sum + item.price, 0);
+            // Store Totals
+            storeTotals[r.storeName] = (storeTotals[r.storeName] || 0) + r.items.reduce((s, i) => s + i.price, 0);
 
-            if (validItems.length === 0 && r.items.length > 0) return;
+            r.items.forEach(i => {
+                const cat = i.category || Category.OTHER; // Original category
 
-            totalSpent += effectiveReceiptTotal;
-            storeTotals[r.storeName] = (storeTotals[r.storeName] || 0) + effectiveReceiptTotal;
-
-            validItems.forEach(item => {
-                const cat = item.category || Category.OTHER;
-                categoryTotals[cat] = (categoryTotals[cat] || 0) + item.price;
-
-                if (!categoryItems[cat]) categoryItems[cat] = [];
-                categoryItems[cat].push({ name: item.name, price: item.price, date: r.date, store: r.storeName });
-
-                if (cat === Category.LUXURY) {
-                    luxuryTotal += item.price;
-                    if (!categoryItems['Luxury']) categoryItems['Luxury'] = [];
-                    categoryItems['Luxury'].push({ name: item.name, price: item.price, date: r.date, store: r.storeName });
-                } else {
-                    // Essentials Calculation (Stricter Provision Logic)
-                    // 1. Always include Child Related items
-                    if (item.isChildRelated) {
-                        provisionTotal += item.price;
-                    }
-                    // 2. Include strict essentials (Food=Groceries, Household, Health, Education)
-                    // Exclude Transport (Gas) unless child related, to avoid inflating score with personal travel
-                    else if ([Category.NECESSITY, Category.FOOD, Category.HEALTH, Category.HOUSEHOLD, Category.EDUCATION].includes(cat)) {
-                        provisionTotal += item.price;
-                    }
+                // Normalize Category for Aggregation
+                let normalizedCat = cat;
+                if (typeof cat === 'string') {
+                    const lower = cat.toLowerCase();
+                    if (['groceries', 'food', 'dining', 'alcohol'].includes(lower)) normalizedCat = Category.FOOD;
+                    else if (['health', 'pharmacy', 'medical'].includes(lower)) normalizedCat = Category.HEALTH;
+                    else if (['household', 'cleaning', 'furniture'].includes(lower)) normalizedCat = Category.HOUSEHOLD;
+                    else if (['education', 'school', 'tuition', 'child'].includes(lower)) normalizedCat = Category.EDUCATION;
+                    else if (['transport', 'fuel', 'parking'].includes(lower)) normalizedCat = Category.TRANSPORT;
+                    else if (['luxury', 'electronics', 'entertainment'].includes(lower)) normalizedCat = Category.LUXURY;
+                    else if (['necessity'].includes(lower)) normalizedCat = Category.NECESSITY;
+                    else normalizedCat = Category.OTHER;
                 }
+
+                categoryTotals[normalizedCat] = (categoryTotals[normalizedCat] || 0) + i.price;
+                totalSpent += i.price; // Accumulate total spent here
+
+                // Provision Calculation (using normalized or raw)
+                // ... (existing logic is fine, but we can simplify using normalizedCat if we trust it,
+                // but let's keep the existing robust check for now to be safe)
+
+                // Check against valid Enum values
+                const isEssentialEnum = [Category.FOOD, Category.HEALTH, Category.HOUSEHOLD, Category.EDUCATION].includes(cat as any);
+                const isLuxuryEnum = [Category.LUXURY].includes(cat as any);
+
+                // Fallback string checks
+                const catLower = typeof cat === 'string' ? cat.toLowerCase() : '';
+                const isEssentialString = ['groceries', 'health', 'household', 'education', 'child'].includes(catLower);
+                const isLuxuryString = ['dining', 'entertainment', 'alcohol', 'electronics', 'luxury'].includes(catLower);
+
+                const isEssential = isEssentialEnum || isEssentialString;
+                const isLuxury = isLuxuryEnum || isLuxuryString;
+
+                if (i.isChildRelated || (isEssential && !isLuxury)) {
+                    provisionTotal += i.price;
+                }
+                if (isLuxury && !i.isChildRelated) {
+                    luxuryTotal += i.price;
+                }
+
+                if (!categoryItems[normalizedCat]) categoryItems[normalizedCat] = [];
+                categoryItems[normalizedCat].push({
+                    name: i.name,
+                    price: i.price,
+                    date: r.date,
+                    store: r.storeName
+                });
             });
         });
 
-        const categoryData = Object.entries(categoryTotals).map(([name, value]) => ({
-            name,
-            value,
-            percentage: totalSpent > 0 ? (value / totalSpent) * 100 : 0
-        })).sort((a, b) => b.value - a.value);
+        const provisionRatio = totalSpent > 0 ? (provisionTotal / totalSpent) * 100 : 0;
+
+        const categoryData = Object.entries(categoryTotals)
+            .map(([name, value]) => ({ name, value, percentage: totalSpent > 0 ? (value / totalSpent) * 100 : 0 }))
+            .sort((a, b) => b.value - a.value);
 
         // Sort drilldown items
         Object.keys(categoryItems).forEach(key => {
             categoryItems[key].sort((a, b) => b.price - a.price);
         });
 
-        const provisionRatio = totalSpent > 0 ? (provisionTotal / totalSpent) * 100 : 0;
-
-        // Evidence Health Components
         const volumeCount = filteredReceipts.length;
 
         // Top Stores (Top 3)
@@ -110,12 +203,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
         // Max Receipt
         const maxSingleReceipt = filteredReceipts.length > 0
-            ? Math.max(...filteredReceipts.map(r => r.items.reduce((s, i) => !ageRestricted || !i.isRestricted ? s + i.price : s, 0)))
+            ? Math.max(...filteredReceipts.map(r => r.items.reduce((s, i) => s + i.price, 0)))
             : 0;
 
         // Recent Spending Trend (Last 5 logs)
         const recentLogs = [...filteredReceipts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).reverse();
-        const maxLogValue = Math.max(...recentLogs.map(r => r.total), 1);
+        const maxLogValue = Math.max(...recentLogs.map(r => r.items.reduce((s, i) => s + i.price, 0)), 1);
 
         // Evidence Score Calculation (0-100)
         // 50% Volume (capped at 20 receipts), 50% Provision Ratio
@@ -136,7 +229,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         if (filteredReceipts.length >= 3) {
             // Compare average of last 3 logs vs global average
             const recentSubset = recentLogs.slice(-3);
-            const recentAvg = recentSubset.reduce((sum, r) => sum + r.total, 0) / recentSubset.length;
+            const recentAvg = recentSubset.reduce((sum, r) => sum + r.items.reduce((s, i) => s + i.price, 0), 0) / recentSubset.length;
 
             const diffPercent = avgReceipt > 0 ? ((recentAvg - avgReceipt) / avgReceipt) * 100 : 0;
 
@@ -161,30 +254,36 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             }
         }
 
-        // --- NEW METRICS ---
-
-        // 1. Daily Activity (Last 7 Days)
+        // 1. Daily Activity (Last 7 Days) - FIXED DATE LOGIC
         const weeklyActivity = [];
         let maxDayTotal = 0;
 
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
+            // Use local YYYY-MM-DD format
+            const offset = d.getTimezoneOffset();
+            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+            const dStr = localDate.toISOString().split('T')[0];
 
             const dayTotal = receipts.reduce((acc, r) => {
-                let rDate = new Date(r.date);
-
-                // Handle YYYY-MM-DD strings explicitly
-                if (r.date.length === 10 && r.date.includes('-')) {
-                    const [y, m, dt] = r.date.split('-').map(Number);
-                    rDate = new Date(y, m - 1, dt);
+                // Normalize receipt date to YYYY-MM-DD
+                let rDateStr = r.date;
+                if (r.date.includes('T')) {
+                    rDateStr = r.date.split('T')[0];
+                } else if (r.date.length === 10 && r.date.includes('-')) {
+                    // Already YYYY-MM-DD, no change needed
+                } else {
+                    // Attempt to parse and format if it's a different format
+                    try {
+                        rDateStr = new Date(r.date).toISOString().split('T')[0];
+                    } catch (e) {
+                        console.warn("Could not parse receipt date:", r.date, e);
+                        rDateStr = ''; // Fallback
+                    }
                 }
 
-                // Simple comparison of Day, Month, Year (Local Time)
-                if (rDate.getDate() === d.getDate() &&
-                    rDate.getMonth() === d.getMonth() &&
-                    rDate.getFullYear() === d.getFullYear()) {
-
+                if (rDateStr === dStr) {
                     const validItems = r.items.filter(item => !ageRestricted || !item.isRestricted);
                     return acc + validItems.reduce((sum, item) => sum + item.price, 0);
                 }
@@ -194,11 +293,13 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             if (dayTotal > maxDayTotal) maxDayTotal = dayTotal;
 
             weeklyActivity.push({
-                day: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }), // "Mon 27"
-                date: d.getDate(),
+                day: d.toLocaleDateString('en-US', { weekday: 'short' }), // "Mon"
+                fullDate: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
                 value: dayTotal
             });
         }
+
+        console.log("Weekly Activity:", weeklyActivity); // Debug log
 
         // 2. Monthly Comparison
         const thisMonthReceipts = receipts.filter(r => {
@@ -221,6 +322,51 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const daysPassed = Math.max(now.getDate(), 1);
         const projectedTotal = (thisMonthTotal / daysPassed) * daysInMonth;
+
+        // 4. Six Month Trend Data (for Area Chart)
+        const trendData = [];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const today = new Date();
+
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
+            trendData.push({ name: key, total: 0, essentials: 0, discretionary: 0 });
+        }
+
+        receipts.forEach(r => {
+            const d = new Date(r.date);
+            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
+            const monthData = trendData.find(m => m.name === key);
+
+            if (monthData) {
+                r.items.forEach(item => {
+                    if (ageRestricted && item.isRestricted) return;
+
+                    // Normalize Category (reuse logic if possible, or just check raw/normalized)
+                    let cat = item.category || Category.OTHER;
+                    if (typeof cat === 'string') {
+                        const lower = cat.toLowerCase();
+                        if (['groceries', 'food', 'dining', 'alcohol'].includes(lower)) cat = Category.FOOD;
+                        else if (['health', 'pharmacy', 'medical'].includes(lower)) cat = Category.HEALTH;
+                        else if (['household', 'cleaning', 'furniture'].includes(lower)) cat = Category.HOUSEHOLD;
+                        else if (['education', 'school', 'tuition', 'child'].includes(lower)) cat = Category.EDUCATION;
+                        else if (['transport', 'fuel', 'parking'].includes(lower)) cat = Category.TRANSPORT;
+                        else if (['luxury', 'electronics', 'entertainment'].includes(lower)) cat = Category.LUXURY;
+                        else if (['necessity'].includes(lower)) cat = Category.NECESSITY;
+                    }
+
+                    const isEssential = [Category.FOOD, Category.NECESSITY, Category.HEALTH, Category.EDUCATION, Category.HOUSEHOLD, Category.TRANSPORT].includes(cat as any);
+
+                    monthData.total += item.price;
+                    if (isEssential) {
+                        monthData.essentials += item.price;
+                    } else {
+                        monthData.discretionary += item.price;
+                    }
+                });
+            }
+        });
 
         return {
             totalSpent,
@@ -245,41 +391,41 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             maxDayTotal,
             monthDiff,
             projectedTotal,
-            thisMonthTotal
+            thisMonthTotal,
+            trendData // Add this
         };
-    }, [receipts, ageRestricted, monthlyBudget, dateFilter]);
+    }, [receipts, monthlyBudget, ageRestricted]);
 
-    const toggleDateFilter = () => {
-        if (dateFilter === 'all') setDateFilter('this_month');
-        else if (dateFilter === 'this_month') setDateFilter('last_month');
-        else setDateFilter('all');
-    };
+    // COLORS moved outside
+    console.log("Dashboard Render - Category Data:", metrics.categoryData);
+    console.log("Dashboard Render - Trend Data:", metrics.trendData);
+
+    // const [isMounted, setIsMounted] = useState(false); // No longer needed
+    // React.useEffect(() => {
+    //     const timer = setTimeout(() => setIsMounted(true), 50);
+    //     return () => clearTimeout(timer);
+    // }, []);
+
+    const budgetProgress = monthlyBudget > 0 ? (metrics.thisMonthTotal / monthlyBudget) * 100 : 0;
+    const isOverBudget = metrics.thisMonthTotal > monthlyBudget;
+
+    // Animated Budget Progress (now driven by isInView)
+    // const [animatedBudgetProgress, setAnimatedBudgetProgress] = useState(0);
+    // React.useEffect(() => {
+    //     if (isMounted) {
+    //         setAnimatedBudgetProgress(budgetProgress);
+    //     } else {
+    //         setAnimatedBudgetProgress(0);
+    //     }
+    // }, [isMounted, budgetProgress]);
+
+    // Evidence Gauge Calc (for simplified provision card)
+    const circumference = 2 * Math.PI * 70; // Adjusted radius for the new simplified card
+    const targetOffset = circumference - (metrics.numericEvidenceScore / 100) * circumference;
 
     const getDateFilterLabel = () => {
-        switch (dateFilter) {
-            case 'this_month': return 'This Month';
-            case 'last_month': return 'Last Month';
-            default: return 'All Time';
-        }
+        return "All Time"; // Simplified for dashboard
     };
-
-    const COLORS: Record<string, string> = {
-        [Category.NECESSITY]: '#38bdf8', // Sky
-        [Category.FOOD]: '#4ade80',      // Green
-        [Category.LUXURY]: '#f472b6',    // Pink
-        [Category.HOUSEHOLD]: '#818cf8', // Indigo
-        [Category.HEALTH]: '#fb7185',    // Rose
-        [Category.TRANSPORT]: '#facc15', // Yellow
-        [Category.EDUCATION]: '#6366f1', // Indigo
-        [Category.OTHER]: '#94a3b8',     // Slate
-    };
-
-    const budgetProgress = monthlyBudget > 0 ? (metrics.totalSpent / monthlyBudget) * 100 : 0;
-
-    // Evidence Gauge Calc
-    const radius = 18;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (metrics.numericEvidenceScore / 100) * circumference;
 
     return (
         <div className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar bg-background">
@@ -301,234 +447,225 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                             <ShieldCheck className="text-amber-500 w-4 h-4" />
                         </div>
                     )}
-                    <button
+                    {/* Removed date filter button as per simplification */}
+                    {/* <button
                         onClick={toggleDateFilter}
                         className="bg-surface border border-white/5 rounded-full h-9 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-md active:shadow-inner"
                     >
                         <Calendar className="text-primary w-3.5 h-3.5" />
                         <span className="text-[10px] font-bold text-white uppercase tracking-wide">{getDateFilterLabel()}</span>
-                    </button>
+                    </button> */}
                 </div>
             </div>
+
+            {/* HERO: Budget Progress */}
+            <AnimatedSection delay={100} className="mb-6" animateContainer={false}>
+                {({ isInView }: { isInView?: boolean } = {}) => (
+                    <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-6 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+                        <div className="flex items-center justify-between mb-6 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                                    <Wallet className="w-6 h-6 text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Monthly Budget</h3>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-3xl font-heading font-bold text-white tracking-tight">€{metrics.thisMonthTotal.toFixed(2)}</p>
+                                        <span className="text-sm text-slate-500 font-medium">/ €{monthlyBudget}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className={`text-2xl font-bold ${isOverBudget ? 'text-red-500' : 'text-emerald-400'}`}>
+                                    {Math.round(isInView ? budgetProgress : 0)}%
+                                </span>
+                                <p className="text-xs text-slate-500 font-medium mt-1">{isOverBudget ? 'Over Budget' : 'Used'}</p>
+                            </div>
+                        </div>
+                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10">
+                            <div
+                                className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_currentColor] ${isOverBudget ? 'bg-red-500 text-red-500' : 'bg-emerald-500 text-emerald-500'}`}
+                                style={{ width: `${isInView ? Math.min(budgetProgress, 100) : 0}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                )}
+            </AnimatedSection>
 
             {/* BENTO GRID LAYOUT */}
             <div className="grid grid-cols-2 gap-3 mb-6">
 
-                {/* 1. Main Provisioning Card (Full Width) */}
-                <div className="col-span-2 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-6 shadow-xl relative overflow-hidden group border border-white/10 transition-all duration-500 hover:shadow-[0_0_30px_rgba(79,70,229,0.3)]">
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-12 -mt-12 transition-all duration-700 group-hover:bg-white/15"></div>
+                {/* Daily Activity */}
+                <AnimatedSection delay={200} className="col-span-2" animateContainer={false}>
+                    {({ isInView }: { isInView?: boolean } = {}) => (
+                        <div className="rounded-2xl border border-slate-800 bg-card p-5 shadow-lg">
+                            <h3 className="text-sm font-medium text-slate-400 mb-4 flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-blue-500" />
+                                Daily Activity
+                            </h3>
+                            <div className="h-32 flex items-end gap-2">
+                                {metrics.weeklyActivity.map((day, idx) => {
+                                    const maxVal = Math.max(...metrics.weeklyActivity.map(d => d.value), 1);
+                                    const heightPercent = (day.value / maxVal) * 100;
 
-                    <div className="relative z-10 flex justify-between items-start">
-                        <div>
-                            <p className="text-indigo-100 text-xs font-heading font-semibold uppercase tracking-widest mb-1 opacity-80">Verified Provision</p>
-                            <h2 className="text-4xl font-heading font-bold text-white tracking-tighter tabular-nums">
-                                €{metrics.provisionTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </h2>
-                            <div className="flex items-center gap-2 mt-3">
-                                <span className="bg-white/20 text-white text-[11px] px-2 py-0.5 rounded-full font-bold tabular-nums border border-white/10">
-                                    {metrics.provisionRatio.toFixed(0)}%
-                                </span>
-                                <span className="text-indigo-100 text-xs font-medium tracking-tight opacity-90">of outgoing funds spent on Child/Home</span>
+                                    return (
+                                        <div key={idx} className="flex flex-col items-center gap-2 w-full h-full group/bar">
+                                            <div className="relative w-full flex-1 flex items-end">
+                                                <div
+                                                    className="w-full bg-blue-500/20 rounded-t-sm transition-all duration-1000 ease-out group-hover/bar:bg-blue-500 group-hover/bar:shadow-[0_0_15px_rgba(59,130,246,0.4)] relative"
+                                                    style={{ height: `${isInView ? Math.max(heightPercent, 5) : 0}%` }}
+                                                >
+                                                    {/* Tooltip */}
+                                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 border border-white/10 font-bold tabular-nums">
+                                                        €{day.value.toFixed(2)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] text-slate-500 font-medium">{day.day}</span>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
-                        <div className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md shadow-sm group-hover:bg-white/25 transition-colors duration-300">
-                            <ShieldCheck className="text-white w-6 h-6" />
+                    )}
+                </AnimatedSection>
+
+                {/* Simplified Provision Stats */}
+                <AnimatedSection delay={300} className="col-span-2" animateContainer={false}>
+                    <div
+                        onClick={onProvisionClick}
+                        className="grid grid-cols-3 gap-4 rounded-2xl border border-blue-500/20 bg-card p-4 shadow-lg cursor-pointer hover:border-blue-500/40 transition-all"
+                    >
+                        <div className="flex flex-col items-center justify-center border-r border-slate-800 pr-4">
+                            <span className="text-xs text-slate-400 uppercase tracking-wide mb-1">Provision</span>
+                            <span className="text-2xl font-bold text-blue-500">{metrics.numericEvidenceScore}</span>
                         </div>
-                    </div>
-                    {/* Progress Bar for Budget inside Main Card */}
-                    <div className="relative z-10 mt-6 bg-black/20 rounded-xl p-3 border border-white/5 backdrop-blur-sm group-hover:border-white/10 transition-all duration-300">
-                        <div className="flex justify-between text-[10px] text-indigo-100 mb-2 font-medium tracking-tight">
-                            <span>Monthly Budget Usage</span>
-                            <span className="tabular-nums">{Math.round(budgetProgress)}%</span>
+                        <div className="flex flex-col items-center justify-center border-r border-slate-800 pr-4">
+                            <span className="text-xs text-slate-400 uppercase tracking-wide mb-1">Child %</span>
+                            <span className="text-2xl font-bold text-green-500">{metrics.provisionRatio.toFixed(0)}%</span>
                         </div>
-                        <div className="h-2 w-full bg-black/30 rounded-full overflow-hidden mb-2">
-                            <div
-                                className={`h-full rounded-full transition-all duration-700 ease-out ${budgetProgress > 100 ? 'bg-rose-300' : 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)]'}`}
-                                style={{ width: `${Math.min(budgetProgress, 100)}%` }}
-                            ></div>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] text-indigo-200/70">
-                            <span>Target: €{monthlyBudget}</span>
-                            <span className="flex items-center gap-1">
-                                Est. End: <span className="text-white font-bold tabular-nums">€{metrics.projectedTotal.toFixed(0)}</span>
+                        <div className="flex flex-col items-center justify-center">
+                            <span className="text-xs text-slate-400 uppercase tracking-wide mb-1">Trend</span>
+                            <span className={`text-2xl font-bold ${metrics.monthDiff > 0 ? 'text-blue-400' : 'text-slate-300'}`}>
+                                {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
                             </span>
                         </div>
                     </div>
-                </div>
+                </AnimatedSection>
 
-                {/* 1.5 Weekly Activity Chart (New) */}
-                <div className="col-span-2 bg-surface border border-white/5 rounded-3xl p-5 shadow-sm hover:border-white/10 transition-all duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <CalendarDays className="text-orange-400 w-4 h-4" />
-                            <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Weekly Activity</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-medium">Last 7 Days</div>
-                    </div>
-
-                    <div className="flex items-end justify-between gap-2 h-32 pt-2">
-                        {metrics.weeklyActivity.map((day, idx) => {
-                            const heightPercent = metrics.maxDayTotal > 0 ? (day.value / metrics.maxDayTotal) * 100 : 0;
-                            return (
-                                <div key={idx} className="flex flex-col items-center gap-2 w-full h-full group/bar">
-                                    <div className="relative w-full flex-1 flex items-end">
-                                        <div
-                                            className="w-full bg-orange-500/20 rounded-t-lg transition-all duration-500 group-hover/bar:bg-orange-500 group-hover/bar:shadow-[0_0_15px_rgba(249,115,22,0.4)] relative"
-                                            style={{ height: `${Math.max(heightPercent, 5)}%` }}
-                                        >
-                                            {/* Tooltip */}
-                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 border border-white/10 font-bold tabular-nums">
-                                                €{day.value.toFixed(2)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="text-[10px] text-slate-500 font-medium group-hover/bar:text-slate-300 transition-colors">{day.day}</div>
+                {/* Trend (Area Chart) & Top Vendors */}
+                <div className="grid grid-cols-2 gap-3 col-span-2">
+                    <AnimatedSection className="col-span-1" delay={400} animateContainer={false}>
+                        {({ isInView }: { isInView?: boolean } = {}) => (
+                            <div className="h-full rounded-2xl border border-slate-800 bg-card p-4 shadow-lg flex flex-col min-h-[180px]">
+                                <h3 className="text-sm font-medium text-slate-400 mb-2">Monthly Trend</h3>
+                                <div className="flex-1 w-full -ml-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={metrics.trendData} key={isInView ? 'visible' : 'hidden'}>
+                                            <defs>
+                                                <linearGradient id="dashboardEssentials" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="dashboardDiscretionary" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#f472b6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#f472b6" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#1e293b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="essentials"
+                                                name="Essentials"
+                                                stackId="1"
+                                                stroke="#38bdf8"
+                                                fill="url(#dashboardEssentials)"
+                                                strokeWidth={2}
+                                                animationDuration={1500}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="discretionary"
+                                                name="Discretionary"
+                                                stackId="1"
+                                                stroke="#f472b6"
+                                                fill="url(#dashboardDiscretionary)"
+                                                strokeWidth={2}
+                                                animationDuration={1500}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* 2. Evidence Health Check */}
-                <div className="col-span-1 bg-surface border border-white/5 rounded-3xl p-4 flex flex-col justify-between relative overflow-hidden shadow-sm hover:border-white/10 transition-all duration-300">
-                    <div className="flex items-center gap-2 mb-3">
-                        <FileText className="text-blue-400 w-4 h-4" />
-                        <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Log Strength</span>
-                    </div>
-
-                    <div className="flex flex-col items-center justify-center py-2 relative">
-                        <div className="relative w-14 h-14">
-                            <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
-                                <circle className="text-slate-800" strokeWidth="5" stroke="currentColor" fill="transparent" r={radius} cx="24" cy="24" />
-                                <circle
-                                    className={`${metrics.evidenceColor} transition-all duration-1000 ease-out drop-shadow-[0_0_4px_rgba(255,255,255,0.2)]`}
-                                    strokeWidth="5"
-                                    strokeDasharray={circumference}
-                                    strokeDashoffset={strokeDashoffset}
-                                    strokeLinecap="round"
-                                    stroke="currentColor"
-                                    fill="transparent"
-                                    r={radius}
-                                    cx="24"
-                                    cy="24"
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className={`text-[10px] font-bold ${metrics.evidenceColor} tabular-nums`}>{metrics.numericEvidenceScore}</span>
-                            </div>
-                        </div>
-                        <p className={`mt-2 text-sm font-heading font-bold tracking-tight ${metrics.evidenceColor}`}>{metrics.evidenceLabel}</p>
-                        <p className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">{metrics.volumeCount} verified logs</p>
-                    </div>
-                </div>
-
-                {/* 3. Spending Trends */}
-                <div className="col-span-1 bg-surface border border-white/5 rounded-3xl p-4 flex flex-col relative overflow-hidden shadow-sm hover:border-white/10 transition-all duration-300">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <BarChart3 className="text-purple-400 w-4 h-4" />
-                            <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Trend</span>
-                        </div>
-                        {metrics.trendDirection === 'up' && <TrendingUp size={14} className="text-red-400" />}
-                        {metrics.trendDirection === 'down' && <TrendingDown size={14} className="text-emerald-400" />}
-                        {metrics.trendDirection === 'flat' && <Minus size={14} className="text-slate-400" />}
-                    </div>
-
-                    {/* Textual Insight */}
-                    <div className="mb-3">
-                        <div className="flex items-start gap-1.5">
-                            <Sparkles size={10} className="text-purple-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-[10px] text-slate-300 leading-tight font-medium">{metrics.spendingInsight}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 flex items-end justify-between gap-1 pt-1">
-                        {metrics.recentLogs.length > 0 ? metrics.recentLogs.map((log, idx) => {
-                            const heightPercent = (log.total / metrics.maxLogValue) * 100;
-                            return (
-                                <div key={idx} className="flex flex-col items-center gap-1 w-full">
-                                    <div
-                                        className="w-full bg-purple-500/30 rounded-t-sm transition-all duration-500 hover:bg-purple-500 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                                        style={{ height: `${Math.max(heightPercent, 10)}%` }}
-                                    ></div>
-                                </div>
-                            )
-                        }) : (
-                            <div className="w-full text-center text-[10px] text-slate-500 italic mt-2">
-                                No data
                             </div>
                         )}
-                    </div>
+                    </AnimatedSection>
+
+                    <AnimatedSection className="col-span-1" delay={500} animateContainer={false}>
+                        {({ isInView }: { isInView?: boolean } = {}) => (
+                            <div className="h-full rounded-2xl border border-slate-800 bg-card p-5 shadow-lg">
+                                <h3 className="text-sm font-medium text-slate-400 mb-4">Top Vendors</h3>
+                                <div className="space-y-3">
+                                    {metrics.topStores.length > 0 ? (
+                                        metrics.topStores.map((store, idx) => (
+                                            <div key={idx} className="space-y-1">
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-slate-300 truncate max-w-[60px]">{store.name}</span>
+                                                    <span className="text-slate-400 tabular-nums">€{store.value.toFixed(0)}</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${isInView ? store.percentage : 0}%` }}></div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-xs text-slate-500 text-center py-4">No data</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </AnimatedSection>
                 </div>
 
                 {/* 4. Financial Snapshot (Grid of 3) */}
-                <div className="col-span-2 bg-surface border border-white/5 rounded-3xl p-5 shadow-sm hover:border-white/10 transition-all duration-300">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Wallet className="text-emerald-400 w-4 h-4" />
-                        <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot ({getDateFilterLabel()})</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                        {/* Avg Spend */}
-                        <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                            <p className="text-[10px] text-slate-500 mb-1 font-medium">Average</p>
-                            <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.avgReceipt.toFixed(0)}</p>
-                        </div>
-                        {/* Max Spend */}
-                        <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                            <p className="text-[10px] text-slate-500 mb-1 font-medium">Highest</p>
-                            <div className="flex items-center gap-1">
-                                <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.maxSingleReceipt.toFixed(0)}</p>
-                                <ArrowUpRight size={12} className="text-red-400" />
-                            </div>
-                        </div>
-                        {/* Monthly Comparison (New) */}
-                        <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                            <p className="text-[10px] text-slate-500 mb-1 font-medium">vs Last Month</p>
-                            <div className="flex items-center gap-1">
-                                <p className={`text-sm font-bold tabular-nums tracking-tight ${metrics.monthDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                    {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
-                                </p>
-                                {metrics.monthDiff > 0 ? <TrendingUp size={12} className="text-red-400" /> : <TrendingDown size={12} className="text-emerald-400" />}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 5. Top Vendors & Budget Remaining */}
-                <div className="col-span-2 grid grid-cols-2 gap-3">
-                    <div className="bg-surface border border-white/5 rounded-3xl p-4 shadow-sm hover:border-white/10 transition-all duration-300">
+                <AnimatedSection delay={600} className="col-span-2" animateContainer={false}>
+                    <div className="bg-surface border border-white/5 rounded-3xl p-5 shadow-sm hover:border-white/10 transition-all duration-300">
                         <div className="flex items-center gap-2 mb-3">
-                            <Store className="text-slate-400 w-3 h-3" />
-                            <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Top Vendors</span>
+                            <Wallet className="text-emerald-400 w-4 h-4" />
+                            <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
                         </div>
-                        <div className="space-y-3">
-                            {metrics.topStores.length > 0 ? metrics.topStores.map((store, i) => (
-                                <div key={i} className="relative">
-                                    <div className="flex justify-between text-[10px] z-10 relative mb-1">
-                                        <span className="text-slate-200 truncate max-w-[65%] font-medium">{store.name}</span>
-                                        <span className="text-slate-400 tabular-nums">€{store.value.toFixed(0)}</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${store.percentage}%` }}></div>
-                                    </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            {/* Avg Spend */}
+                            <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                <p className="text-[10px] text-slate-500 mb-1 font-medium">Average</p>
+                                <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.avgReceipt.toFixed(0)}</p>
+                            </div>
+                            {/* Max Spend */}
+                            <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                <p className="text-[10px] text-slate-500 mb-1 font-medium">Highest</p>
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.maxSingleReceipt.toFixed(0)}</p>
+                                    <ArrowUpRight size={12} className="text-red-400" />
                                 </div>
-                            )) : (
-                                <span className="text-[10px] text-slate-500">No data yet</span>
-                            )}
+                            </div>
+                            {/* Monthly Comparison (New) */}
+                            <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                <p className="text-[10px] text-slate-500 mb-1 font-medium">vs Last Month</p>
+                                <div className="flex items-center gap-1">
+                                    <p className={`text-sm font-bold tabular-nums tracking-tight ${metrics.monthDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                        {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
+                                    </p>
+                                    {metrics.monthDiff > 0 ? <TrendingUp size={12} className="text-red-400" /> : <TrendingDown size={12} className="text-emerald-400" />}
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div className="bg-surface border border-white/5 rounded-3xl p-4 shadow-sm flex flex-col justify-center items-center text-center hover:border-white/10 transition-all duration-300">
-                        <p className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase mb-1">Remaining Budget</p>
-                        <p className={`text-2xl font-heading font-bold tracking-tighter tabular-nums ${metrics.totalSpent > monthlyBudget ? 'text-red-400' : 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]'}`}>
-                            €{Math.max(monthlyBudget - metrics.totalSpent, 0).toFixed(0)}
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-1">
-                            of €{monthlyBudget} total
-                        </p>
-                    </div>
-                </div>
+                </AnimatedSection>
 
                 {/* 6. Category Breakdown (Linear Bars) */}
                 <div className="col-span-2 bg-surface border border-white/5 rounded-3xl p-5 shadow-sm hover:border-white/10 transition-all duration-300">
@@ -538,24 +675,28 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                     <div className="space-y-4">
                         {metrics.categoryData.slice(0, 4).map((d, i) => (
-                            <div key={i} onClick={() => {
-                                const items = metrics.categoryItems[d.name] || [];
-                                if (items.length > 0) setDrillDown({ category: d.name, items });
-                            }} className="cursor-pointer group">
-                                <div className="flex justify-between items-center text-xs mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: COLORS[d.name], color: COLORS[d.name] }}></div>
-                                        <span className="text-slate-200 font-medium group-hover:text-white transition-colors duration-300">{d.name}</span>
+                            <AnimatedSection key={i} delay={700 + (i * 100)} animateContainer={false}>
+                                {({ isInView }: { isInView?: boolean } = {}) => (
+                                    <div onClick={() => {
+                                        const items = metrics.categoryItems[d.name] || [];
+                                        if (items.length > 0) setDrillDown({ category: d.name, items });
+                                    }} className="cursor-pointer group">
+                                        <div className="flex justify-between items-center text-xs mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: COLORS[d.name] || '#94a3b8', color: COLORS[d.name] || '#94a3b8' }}></div>
+                                                <span className="text-slate-200 font-medium group-hover:text-white transition-colors duration-300">{d.name}</span>
+                                            </div>
+                                            <span className="text-slate-400 font-mono tabular-nums group-hover:text-white transition-colors duration-300">€{d.value.toFixed(0)}</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-125 group-hover:shadow-[0_0_10px_currentColor]"
+                                                style={{ width: `${isInView ? d.percentage : 0}%`, backgroundColor: COLORS[d.name] || '#94a3b8', color: COLORS[d.name] || '#94a3b8' }}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <span className="text-slate-400 font-mono tabular-nums group-hover:text-white transition-colors duration-300">€{d.value.toFixed(0)}</span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full rounded-full transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_10px_currentColor]"
-                                        style={{ width: `${d.percentage}%`, backgroundColor: COLORS[d.name], color: COLORS[d.name] }}
-                                    ></div>
-                                </div>
-                            </div>
+                                )}
+                            </AnimatedSection>
                         ))}
                         {metrics.categoryData.length === 0 && (
                             <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>

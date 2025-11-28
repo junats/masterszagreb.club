@@ -8,6 +8,8 @@
 	<string>TrueTrack needs camera access to scan receipts</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>TrueTrack needs permission to save photos to your library</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TrueTrack needs your location to find nearby support services and legal aid.</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>CFBundleDevelopmentRegion</key>

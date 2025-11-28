@@ -288,6 +288,27 @@ const DebugUserCount = () => {
             >
                 RESET ALL DATA (Fix Login)
             </button>
+            {users.length === 0 && (
+                <button
+                    onClick={async () => {
+                        const newUser = {
+                            id: `user_${Date.now()}`,
+                            email: 'admin@example.com',
+                            password: 'password',
+                            name: 'Admin User',
+                            tier: 'Pro'
+                        };
+                        const list = [newUser];
+                        await Preferences.set({ key: 'truetrack_mock_users', value: JSON.stringify(list) });
+                        await Preferences.set({ key: 'truetrack_session', value: JSON.stringify(newUser) });
+                        alert("User created! Email: admin@example.com, Pass: password");
+                        window.location.reload();
+                    }}
+                    className="mt-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 px-2 py-1 rounded text-[10px] w-full hover:bg-emerald-500/30"
+                >
+                    FORCE CREATE USER
+                </button>
+            )}
         </div>
     );
 };

@@ -162,12 +162,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                 <h2 className="text-2xl font-heading font-bold text-white tracking-tight">{selectedReceipt.storeName}</h2>
 
                                 {isBill && selectedReceipt.referenceCode && (
-                                    <div className="mt-2 bg-black/30 border border-white/10 rounded-lg p-2 flex items-center gap-3 w-fit hover:border-white/30 transition-colors duration-300">
-                                        <div>
+                                    <div className="mt-2 bg-black/30 border border-white/10 rounded-lg p-2 flex items-center gap-3 w-full hover:border-white/30 transition-colors duration-300">
+                                        <div className="min-w-0 flex-1">
                                             <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">Payment Code</p>
-                                            <p className="text-sm font-mono text-white tracking-wide">{selectedReceipt.referenceCode}</p>
+                                            <p className="text-sm font-mono text-white tracking-wide break-all">{selectedReceipt.referenceCode}</p>
                                         </div>
-                                        <button className="text-slate-400 hover:text-white transition-colors duration-300" onClick={() => navigator.clipboard.writeText(selectedReceipt.referenceCode!)}>
+                                        <button className="text-slate-400 hover:text-white transition-colors duration-300 shrink-0" onClick={() => navigator.clipboard.writeText(selectedReceipt.referenceCode!)}>
                                             <Copy size={14} />
                                         </button>
                                     </div>

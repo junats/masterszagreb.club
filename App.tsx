@@ -7,6 +7,7 @@ import HistoryView from './components/HistoryView';
 import Settings from './components/Settings';
 import SupportView from './components/SupportView';
 import AuthScreen from './components/AuthScreen';
+import ProvisionAnalysis from './components/ProvisionAnalysis';
 import { ViewState, Receipt, User, SubscriptionTier } from './types';
 import { authService, isMockMode } from './services/authService';
 import { Database, X } from 'lucide-react';
@@ -73,11 +74,13 @@ const App: React.FC = () => {
     return () => clearTimeout(safetyTimeout);
   }, []);
 
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
   useEffect(() => {
     const loadData = async () => {
-      const { value: savedReceipts } = await Preferences.get({ key: RECEIPT_STORAGE_KEY });
-      if (savedReceipts) {
-        try {
+      try {
+        const { value: savedReceipts } = await Preferences.get({ key: RECEIPT_STORAGE_KEY });
+        if (savedReceipts) {
           const parsed = JSON.parse(savedReceipts) as Receipt[];
           const uniqueMap = new Map<string, Receipt>();
           parsed.forEach(r => {
@@ -87,21 +90,19 @@ const App: React.FC = () => {
             }
           });
           setReceipts(Array.from(uniqueMap.values()));
-        } catch (e) {
-          console.error("Failed to parse receipts", e);
         }
-      }
 
-      const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
-      if (savedSettings) {
-        try {
+        const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
+        if (savedSettings) {
           const parsed = JSON.parse(savedSettings);
           if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
           if (parsed.categoryBudgets !== undefined) setCategoryBudgets(parsed.categoryBudgets);
           if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
-        } catch (e) {
-          console.error("Failed to parse settings", e);
         }
+      } catch (e) {
+        console.error("Failed to load data", e);
+      } finally {
+        setIsDataLoaded(true);
       }
     };
     loadData();
@@ -222,7 +223,7 @@ const App: React.FC = () => {
     }
   };
 
-  if (isAuthLoading) {
+  if (isAuthLoading || !isDataLoaded) {
     return <div className="h-screen w-full bg-background flex items-center justify-center text-slate-500">Loading...</div>;
   }
 
@@ -235,10 +236,12 @@ const App: React.FC = () => {
       case 'dashboard':
         return (
           <Dashboard
+            key={`dashboard-${receipts.length}-${monthlyBudget}-${ageRestricted}`}
             receipts={receipts}
             monthlyBudget={monthlyBudget}
             ageRestricted={ageRestricted}
             onViewReceipt={handleViewReceipt}
+            onProvisionClick={() => setCurrentView('provision')}
           />
         );
       case 'scan':
@@ -262,6 +265,18 @@ const App: React.FC = () => {
         );
       case 'support':
         return <SupportView />;
+
+
+      // ... existing imports
+
+      // Inside App component renderView switch:
+      case 'provision':
+        return (
+          <ProvisionAnalysis
+            receipts={receipts}
+            onBack={() => setCurrentView('dashboard')}
+          />
+        );
       case 'settings':
         return (
           <Settings
@@ -277,12 +292,13 @@ const App: React.FC = () => {
           />
         );
       default:
-        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} onViewReceipt={handleViewReceipt} />;
+        // Force re-render when switching back to dashboard to trigger animations
+        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} onViewReceipt={handleViewReceipt} onProvisionClick={() => setCurrentView('provision')} />;
     }
   };
 
   return (
-    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-2 safe-area-top">
+    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-14 safe-area-top">
       <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
 
@@ -299,7 +315,9 @@ const App: React.FC = () => {
       )}
 
       <main className="flex-1 w-full max-w-md mx-auto relative z-10 h-full">
-        {renderView()}
+        <div key={currentView} className="h-full animate-fade-in">
+          {renderView()}
+        </div>
       </main>
 
       <Navigation currentView={currentView} setView={setCurrentView} isVisible={!!user} />

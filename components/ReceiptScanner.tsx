@@ -290,9 +290,17 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-start gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-          <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
-          <p className="text-red-200 text-sm font-medium">{error}</p>
+        <div className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
+            <p className="text-red-200 text-sm font-medium">{error}</p>
+          </div>
+          <button
+            onClick={() => { setError(null); handleCameraCapture(); }}
+            className="self-end px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 text-xs font-bold rounded-lg transition-colors border border-red-500/30"
+          >
+            Retry Scan
+          </button>
         </div>
       )}
 

@@ -44,14 +44,37 @@ const mockAuthService = {
     const normalizedPassword = password.trim(); // Fix for mobile auto-spacing
 
     console.log(`MockAuth: Attempting sign in for '${normalizedEmail}'`);
-    console.log(`MockAuth: Stored users count: ${users.length}`);
 
-    if (users.length === 0) {
-      return { user: null, error: "No registered users found. Please sign up first." };
+    let usersList = users;
+    if (!Array.isArray(usersList)) {
+      console.warn("MockAuth: Users storage was corrupt (not an array). Resetting.");
+      usersList = [];
+    }
+
+    console.log(`MockAuth: Stored users count: ${usersList.length}`);
+
+    if (usersList.length === 0) {
+      console.log("MockAuth: Empty database. Auto-registering first user.");
+      const newUser: User = {
+        id: `user_${Date.now()}`,
+        email: normalizedEmail || 'admin@example.com', // Fallback if email is empty
+        name: 'Admin User',
+        tier: SubscriptionTier.PRO
+      };
+      // Use provided password or default
+      const finalPassword = normalizedPassword || 'password';
+
+      usersList.push({ ...newUser, password: finalPassword });
+
+      await Preferences.set({ key: MOCK_STORAGE_KEY, value: JSON.stringify(usersList) });
+      await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(newUser) });
+
+      console.log("MockAuth: Auto-registration successful.");
+      return { user: newUser, error: null };
     }
 
     // Debug: Log available emails
-    const userExists = users.find((u: any) => u.email === normalizedEmail);
+    const userExists = usersList.find((u: any) => u.email === normalizedEmail);
 
     if (!userExists) {
       console.log('MockAuth: Email not found in database.');
@@ -65,7 +88,7 @@ const mockAuthService = {
 
     // Simple mock auth check
     // Note: We compare against trimmed password now
-    const foundUser = users.find((u: any) => u.email === normalizedEmail && u.password === normalizedPassword);
+    const foundUser = usersList.find((u: any) => u.email === normalizedEmail && u.password === normalizedPassword);
 
     if (foundUser) {
       const { password, ...safeUser } = foundUser;

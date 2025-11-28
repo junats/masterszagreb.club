@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, ExternalLink, Heart, Scale, Users, ShieldAlert, Loader2, Search } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation';
 
 const SupportView: React.FC = () => {
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
@@ -7,48 +8,56 @@ const SupportView: React.FC = () => {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [cityGuess, setCityGuess] = useState<string>('');
 
+
+
+  // ... inside component
   useEffect(() => {
-    // 1. Get Exact Coordinates
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation(position);
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Error getting location", error);
-          if (error.code === error.PERMISSION_DENIED) {
+    const getLocation = async () => {
+      try {
+        const permission = await Geolocation.checkPermissions();
+        if (permission.location === 'denied' || permission.location === 'prompt' || permission.location === 'prompt-with-rationale') {
+          const request = await Geolocation.requestPermissions();
+          if (request.location === 'denied') {
             setPermissionDenied(true);
+            setLoading(false);
+            return;
           }
-          setLoading(false);
         }
-      );
-    } else {
-      setLoading(false);
-    }
+
+        const coordinates = await Geolocation.getCurrentPosition();
+        setLocation(coordinates as any); // Type compatibility
+        setLoading(false);
+      } catch (e) {
+        console.error("Error getting location", e);
+        setPermissionDenied(true);
+        setLoading(false);
+      }
+    };
+
+    getLocation();
 
     // 2. Infer City from Timezone (Works offline/without API)
     try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        // Example: "Europe/Zagreb" -> "Zagreb"
-        if (tz && tz.includes('/')) {
-            const city = tz.split('/')[1].replace(/_/g, ' ');
-            setCityGuess(city);
-        }
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      // Example: "Europe/Zagreb" -> "Zagreb"
+      if (tz && tz.includes('/')) {
+        const city = tz.split('/')[1].replace(/_/g, ' ');
+        setCityGuess(city);
+      }
     } catch (e) {
-        console.warn("Could not detect timezone city");
+      console.warn("Could not detect timezone city");
     }
   }, []);
 
   const generateMapLink = (query: string) => {
-      // Append "near me" to help Google's relevance engine
-      const localizedQuery = `${query} near me`;
-      
-      if (location) {
-          // Force map view to user's coordinates
-          return `https://www.google.com/maps/search/${encodeURIComponent(localizedQuery)}/@${location.coords.latitude},${location.coords.longitude},14z`;
-      }
-      return `https://www.google.com/maps/search/${encodeURIComponent(localizedQuery)}`;
+    // Append "near me" to help Google's relevance engine
+    const localizedQuery = `${query} near me`;
+
+    if (location) {
+      // Force map view to user's coordinates
+      return `https://www.google.com/maps/search/${encodeURIComponent(localizedQuery)}/@${location.coords.latitude},${location.coords.longitude},14z`;
+    }
+    return `https://www.google.com/maps/search/${encodeURIComponent(localizedQuery)}`;
   };
 
   const resources = [
@@ -58,19 +67,19 @@ const SupportView: React.FC = () => {
       color: "text-blue-400",
       bg: "bg-blue-400/10",
       items: [
-        { 
-            name: "Family Law & Custody", 
-            desc: "Find lawyers specializing in fathers' rights and family law.", 
-            action: "Find Lawyers",
-            link: generateMapLink("Family Law Lawyer"),
-            type: 'map'
+        {
+          name: "Family Law & Custody",
+          desc: "Find lawyers specializing in fathers' rights and family law.",
+          action: "Find Lawyers",
+          link: generateMapLink("Family Law Lawyer"),
+          type: 'map'
         },
-        { 
-            name: "Free Legal Aid", 
-            desc: "Non-profit legal assistance and pro-bono services.", 
-            action: "Search Legal Aid",
-            link: generateMapLink("Free Legal Aid Center"),
-            type: 'map'
+        {
+          name: "Free Legal Aid",
+          desc: "Non-profit legal assistance and pro-bono services.",
+          action: "Search Legal Aid",
+          link: generateMapLink("Free Legal Aid Center"),
+          type: 'map'
         },
       ]
     },
@@ -80,19 +89,19 @@ const SupportView: React.FC = () => {
       color: "text-rose-400",
       bg: "bg-rose-400/10",
       items: [
-        { 
-            name: "Crisis Hotline (EU/Intl)", 
-            desc: "Immediate confidential support.", 
-            action: "Call 112",
-            link: "tel:112", 
-            type: 'call'
+        {
+          name: "Crisis Hotline (EU/Intl)",
+          desc: "Immediate confidential support.",
+          action: "Call 112",
+          link: "tel:112",
+          type: 'call'
         },
-        { 
-            name: "Men's Support Groups", 
-            desc: "Local community groups for fathers and men.", 
-            action: "Find Groups",
-            link: generateMapLink("Men's Support Group"),
-            type: 'map'
+        {
+          name: "Men's Support Groups",
+          desc: "Local community groups for fathers and men.",
+          action: "Find Groups",
+          link: generateMapLink("Men's Support Group"),
+          type: 'map'
         },
       ]
     },
@@ -102,19 +111,19 @@ const SupportView: React.FC = () => {
       color: "text-emerald-400",
       bg: "bg-emerald-400/10",
       items: [
-        { 
-            name: "Food Assistance", 
-            desc: "Community food banks and pantries.", 
-            action: "Find Food Banks",
-            link: generateMapLink("Food Bank"),
-            type: 'map'
+        {
+          name: "Food Assistance",
+          desc: "Community food banks and pantries.",
+          action: "Find Food Banks",
+          link: generateMapLink("Food Bank"),
+          type: 'map'
         },
-        { 
-            name: "Social Welfare Centers", 
-            desc: "Government social support and child services.", 
-            action: "Find Offices",
-            link: generateMapLink("Center for Social Welfare"), // "Center for Social Welfare" is common EU terminology
-            type: 'map'
+        {
+          name: "Social Welfare Centers",
+          desc: "Government social support and child services.",
+          action: "Find Offices",
+          link: generateMapLink("Center for Social Welfare"), // "Center for Social Welfare" is common EU terminology
+          type: 'map'
         },
       ]
     }
@@ -125,7 +134,7 @@ const SupportView: React.FC = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Local Support</h1>
         <p className="text-slate-400 text-sm">
-            {cityGuess ? `Showing resources near ${cityGuess}` : 'Finding local resources...'}
+          {cityGuess ? `Showing resources near ${cityGuess}` : 'Finding local resources...'}
         </p>
       </div>
 
@@ -137,16 +146,16 @@ const SupportView: React.FC = () => {
           </div>
           <div>
             <h3 className="text-slate-200 text-sm font-medium">
-                {location ? "Location Active" : "Detecting Location..."}
+              {location ? "Location Active" : "Detecting Location..."}
             </h3>
             <p className="text-xs text-slate-500">
-              {loading 
-                ? "Triangulating..." 
-                : permissionDenied 
-                    ? "GPS Denied (Using generic search)" 
-                    : location 
-                        ? "Results localized to your area" 
-                        : "Unavailable"}
+              {loading
+                ? "Triangulating..."
+                : permissionDenied
+                  ? "GPS Denied (Using generic search)"
+                  : location
+                    ? "Results localized to your area"
+                    : "Unavailable"}
             </p>
           </div>
         </div>
@@ -162,12 +171,12 @@ const SupportView: React.FC = () => {
             If you or your child are in danger, call emergency services immediately.
           </p>
           <div className="flex gap-2 w-full">
-              <a href="tel:112" className="flex-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-2 rounded-lg transition-colors text-center shadow-lg shadow-red-900/20">
-                  Call 112 (Europe)
-              </a>
-              <a href="tel:911" className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-lg transition-colors text-center border border-slate-600">
-                  Call 911 (US)
-              </a>
+            <a href="tel:112" className="flex-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-2 rounded-lg transition-colors text-center shadow-lg shadow-red-900/20">
+              Call 112 (Europe)
+            </a>
+            <a href="tel:911" className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-lg transition-colors text-center border border-slate-600">
+              Call 911 (US)
+            </a>
           </div>
         </div>
       </div>
@@ -179,7 +188,7 @@ const SupportView: React.FC = () => {
               <section.icon className={`${section.color} w-5 h-5`} />
               <h2 className="text-slate-200 font-semibold">{section.category}</h2>
             </div>
-            
+
             <div className="grid gap-3">
               {section.items.map((item, i) => (
                 <div key={i} className="bg-surface border border-slate-700/50 rounded-xl p-4">
@@ -189,31 +198,30 @@ const SupportView: React.FC = () => {
                       <p className="text-slate-500 text-xs mt-1">{item.desc}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
-                    <a 
-                        href={item.link}
-                        target={item.type === 'map' ? "_blank" : undefined}
-                        rel={item.type === 'map' ? "noopener noreferrer" : undefined}
-                        className={`flex-1 ${
-                            item.type === 'call' 
-                            ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20' 
-                            : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20'
+                    <a
+                      href={item.link}
+                      target={item.type === 'map' ? "_blank" : undefined}
+                      rel={item.type === 'map' ? "noopener noreferrer" : undefined}
+                      className={`flex-1 ${item.type === 'call'
+                        ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20'
+                        : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20'
                         } py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs font-semibold`}
                     >
                       {item.type === 'call' ? <Phone size={14} /> : <Search size={14} />}
                       {item.action}
                     </a>
-                    
+
                     {item.type === 'map' && (
-                        <a 
-                            href={item.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-10 bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 rounded-lg flex items-center justify-center transition-colors"
-                        >
-                            <ExternalLink size={14} />
-                        </a>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-10 bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 rounded-lg flex items-center justify-center transition-colors"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
                     )}
                   </div>
                 </div>
@@ -222,7 +230,7 @@ const SupportView: React.FC = () => {
           </div>
         ))}
       </div>
-      
+
       <div className="mt-8 p-4 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-2xl border border-white/5 text-center">
         <p className="text-xs text-slate-400 italic">
           "Stay strong. You are building a safe future."
