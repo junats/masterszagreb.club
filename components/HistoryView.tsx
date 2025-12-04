@@ -4,6 +4,8 @@ import { Search, ChevronRight, Share2, MapPin, Trash2, FileText, Receipt as Rece
 import { storageService } from '../services/storageService';
 import { Share } from '@capacitor/share';
 import HistoryAnalytics from './HistoryAnalytics';
+import AnimatedSection from './AnimatedSection';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 
 interface HistoryViewProps {
     receipts: Receipt[];
@@ -298,52 +300,91 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                 const isHidden = ageRestricted && item.isRestricted;
                                 if (isHidden) return null;
 
+                                const handleDeleteItem = () => {
+                                    if (onUpdate) {
+                                        const newItems = [...selectedReceipt.items];
+                                        newItems.splice(idx, 1);
+                                        // Recalculate total
+                                        const newTotal = newItems.reduce((sum, i) => sum + i.price, 0);
+                                        onUpdate({ ...selectedReceipt, items: newItems, total: newTotal });
+                                        onSelectReceipt({ ...selectedReceipt, items: newItems, total: newTotal });
+                                        // Haptic feedback
+                                        import('../services/haptics').then(({ HapticsService }) => {
+                                            HapticsService.notificationSuccess();
+                                        });
+                                    }
+                                };
+
                                 return (
-                                    <div key={idx} className={`flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}>
-                                        <div>
-                                            <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
-                                                    item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
-                                                        item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                                            'bg-slate-800 border-slate-700 text-slate-400'
-                                                    }`}>
-                                                    {item.category}
-                                                </span>
-                                                {item.isRestricted && !ageRestricted && (
-                                                    <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
-                                                )}
-                                                {item.isChildRelated && childSupportMode && (
-                                                    <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
-                                                        <Baby size={10} /> Child
+                                    <motion.div
+                                        key={idx}
+                                        className="relative overflow-hidden rounded-lg mb-2"
+                                    >
+                                        <motion.div
+                                            className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-4 rounded-lg"
+                                            initial={{ opacity: 0 }}
+                                            whileHover={{ opacity: 1 }}
+                                        >
+                                            <Trash2 size={18} className="text-red-400" />
+                                        </motion.div>
+                                        <motion.div
+                                            className={`relative bg-surfaceHighlight flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}
+                                            drag="x"
+                                            dragConstraints={{ left: -100, right: 0 }}
+                                            onDragEnd={(e, info) => {
+                                                if (info.offset.x < -60) {
+                                                    handleDeleteItem();
+                                                }
+                                            }}
+                                            whileDrag={{ scale: 0.98 }}
+                                        >
+                                            <div>
+                                                <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                        item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                            item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                                                item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                                                    item.category === Category.DINING ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
+                                                                        'bg-slate-800 border-slate-700 text-slate-400'
+                                                        }`}>
+                                                        {item.category}
                                                     </span>
+                                                    {item.isRestricted && !ageRestricted && (
+                                                        <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
+                                                    )}
+                                                    {item.isChildRelated && childSupportMode && (
+                                                        <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
+                                                            <Baby size={10} /> Child
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
+                                                    €{item.price.toFixed(2)}
+                                                </span>
+                                                {onUpdate && childSupportMode && (
+                                                    <button
+                                                        onClick={() => handleToggleChildRelated(idx)}
+                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
+                                                        title="Toggle Child Related"
+                                                    >
+                                                        <Baby size={14} />
+                                                    </button>
+                                                )}
+                                                {onUpdate && !ageRestricted && (
+                                                    <button
+                                                        onClick={() => handleToggleRestriction(idx)}
+                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
+                                                        title="Toggle Restriction (18+)"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
                                                 )}
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
-                                                €{item.price.toFixed(2)}
-                                            </span>
-                                            {onUpdate && childSupportMode && (
-                                                <button
-                                                    onClick={() => handleToggleChildRelated(idx)}
-                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
-                                                    title="Toggle Child Related"
-                                                >
-                                                    <Baby size={14} />
-                                                </button>
-                                            )}
-                                            {onUpdate && !ageRestricted && (
-                                                <button
-                                                    onClick={() => handleToggleRestriction(idx)}
-                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
-                                                    title="Toggle Restriction (18+)"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
+                                        </motion.div>
+                                    </motion.div>
                                 );
                             })}
                         </div>
@@ -520,57 +561,82 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                         <p className="text-slate-600 font-medium">No records found.</p>
                     </div>
                 ) : (
-                    filteredReceipts.map((receipt) => {
+                    filteredReceipts.map((receipt, index) => {
                         const effectiveTotal = getEffectiveTotal(receipt);
                         const visibleItemCount = getVisibleItems(receipt).length;
                         const isBill = receipt.type === 'bill';
                         const thumbUrl = receipt.imageUrl || (receipt.storagePath ? storageService.getPublicUrl(receipt.storagePath) : '');
 
                         return (
-                            <button
-                                key={receipt.id}
-                                onClick={() => onSelectReceipt(receipt)}
-                                className={`w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group ${isBill
-                                    ? 'bg-gradient-to-r from-slate-900 to-indigo-950/30 border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.1)]'
-                                    : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
-                                    }`}
-                            >
-                                <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
-                                    {thumbUrl ? (
-                                        <img
-                                            src={thumbUrl}
-                                            alt="Receipt"
-                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-700">
-                                            <ReceiptIcon size={24} />
-                                        </div>
-                                    )}
-                                    {isBill && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>}
+                            <div key={receipt.id} className="relative mb-3">
+                                {/* Delete Background */}
+                                <div className="absolute inset-0 bg-red-500/20 rounded-2xl flex items-center justify-end px-6 z-0">
+                                    <Trash2 className="text-red-400" size={20} />
                                 </div>
 
-                                <div className="flex-1 min-w-0 text-left">
-                                    <div className="flex justify-between items-start mb-0.5">
-                                        <h3 className="text-slate-200 font-bold text-sm truncate pr-2 tracking-tight group-hover:text-white transition-colors duration-300">{receipt.storeName}</h3>
-                                        <span className={`font-bold text-sm tabular-nums tracking-tight transition-colors duration-300 ${isBill ? 'text-indigo-400 group-hover:text-indigo-300' : 'text-white'}`}>€{effectiveTotal.toFixed(2)}</span>
+                                <motion.div
+                                    drag="x"
+                                    dragConstraints={{ left: -100, right: 0 }}
+                                    dragElastic={0.1}
+                                    onDragEnd={(e, info) => {
+                                        if (info.offset.x < -80 && onDelete) {
+                                            // Small vibration
+                                            if (navigator.vibrate) navigator.vibrate(50);
+
+                                            if (confirm("Are you sure you want to delete this receipt?")) {
+                                                onDelete(receipt.id);
+                                            }
+                                        }
+                                    }}
+                                    onClick={(e) => {
+                                        // Prevent click if we were dragging (simple heuristic)
+                                        // In a real app we might check drag distance, but for now
+                                        // we rely on the user intention.
+                                        onSelectReceipt(receipt);
+                                    }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className={`relative z-10 w-full transition-colors duration-300 p-3 rounded-2xl border flex items-center gap-4 group cursor-pointer ${isBill
+                                        ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-500/20'
+                                        : 'bg-surface border-white/5 hover:bg-surfaceHighlight'
+                                        }`}
+                                >
+                                    <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
+                                        {thumbUrl ? (
+                                            <img
+                                                src={thumbUrl}
+                                                alt="Receipt"
+                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-700">
+                                                <ReceiptIcon size={24} />
+                                            </div>
+                                        )}
+                                        {isBill && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>}
                                     </div>
 
-                                    {isBill && receipt.referenceCode && (
-                                        <p className="text-[10px] font-mono text-indigo-300/80 truncate mb-1">
-                                            Ref: {receipt.referenceCode}
-                                        </p>
-                                    )}
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <h3 className="text-slate-200 font-bold text-sm truncate pr-2 tracking-tight group-hover:text-white transition-colors duration-300">{receipt.storeName}</h3>
+                                            <span className={`font-bold text-sm tabular-nums tracking-tight transition-colors duration-300 ${isBill ? 'text-indigo-400 group-hover:text-indigo-300' : 'text-white'}`}>€{effectiveTotal.toFixed(2)}</span>
+                                        </div>
 
-                                    <div className="flex justify-between items-end mt-1">
-                                        <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
-                                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
-                                            <span>{visibleItemCount} items</span>
-                                            <ChevronRight size={12} />
+                                        {isBill && receipt.referenceCode && (
+                                            <p className="text-[10px] font-mono text-indigo-300/80 truncate mb-1">
+                                                Ref: {receipt.referenceCode}
+                                            </p>
+                                        )}
+
+                                        <div className="flex justify-between items-end mt-1">
+                                            <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
+                                            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
+                                                <span>{visibleItemCount} items</span>
+                                                <ChevronRight size={12} />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </button>
+                                </motion.div>
+                            </div>
                         );
                     })
                 )}

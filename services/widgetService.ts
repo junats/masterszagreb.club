@@ -42,21 +42,33 @@ export const WidgetService = {
 
             // Calculate Monthly Spend
             const monthlySpend = receipts.reduce((total, r) => {
-                const d = new Date(r.date);
-                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                let rDate = new Date(r.date);
+                // Robust parsing for YYYY-MM-DD to avoid UTC shift
+                if (r.date.includes('-') && !r.date.includes('T')) {
+                    const parts = r.date.split('-');
+                    rDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                }
+
+                if (rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear) {
                     return total + r.total;
                 }
                 return total;
             }, 0);
 
             // Calculate Daily Spend
+            // Use local date string for comparison
+            const localToday = new Date();
+            const localTodayStr = localToday.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+
             const dailySpend = receipts.reduce((total, r) => {
                 let rDateStr = r.date;
                 if (r.date.includes('T')) {
-                    rDateStr = r.date.split('T')[0];
+                    // Convert ISO to local YYYY-MM-DD
+                    const d = new Date(r.date);
+                    rDateStr = d.toLocaleDateString('en-CA');
                 }
 
-                if (rDateStr === todayStr) {
+                if (rDateStr === localTodayStr) {
                     return total + r.total;
                 }
                 return total;

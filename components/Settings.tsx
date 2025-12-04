@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { User as UserIcon, Users, Bell, Shield, LogOut, ChevronRight, Wallet, Lock, FileDown, Database, Star, PieChart, Tag, Plus, Trash2, X as XIcon, Calendar, RefreshCw, FileText, Target, Trophy } from 'lucide-react';
+import { User as UserIcon, Users, Bell, Shield, LogOut, ChevronRight, Wallet, Lock, FileDown, Database, Star, PieChart, Tag, Plus, Trash2, X as XIcon, Calendar, RefreshCw, FileText, Target, Trophy, Crown, AlertTriangle, AlertOctagon, Sparkles } from 'lucide-react';
 import { Receipt, User, SubscriptionTier, Category, CategoryDefinition, RecurringExpense, Goal, GoalType } from '../types';
 import { exportService } from '../services/exportService';
 import { PDFService } from '../services/pdfService';
+import { HapticsService } from '../services/haptics';
 import SubscriptionModal from './SubscriptionModal';
 
 interface SettingsProps {
@@ -24,6 +25,12 @@ interface SettingsProps {
     onDeleteAll: () => void;
     goals: Goal[];
     setGoals: (goals: Goal[]) => void;
+    setReceipts: (receipts: Receipt[]) => void;
+    onSeedData?: () => void;
+    ambientMode?: boolean;
+    setAmbientMode?: (enabled: boolean) => void;
+    showGlobalAmbient?: boolean;
+    setShowGlobalAmbient?: (enabled: boolean) => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({
@@ -44,7 +51,13 @@ const Settings: React.FC<SettingsProps> = ({
     onUpgrade,
     onDeleteAll,
     goals,
-    setGoals
+    setGoals,
+    setReceipts,
+    onSeedData,
+    ambientMode,
+    setAmbientMode,
+    showGlobalAmbient,
+    setShowGlobalAmbient
 }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -188,7 +201,7 @@ const Settings: React.FC<SettingsProps> = ({
 
     return (
         <>
-            <div className="flex flex-col h-full px-4 pt-4 pb-24 overflow-y-auto no-scrollbar bg-background">
+            <div className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar bg-background">
                 <div className="mb-6">
                     <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Settings</h1>
                     <p className="text-slate-400 text-sm font-medium">Manage your account and preferences</p>
@@ -258,11 +271,68 @@ const Settings: React.FC<SettingsProps> = ({
                                         type="checkbox"
                                         className="sr-only peer"
                                         checked={childSupportMode}
-                                        onChange={(e) => setChildSupportMode(e.target.checked)}
+                                        onChange={(e) => {
+                                            HapticsService.impactMedium();
+                                            setChildSupportMode(e.target.checked);
+                                        }}
                                     />
                                     <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
                                 </label>
                             </div>
+
+                            {/* Ambient Mode Toggle */}
+                            {setAmbientMode && (
+                                <div className="w-full flex items-center justify-between p-4 border-t border-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl ${ambientMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                                            <Star size={18} />
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-200 text-sm font-bold block">Ambient Effects</span>
+                                            <span className="text-xs text-slate-500 font-medium block">Enable dynamic lighting effects</span>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={ambientMode}
+                                            onChange={(e) => {
+                                                HapticsService.impactMedium();
+                                                setAmbientMode(e.target.checked);
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 peer-checked:shadow-[0_0_15px_rgba(168,85,247,0.3)]"></div>
+                                    </label>
+                                </div>
+                            )}
+
+                            {/* Global App Background Toggle (Sub-option) */}
+                            {setAmbientMode && setShowGlobalAmbient && ambientMode && (
+                                <div className="w-full flex items-center justify-between p-4 border-t border-white/5 pl-8 bg-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl ${showGlobalAmbient ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
+                                            <Sparkles size={18} />
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-200 text-sm font-bold block">App Background</span>
+                                            <span className="text-xs text-slate-500 font-medium block">Show effect on main screens</span>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={showGlobalAmbient}
+                                            onChange={(e) => {
+                                                HapticsService.impactMedium();
+                                                setShowGlobalAmbient(e.target.checked);
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]"></div>
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     </section>
 
@@ -325,8 +395,25 @@ const Settings: React.FC<SettingsProps> = ({
                                     <span className="text-white font-mono font-bold tabular-nums">€{monthlyBudget}</span>
                                 </div>
 
+                                {/* Range Slider */}
+                                <div className="px-1 pb-1 mb-8">
+                                    <input
+                                        type="range"
+                                        min="100"
+                                        max="3000"
+                                        step="50"
+                                        value={monthlyBudget}
+                                        onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-medium">
+                                        <span>€100</span>
+                                        <span>€3000</span>
+                                    </div>
+                                </div>
+
                                 {/* Goals & Habits */}
-                                <div className="mt-8 pt-8 border-t border-white/5">
+                                <div className="pt-8 border-t border-white/5">
                                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                                         <Target size={14} className="text-purple-400" />
                                         Goals & Habits
@@ -363,6 +450,7 @@ const Settings: React.FC<SettingsProps> = ({
                                                         className="sr-only peer"
                                                         checked={goal.isEnabled}
                                                         onChange={() => {
+                                                            HapticsService.impactLight();
                                                             const updatedGoals = goals.map(g =>
                                                                 g.id === goal.id ? { ...g, isEnabled: !g.isEnabled } : g
                                                             );
@@ -373,23 +461,6 @@ const Settings: React.FC<SettingsProps> = ({
                                                 </label>
                                             </div>
                                         ))}
-                                    </div>
-                                </div>
-
-                                {/* Range Slider */}
-                                <div className="px-1 pb-1">
-                                    <input
-                                        type="range"
-                                        min="100"
-                                        max="3000"
-                                        step="50"
-                                        value={monthlyBudget}
-                                        onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
-                                    />
-                                    <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-medium">
-                                        <span>€100</span>
-                                        <span>€3000</span>
                                     </div>
                                 </div>
                             </div>
@@ -469,7 +540,10 @@ const Settings: React.FC<SettingsProps> = ({
                                         type="checkbox"
                                         className="sr-only peer"
                                         checked={ageRestricted}
-                                        onChange={handleToggleRestricted}
+                                        onChange={(e) => {
+                                            HapticsService.impactMedium();
+                                            handleToggleRestricted(e);
+                                        }}
                                     />
                                     <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user.tier === SubscriptionTier.PRO ? 'peer-checked:bg-rose-500 peer-checked:shadow-[0_0_15px_rgba(244,63,94,0.3)]' : ''}`}></div>
                                 </label>
@@ -522,98 +596,28 @@ const Settings: React.FC<SettingsProps> = ({
                                 <ChevronRight className="text-slate-600" size={16} />
                             </button>
 
-                            {/* Demo Data Generator */}
-                            <button
-                                onClick={() => {
-                                    if (confirm("This will add realistic demo receipts to your history. Continue?")) {
-                                        const now = new Date();
-                                        const twoDaysAgo = new Date(now);
-                                        twoDaysAgo.setDate(now.getDate() - 2);
-                                        const fiveDaysAgo = new Date(now);
-                                        fiveDaysAgo.setDate(now.getDate() - 5);
-
-                                        // Helper to format as YYYY-MM-DD for consistency with manual entry
-                                        const toLocalISO = (d: Date) => {
-                                            const offset = d.getTimezoneOffset() * 60000;
-                                            return new Date(d.getTime() - offset).toISOString().slice(0, 10);
-                                        };
-
-                                        const demoReceipts: Receipt[] = [
-                                            {
-                                                id: `demo_${Date.now()}_1`,
-                                                storeName: "Tesco Extra",
-                                                date: toLocalISO(now), // Today
-                                                total: 85.50,
-                                                scannedAt: new Date().toISOString(),
-                                                type: 'receipt',
-                                                items: [
-                                                    { name: "Milk 2L", price: 2.50, category: Category.FOOD, quantity: 2 },
-                                                    { name: "Bread", price: 1.80, category: Category.FOOD, quantity: 1 },
-                                                    { name: "Diapers Size 4", price: 15.00, category: Category.NECESSITY, isChildRelated: true, quantity: 1 },
-                                                    { name: "Baby Wipes", price: 3.50, category: Category.NECESSITY, isChildRelated: true, quantity: 2 },
-                                                    { name: "Wine Bottle", price: 12.00, category: Category.LUXURY, isRestricted: true, quantity: 1 },
-                                                    { name: "Chicken Breast", price: 8.50, category: Category.FOOD, quantity: 1 },
-                                                    { name: "Vegetables", price: 5.20, category: Category.FOOD, quantity: 1 },
-                                                    { name: "Lego Set", price: 25.00, category: Category.LUXURY, isChildRelated: true, quantity: 1 },
-                                                    { name: "Shampoo", price: 4.50, category: Category.HEALTH, quantity: 1 },
-                                                    { name: "Batteries", price: 7.50, category: Category.HOUSEHOLD, quantity: 1 }
-                                                ]
-                                            },
-                                            {
-                                                id: `demo_${Date.now()}_2`,
-                                                storeName: "Shell Station",
-                                                date: toLocalISO(twoDaysAgo), // 2 days ago
-                                                total: 65.00,
-                                                scannedAt: new Date().toISOString(),
-                                                type: 'receipt',
-                                                items: [
-                                                    { name: "Unleaded Fuel", price: 55.00, category: Category.TRANSPORT, quantity: 1 },
-                                                    { name: "Coffee", price: 3.50, category: Category.FOOD, quantity: 1 },
-                                                    { name: "Sandwich", price: 6.50, category: Category.FOOD, quantity: 1 }
-                                                ]
-                                            },
-                                            {
-                                                id: `demo_${Date.now()}_3`,
-                                                storeName: "Little Stars Kindergarten",
-                                                date: toLocalISO(fiveDaysAgo), // 5 days ago
-                                                total: 450.00,
-                                                scannedAt: new Date().toISOString(),
-                                                type: 'bill',
-                                                referenceCode: "KINDER-2023-11",
-                                                items: [
-                                                    { name: "Monthly Tuition", price: 400.00, category: Category.EDUCATION, isChildRelated: true, quantity: 1 },
-                                                    { name: "Meal Plan", price: 50.00, category: Category.FOOD, isChildRelated: true, quantity: 1 }
-                                                ]
-                                            }
-                                        ];
-
-                                        // Load existing, append demo, save
-                                        const existing = localStorage.getItem('truetrack_receipts');
-                                        const parsed = existing ? JSON.parse(existing) : [];
-                                        const combined = [...parsed, ...demoReceipts];
-                                        localStorage.setItem('truetrack_receipts', JSON.stringify(combined));
-
-                                        // Also update Preferences for consistency if app uses it
-                                        import('@capacitor/preferences').then(({ Preferences }) => {
-                                            Preferences.set({ key: 'truetrack_receipts', value: JSON.stringify(combined) });
-                                            alert("Demo data added! Go to History to see the charts.");
-                                            window.location.reload();
-                                        });
-                                    }
-                                }}
-                                className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
-                                        <Database size={18} />
+                            {/* Comprehensive Seed Data (Dev) */}
+                            {onSeedData && (
+                                <button
+                                    onClick={() => {
+                                        if (confirm("This will generate a comprehensive set of dummy data (30 days). Continue?")) {
+                                            onSeedData();
+                                        }
+                                    }}
+                                    className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-indigo-500/20 p-2 rounded-xl text-indigo-400">
+                                            <Database size={18} />
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="text-slate-200 text-sm font-bold block">Seed Comprehensive Data</span>
+                                            <span className="text-xs text-slate-500 font-medium">Generate 30-day history (Dev)</span>
+                                        </div>
                                     </div>
-                                    <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Generate Demo Data</span>
-                                        <span className="text-xs text-slate-500 font-medium">Populate realistic receipts</span>
-                                    </div>
-                                </div>
-                                <ChevronRight className="text-slate-600" size={16} />
-                            </button>
+                                    <ChevronRight className="text-slate-600" size={16} />
+                                </button>
+                            )}
 
                             <button
                                 onClick={async () => {
@@ -684,7 +688,7 @@ const Settings: React.FC<SettingsProps> = ({
                         <LogOut size={16} />
                         Sign Out
                     </button>
-                </div>
+                </div >
 
                 <SubscriptionModal
                     isOpen={showPaywall}
@@ -694,215 +698,221 @@ const Settings: React.FC<SettingsProps> = ({
                         setShowPaywall(false);
                     }}
                 />
-            </div>
+            </div >
 
             {/* Add Category Modal */}
-            {showCategoryModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-                        <button
-                            onClick={() => setShowCategoryModal(false)}
-                            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
-                        >
-                            <XIcon size={24} />
-                        </button>
-
-                        <h2 className="text-xl font-heading font-bold text-white mb-6">Add New Category</h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category Name</label>
-                                <input
-                                    type="text"
-                                    value={newCategoryName}
-                                    onChange={(e) => setNewCategoryName(e.target.value)}
-                                    placeholder="e.g. Gaming, Pets, Gifts"
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Color Tag</label>
-                                <div className="flex gap-3 flex-wrap">
-                                    {['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'].map(color => (
-                                        <button
-                                            key={color}
-                                            onClick={() => setNewCategoryColor(color)}
-                                            className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${newCategoryColor === color ? 'ring-2 ring-white scale-110' : ''}`}
-                                            style={{ backgroundColor: color }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
+            {
+                showCategoryModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
                             <button
-                                onClick={handleAddCategory}
-                                disabled={!newCategoryName.trim()}
-                                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all mt-4"
+                                onClick={() => setShowCategoryModal(false)}
+                                className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
                             >
-                                Create Category
+                                <XIcon size={24} />
                             </button>
+
+                            <h2 className="text-xl font-heading font-bold text-white mb-6">Add New Category</h2>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category Name</label>
+                                    <input
+                                        type="text"
+                                        value={newCategoryName}
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                        placeholder="e.g. Gaming, Pets, Gifts"
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Color Tag</label>
+                                    <div className="flex gap-3 flex-wrap">
+                                        {['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'].map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => setNewCategoryColor(color)}
+                                                className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${newCategoryColor === color ? 'ring-2 ring-white scale-110' : ''}`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleAddCategory}
+                                    disabled={!newCategoryName.trim()}
+                                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all mt-4"
+                                >
+                                    Create Category
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Add Recurring Expense Modal */}
-            {showRecurringModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-                        <button
-                            onClick={() => setShowRecurringModal(false)}
-                            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
-                        >
-                            <XIcon size={24} />
-                        </button>
+            {
+                showRecurringModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
+                            <button
+                                onClick={() => setShowRecurringModal(false)}
+                                className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <XIcon size={24} />
+                            </button>
 
-                        <h2 className="text-xl font-heading font-bold text-white mb-6">Add Subscription</h2>
+                            <h2 className="text-xl font-heading font-bold text-white mb-6">Add Subscription</h2>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Name</label>
-                                <input
-                                    type="text"
-                                    value={newExpenseName}
-                                    onChange={(e) => setNewExpenseName(e.target.value)}
-                                    placeholder="e.g. Netflix, Gym"
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Amount (€)</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Name</label>
                                     <input
-                                        type="number"
-                                        value={newExpenseAmount}
-                                        onChange={(e) => setNewExpenseAmount(e.target.value)}
-                                        placeholder="0.00"
+                                        type="text"
+                                        value={newExpenseName}
+                                        onChange={(e) => setNewExpenseName(e.target.value)}
+                                        placeholder="e.g. Netflix, Gym"
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
                                     />
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Amount (€)</label>
+                                        <input
+                                            type="number"
+                                            value={newExpenseAmount}
+                                            onChange={(e) => setNewExpenseAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Frequency</label>
+                                        <select
+                                            value={newExpenseFrequency}
+                                            onChange={(e) => setNewExpenseFrequency(e.target.value as any)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
+                                        >
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="yearly">Yearly</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Frequency</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category</label>
                                     <select
-                                        value={newExpenseFrequency}
-                                        onChange={(e) => setNewExpenseFrequency(e.target.value as any)}
+                                        value={newExpenseCategory}
+                                        onChange={(e) => setNewExpenseCategory(e.target.value)}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
                                     >
-                                        <option value="weekly">Weekly</option>
-                                        <option value="monthly">Monthly</option>
-                                        <option value="yearly">Yearly</option>
+                                        <option value="">Select Category</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                        ))}
                                     </select>
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category</label>
-                                <select
-                                    value={newExpenseCategory}
-                                    onChange={(e) => setNewExpenseCategory(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Next Due Date</label>
+                                    <input
+                                        type="date"
+                                        value={newExpenseDate}
+                                        onChange={(e) => setNewExpenseDate(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleAddRecurring}
+                                    disabled={!newExpenseName || !newExpenseAmount || !newExpenseCategory}
+                                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all mt-4"
                                 >
-                                    <option value="">Select Category</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                    ))}
-                                </select>
+                                    Add Subscription
+                                </button>
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Next Due Date</label>
-                                <input
-                                    type="date"
-                                    value={newExpenseDate}
-                                    onChange={(e) => setNewExpenseDate(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleAddRecurring}
-                                disabled={!newExpenseName || !newExpenseAmount || !newExpenseCategory}
-                                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all mt-4"
-                            >
-                                Add Subscription
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Legal Export Modal */}
-            {showLegalExportModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-                        <button
-                            onClick={() => setShowLegalExportModal(false)}
-                            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
-                        >
-                            <XIcon size={24} />
-                        </button>
-
-                        <div className="mb-6">
-                            <h2 className="text-xl font-heading font-bold text-white flex items-center gap-2">
-                                <FileText className="text-blue-400" />
-                                Legal Export
-                            </h2>
-                            <p className="text-slate-400 text-sm mt-1">Generate a PDF report for legal/custody purposes.</p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-                                <input
-                                    type="date"
-                                    value={exportStartDate}
-                                    onChange={(e) => setExportStartDate(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
-                                <input
-                                    type="date"
-                                    value={exportEndDate}
-                                    onChange={(e) => setExportEndDate(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"
-                                />
-                            </div>
-
+            {
+                showLegalExportModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
                             <button
-                                onClick={async () => {
-                                    try {
-                                        const savedReceipts = localStorage.getItem('truetrack_receipts');
-                                        if (!savedReceipts) {
-                                            alert('No data to export.');
-                                            return;
-                                        }
-                                        const receipts = JSON.parse(savedReceipts) as Receipt[];
-
-                                        PDFService.generateLegalReport(
-                                            receipts,
-                                            user,
-                                            { start: new Date(exportStartDate), end: new Date(exportEndDate) }
-                                        );
-                                        setShowLegalExportModal(false);
-                                    } catch (e) {
-                                        console.error('PDF Export failed:', e);
-                                        alert('Failed to generate PDF.');
-                                    }
-                                }}
-                                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all mt-4 flex items-center justify-center gap-2"
+                                onClick={() => setShowLegalExportModal(false)}
+                                className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
                             >
-                                <FileDown size={18} />
-                                Generate PDF
+                                <XIcon size={24} />
                             </button>
+
+                            <div className="mb-6">
+                                <h2 className="text-xl font-heading font-bold text-white flex items-center gap-2">
+                                    <FileText className="text-blue-400" />
+                                    Legal Export
+                                </h2>
+                                <p className="text-slate-400 text-sm mt-1">Generate a PDF report for legal/custody purposes.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={exportStartDate}
+                                        onChange={(e) => setExportStartDate(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
+                                    <input
+                                        type="date"
+                                        value={exportEndDate}
+                                        onChange={(e) => setExportEndDate(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const savedReceipts = localStorage.getItem('truetrack_receipts');
+                                            if (!savedReceipts) {
+                                                alert('No data to export.');
+                                                return;
+                                            }
+                                            const receipts = JSON.parse(savedReceipts) as Receipt[];
+
+                                            PDFService.generateLegalReport(
+                                                receipts,
+                                                user,
+                                                { start: new Date(exportStartDate), end: new Date(exportEndDate) }
+                                            );
+                                            setShowLegalExportModal(false);
+                                        } catch (e) {
+                                            console.error('PDF Export failed:', e);
+                                            alert('Failed to generate PDF.');
+                                        }
+                                    }}
+                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all mt-4 flex items-center justify-center gap-2"
+                                >
+                                    <FileDown size={18} />
+                                    Generate PDF
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 };

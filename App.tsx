@@ -1,5 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Preferences } from '@capacitor/preferences';
+import { SplashScreen } from '@capacitor/splash-screen';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -11,13 +13,23 @@ import AuthScreen from './components/AuthScreen';
 import ProvisionAnalysis from './components/ProvisionAnalysis';
 import SettlementView from './components/SettlementView';
 import CustodyCalendar from './components/CustodyCalendar';
-import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType } from './types';
+import IntroTour from './components/IntroTour';
+import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType, ChildEvent } from './types';
 import { authService, isMockMode } from './services/authService';
-import { Database, X } from 'lucide-react';
+import { Database, X, Shield } from 'lucide-react';
+import { AmbientBackground } from './components/AmbientBackground';
+import { WidgetService } from './services/widgetService';
+import { HapticService } from './services/HapticService';
+import { ImpactStyle } from '@capacitor/haptics';
+
+const RECEIPT_STORAGE_KEY = 'truetrack_receipts';
+const SETTINGS_STORAGE_KEY = 'truetrack_settings';
 
 const DEFAULT_CATEGORIES: CategoryDefinition[] = [
   { id: 'necessity', name: 'Necessity', color: '#38bdf8' }, // Sky
   { id: 'food', name: 'Food', color: '#4ade80' },           // Green
+  { id: 'dining', name: 'Dining', color: '#f97316' },       // Orange
+  { id: 'alcohol', name: 'Alcohol', color: '#ef4444' },     // Red
   { id: 'luxury', name: 'Luxury', color: '#f472b6' },       // Pink
   { id: 'household', name: 'Household', color: '#818cf8' }, // Indigo
   { id: 'health', name: 'Health', color: '#fb7185' },       // Rose
@@ -45,40 +57,105 @@ const getReceiptSignature = (r: Receipt) => {
   const cleanStore = r.storeName.toLowerCase().replace(/[^a-z0-9]/g, '');
   const cleanRef = (r.referenceCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const priceCents = Math.round(r.total * 100);
-  return `${cleanStore}|${r.date}|${priceCents}|${r.type || 'receipt'}|${cleanRef}`;
+  return `${cleanStore}| ${r.date}| ${priceCents}| ${r.type || 'receipt'}| ${cleanRef} `;
 };
-
-import { Preferences } from '@capacitor/preferences';
-import { SplashScreen } from '@capacitor/splash-screen';
-import { WidgetService } from './services/widgetService';
-
-const RECEIPT_STORAGE_KEY = 'truetrack_receipts';
-const SETTINGS_STORAGE_KEY = 'truetrack_settings';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [user, setUser] = useState<User | null>(null);
-
-  // ... (existing code)
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [monthlyBudget, setMonthlyBudget] = useState(300);
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
+  const [ageRestricted, setAgeRestricted] = useState(false);
+  const [showDevBanner, setShowDevBanner] = useState(false);
+  const [childSupportMode, setChildSupportMode] = useState(false);
+  const [categories, setCategories] = useState<CategoryDefinition[]>(DEFAULT_CATEGORIES);
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const [custodyDays, setCustodyDays] = useState<CustodyDay[]>([]);
+  const [childEvents, setChildEvents] = useState<ChildEvent[]>([]);
+  const [goals, setGoals] = useState<Goal[]>(DEFAULT_GOALS);
+  const [showTour, setShowTour] = useState(false);
+  const [ambientMode, setAmbientMode] = useState(true); // Master switch
+  const [showGlobalAmbient, setShowGlobalAmbient] = useState(true); // App background specific
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
+  const [direction, setDirection] = useState(0);
 
   const handleViewReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
     setCurrentView('history');
   };
 
-  // ...
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [monthlyBudget, setMonthlyBudget] = useState(300);
-  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
-  const [ageRestricted, setAgeRestricted] = useState(false);
-  const [showDevBanner, setShowDevBanner] = useState(true);
-  const [childSupportMode, setChildSupportMode] = useState(false);
-  const [categories, setCategories] = useState<CategoryDefinition[]>(DEFAULT_CATEGORIES);
-  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
-  const [custodyDays, setCustodyDays] = useState<CustodyDay[]>([]);
-  const [goals, setGoals] = useState<Goal[]>(DEFAULT_GOALS);
+  // Helper to handle view changes with direction
+  const handleSetView = (newView: ViewState) => {
+    HapticService.impact(ImpactStyle.Light);
+    const navOrder = ['dashboard', 'scan', 'history', ...(childSupportMode ? ['support'] : []), 'settings'];
+    const currentIndex = navOrder.indexOf(currentView);
+    const newIndex = navOrder.indexOf(newView);
+
+    if (currentIndex !== -1 && newIndex !== -1) {
+      setDirection(newIndex > currentIndex ? 1 : -1);
+    } else {
+      setDirection(0);
+    }
+    setCurrentView(newView);
+  };
+
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? '100%' : '-100%',
+      position: 'absolute' as const,
+      width: '100%',
+      height: '100%',
+      zIndex: 1
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      position: 'relative' as const,
+      width: '100%',
+      height: '100%'
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? '100%' : '-100%',
+      position: 'absolute' as const,
+      width: '100%',
+      height: '100%'
+    })
+  };
+
+  useEffect(() => {
+    const checkTour = async () => {
+      const { value } = await Preferences.get({ key: 'has_seen_tour' });
+      if (!value) {
+        // Delay slightly to allow app to settle
+        setTimeout(() => setShowTour(true), 1000);
+      }
+    };
+    checkTour();
+  }, []);
+
+  const handleTourComplete = async () => {
+    setShowTour(false);
+    await Preferences.set({ key: 'has_seen_tour', value: 'true' });
+  };
+
+  // Calculate Spend Ratio for Ambient Background (Must be before early returns)
+  const spendRatio = React.useMemo(() => {
+    if (monthlyBudget <= 0) return 0;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const thisMonthTotal = receipts
+      .filter(r => {
+        const d = new Date(r.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((acc, r) => acc + r.total, 0);
+    return thisMonthTotal / monthlyBudget;
+  }, [receipts, monthlyBudget]);
 
   // Update Widget Data whenever receipts or budget changes
   useEffect(() => {
@@ -152,11 +229,18 @@ const App: React.FC = () => {
           if (parsed.categories !== undefined) setCategories(parsed.categories);
           if (parsed.recurringExpenses !== undefined) setRecurringExpenses(parsed.recurringExpenses);
           if (parsed.goals !== undefined) setGoals(parsed.goals);
+          if (parsed.ambientMode !== undefined) setAmbientMode(parsed.ambientMode);
+          if (parsed.showGlobalAmbient !== undefined) setShowGlobalAmbient(parsed.showGlobalAmbient);
         }
 
         const { value: savedCustody } = await Preferences.get({ key: 'truetrack_custody' });
         if (savedCustody) {
           setCustodyDays(JSON.parse(savedCustody));
+        }
+
+        const { value: savedEvents } = await Preferences.get({ key: 'truetrack_child_events' });
+        if (savedEvents) {
+          setChildEvents(JSON.parse(savedEvents));
         }
       } catch (e) {
         console.error("Failed to load data", e);
@@ -176,11 +260,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const saveSettings = async () => {
-      await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals }) });
+      await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient }) });
       await Preferences.set({ key: 'truetrack_custody', value: JSON.stringify(custodyDays) });
+      await Preferences.set({ key: 'truetrack_child_events', value: JSON.stringify(childEvents) });
     };
     saveSettings();
-  }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays]);
+  }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays, ambientMode, showGlobalAmbient, childEvents]);
 
   // Check for recurring expenses on load
   useEffect(() => {
@@ -201,7 +286,7 @@ const App: React.FC = () => {
           hasUpdates = true;
           // Create receipt
           const newReceipt: Receipt = {
-            id: `recurring_${Date.now()}_${expense.id}`,
+            id: `recurring_${Date.now()}_${expense.id} `,
             storeName: expense.name,
             date: expense.nextDueDate.split('T')[0],
             total: expense.amount,
@@ -232,7 +317,7 @@ const App: React.FC = () => {
         setReceipts(prev => [...prev, ...newReceipts]);
         setRecurringExpenses(updatedExpenses);
         if (newReceipts.length > 0) {
-          alert(`Added ${newReceipts.length} recurring expense(s):\n${newReceipts.map(r => r.storeName).join(', ')}`);
+          alert(`Added ${newReceipts.length} recurring expense(s): \n${newReceipts.map(r => r.storeName).join(', ')} `);
         }
       }
     };
@@ -274,7 +359,7 @@ const App: React.FC = () => {
 
         if (isDuplicateSig || isDuplicateImageHash || isDuplicateFileHash || isDuplicateTxId) {
           duplicateCount++;
-          console.log(`Duplicate blocked: Sig=${isDuplicateSig}, ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}, TxId=${isDuplicateTxId}`);
+          console.log(`Duplicate blocked: Sig = ${isDuplicateSig}, ImgHash = ${isDuplicateImageHash}, FileHash = ${isDuplicateFileHash}, TxId = ${isDuplicateTxId} `);
           continue;
         }
 
@@ -284,7 +369,7 @@ const App: React.FC = () => {
           // We can't use window.confirm inside the loop easily for multiple items without blocking UI weirdly.
           // For simplicity in this iteration, we'll use confirm() which blocks execution.
           // In a real app, we'd queue these for a custom modal.
-          const confirmMessage = `Potential duplicate detected:\n\nStore: ${receipt.storeName}\nDate: ${receipt.date}\nTotal: €${receipt.total.toFixed(2)}\n\nThis matches an existing receipt from "${weakMatch.storeName}".\n\nDo you want to add it anyway?`;
+          const confirmMessage = `Potential duplicate detected: \n\nStore: ${receipt.storeName} \nDate: ${receipt.date} \nTotal: €${receipt.total.toFixed(2)} \n\nThis matches an existing receipt from "${weakMatch.storeName}".\n\nDo you want to add it anyway ? `;
 
           if (window.confirm(confirmMessage)) {
             confirmedNewReceipts.push(receipt);
@@ -347,108 +432,164 @@ const App: React.FC = () => {
   // --- DEV TOOLS ---
   const generateDummyData = () => {
     const dummyProducts = [
-      // JUNK FOOD
-      { name: 'McDonalds Big Mac Meal', price: 9.50, store: 'McDonalds', category: Category.FOOD, goalType: GoalType.JUNK_FOOD },
-      { name: 'Large Pepperoni Pizza', price: 18.00, store: 'Dominos', category: Category.FOOD, goalType: GoalType.JUNK_FOOD },
-      { name: 'Family Size Chips', price: 3.50, store: 'Tesco', category: Category.FOOD, goalType: GoalType.JUNK_FOOD },
-      { name: 'Chocolate Bar Multipack', price: 4.00, store: 'Spar', category: Category.FOOD, goalType: GoalType.JUNK_FOOD },
+      // --- NECESSITY ---
+      { name: 'Rent Payment', price: 1200.00, store: 'Landlord', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Electricity Bill', price: 145.50, store: 'Electric Ireland', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Gas Bill', price: 85.20, store: 'Bord Gais', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Internet Bill', price: 60.00, store: 'Virgin Media', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Mobile Phone Bill', price: 45.00, store: 'Vodafone', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Car Insurance', price: 80.00, store: 'AXA', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Work Boots', price: 110.00, store: 'Workwear Store', category: Category.NECESSITY, goalType: undefined },
 
-      // ALCOHOL
-      { name: 'Heineken 12 Pack', price: 22.00, store: 'Tesco', category: Category.FOOD, goalType: GoalType.ALCOHOL },
-      { name: 'Bottle of Vodka', price: 28.00, store: 'Off License', category: Category.FOOD, goalType: GoalType.ALCOHOL },
-      { name: 'Craft Beer Selection', price: 15.00, store: 'Local Pub', category: Category.FOOD, goalType: GoalType.ALCOHOL },
-      { name: 'Pinot Grigio Wine', price: 12.00, store: 'Lidl', category: Category.FOOD, goalType: GoalType.ALCOHOL },
+      // --- FOOD (Groceries) ---
+      { name: 'Weekly Groceries', price: 154.32, store: 'Tesco', category: Category.FOOD, goalType: undefined },
+      { name: 'Milk & Bread', price: 5.50, store: 'Spar', category: Category.FOOD, goalType: undefined },
+      { name: 'Chicken Fillets', price: 12.00, store: 'Lidl', category: Category.FOOD, goalType: undefined },
+      { name: 'Fresh Vegetables', price: 8.45, store: 'Aldi', category: Category.FOOD, goalType: undefined },
+      { name: 'Cereal & Milk', price: 6.75, store: 'Dunnes Stores', category: Category.FOOD, goalType: undefined },
+      { name: 'Butcher Meat Pack', price: 45.00, store: 'Local Butcher', category: Category.FOOD, goalType: undefined },
+      { name: 'Fruit Basket', price: 15.00, store: 'SuperValu', category: Category.FOOD, goalType: undefined },
 
-      // SMOKING
-      { name: 'Pack of Cigarettes', price: 16.50, store: 'Spar', category: Category.OTHER, goalType: GoalType.SMOKING },
-      { name: 'Vape Juice', price: 8.00, store: 'Vape Shop', category: Category.OTHER, goalType: GoalType.SMOKING },
-      { name: 'Disposable Vape', price: 10.00, store: 'Newsagent', category: Category.OTHER, goalType: GoalType.SMOKING },
+      // --- DINING (Restaurants/Takeaway/Cafe) ---
+      { name: 'Big Mac Meal', price: 9.50, store: 'McDonalds', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
+      { name: 'Pepperoni Pizza', price: 18.00, store: 'Dominos', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
+      { name: 'Chicken Bucket', price: 24.00, store: 'KFC', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
+      { name: 'Whopper Meal', price: 10.20, store: 'Burger King', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
+      { name: 'Cappuccino & Muffin', price: 8.50, store: 'Starbucks', category: Category.DINING, goalType: GoalType.CAFFEINE },
+      { name: 'Latte', price: 4.20, store: 'Costa Coffee', category: Category.DINING, goalType: GoalType.CAFFEINE },
+      { name: 'Sushi Platter', price: 32.00, store: 'Sushi Bar', category: Category.DINING, goalType: undefined },
+      { name: 'Indian Takeaway', price: 45.50, store: 'Spice of India', category: Category.DINING, goalType: undefined },
+      { name: 'Thai Curry', price: 16.50, store: 'Camile Thai', category: Category.DINING, goalType: undefined },
+      { name: 'Burrito Bowl', price: 11.50, store: 'Boojum', category: Category.DINING, goalType: undefined },
+      { name: 'Brunch with Friends', price: 28.00, store: 'Local Cafe', category: Category.DINING, goalType: undefined },
 
-      // GAMING
-      { name: 'Steam Wallet Top-up', price: 20.00, store: 'Steam', category: Category.LUXURY, goalType: GoalType.GAMING },
-      { name: 'PlayStation Plus Sub', price: 15.00, store: 'PlayStation', category: Category.LUXURY, goalType: GoalType.GAMING },
-      { name: 'New Game Release', price: 69.99, store: 'GameStop', category: Category.LUXURY, goalType: GoalType.GAMING },
-      { name: 'Robux Gift Card', price: 10.00, store: 'Tesco', category: Category.LUXURY, goalType: GoalType.GAMING },
+      // --- ALCOHOL ---
+      { name: 'Heineken Slab (24)', price: 45.00, store: 'Tesco', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Guinness 8 Pack', price: 16.00, store: 'SuperValu', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Bottle of Vodka', price: 28.00, store: 'Off License', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Gin & Tonic Mix', price: 35.00, store: 'Off License', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Craft Beer Flight', price: 18.00, store: 'Brewery Bar', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Bottle of Red Wine', price: 14.00, store: 'Lidl', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Prosecco', price: 12.00, store: 'Aldi', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
+      { name: 'Whiskey Bottle', price: 45.00, store: 'Jameson Distillery', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
 
-      // GAMBLING
-      { name: 'Lottery Ticket', price: 10.00, store: 'Newsagent', category: Category.LUXURY, goalType: GoalType.GAMBLING },
-      { name: 'Online Bet Deposit', price: 50.00, store: 'Paddy Power', category: Category.LUXURY, goalType: GoalType.GAMBLING },
-      { name: 'Casino Chips', price: 100.00, store: 'Casino', category: Category.LUXURY, goalType: GoalType.GAMBLING },
-
-      // CAFFEINE
-      { name: 'Starbucks Latte', price: 4.50, store: 'Starbucks', category: Category.FOOD, goalType: GoalType.CAFFEINE },
-      { name: 'Monster Energy Drink', price: 2.50, store: 'Spar', category: Category.FOOD, goalType: GoalType.CAFFEINE },
-      { name: 'Nespresso Pods', price: 25.00, store: 'Nespresso', category: Category.FOOD, goalType: GoalType.CAFFEINE },
-      { name: 'Costa Cappuccino', price: 3.80, store: 'Costa', category: Category.FOOD, goalType: GoalType.CAFFEINE },
-
-      // SUGAR
-      { name: 'Coca Cola 2L', price: 3.00, store: 'Tesco', category: Category.FOOD, goalType: GoalType.SUGAR },
-      { name: 'Ben & Jerrys Ice Cream', price: 6.50, store: 'Tesco', category: Category.FOOD, goalType: GoalType.SUGAR },
-      { name: 'Bag of Sweets', price: 2.00, store: 'Newsagent', category: Category.FOOD, goalType: GoalType.SUGAR },
-      { name: 'Donut Box', price: 12.00, store: 'Krispy Kreme', category: Category.FOOD, goalType: GoalType.SUGAR },
-
-      // ONLINE SHOPPING
-      { name: 'Amazon Order', price: 45.00, store: 'Amazon', category: Category.HOUSEHOLD, goalType: GoalType.ONLINE_SHOPPING },
-      { name: 'Temu Gadgets', price: 25.00, store: 'Temu', category: Category.LUXURY, goalType: GoalType.ONLINE_SHOPPING },
-      { name: 'eBay Purchase', price: 30.00, store: 'eBay', category: Category.OTHER, goalType: GoalType.ONLINE_SHOPPING },
-
-      // FAST FASHION
-      { name: 'Shein Haul', price: 80.00, store: 'Shein', category: Category.LUXURY, goalType: GoalType.FAST_FASHION },
-      { name: 'Zara Dress', price: 49.99, store: 'Zara', category: Category.LUXURY, goalType: GoalType.FAST_FASHION },
-      { name: 'Primark Clothes', price: 35.00, store: 'Primark', category: Category.NECESSITY, goalType: GoalType.FAST_FASHION },
-
-      // RIDE SHARING
-      { name: 'Uber Ride', price: 18.50, store: 'Uber', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
-      { name: 'Taxi Fare', price: 22.00, store: 'FreeNow', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
-      { name: 'Lyft Ride', price: 15.00, store: 'Lyft', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
-
-      // STREAMING
+      // --- LUXURY ---
+      { name: 'Cinema Tickets', price: 24.00, store: 'Odeon', category: Category.LUXURY, goalType: undefined },
       { name: 'Netflix Subscription', price: 15.99, store: 'Netflix', category: Category.LUXURY, goalType: GoalType.STREAMING },
       { name: 'Spotify Premium', price: 10.99, store: 'Spotify', category: Category.LUXURY, goalType: GoalType.STREAMING },
-      { name: 'Disney+ Monthly', price: 8.99, store: 'Disney+', category: Category.LUXURY, goalType: GoalType.STREAMING },
+      { name: 'Video Game', price: 69.99, store: 'GameStop', category: Category.LUXURY, goalType: GoalType.GAMING },
+      { name: 'Steam Wallet', price: 20.00, store: 'Steam', category: Category.LUXURY, goalType: GoalType.GAMING },
+      { name: 'Designer T-Shirt', price: 85.00, store: 'Brown Thomas', category: Category.LUXURY, goalType: GoalType.FAST_FASHION },
+      { name: 'New Headphones', price: 150.00, store: 'Currys', category: Category.LUXURY, goalType: undefined },
+      { name: 'Concert Tickets', price: 220.00, store: 'Ticketmaster', category: Category.LUXURY, goalType: undefined },
+      { name: 'Lego Set', price: 120.00, store: 'Smyths Toys', category: Category.LUXURY, goalType: undefined },
+      { name: 'Perfume', price: 90.00, store: 'Boots', category: Category.LUXURY, goalType: undefined },
+      { name: 'Online Bet', price: 50.00, store: 'Paddy Power', category: Category.LUXURY, goalType: GoalType.GAMBLING },
+      { name: 'Lottery Ticket', price: 10.00, store: 'Newsagent', category: Category.LUXURY, goalType: GoalType.GAMBLING },
 
-      // GENERAL / OTHER
-      { name: 'Weekly Groceries', price: 120.00, store: 'Tesco', category: Category.FOOD, goalType: undefined },
-      { name: 'Petrol Refill', price: 60.00, store: 'Shell', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Electricity Bill', price: 150.00, store: 'Electric Ireland', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Gym Membership', price: 40.00, store: 'Flyefit', category: Category.HEALTH, goalType: undefined },
+      // --- HOUSEHOLD ---
+      { name: 'Cleaning Supplies', price: 25.00, store: 'Tesco', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'Toilet Paper Bulk', price: 12.00, store: 'Lidl', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'Laundry Detergent', price: 14.00, store: 'Dunnes', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'New Pillows', price: 30.00, store: 'IKEA', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'Kitchen Utensils', price: 45.00, store: 'Homestore', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'Batteries', price: 8.00, store: 'Dealz', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'Light Bulbs', price: 12.00, store: 'Woodies', category: Category.HOUSEHOLD, goalType: undefined },
+
+      // --- HEALTH ---
+      { name: 'Prescription Meds', price: 25.00, store: 'Boots Pharmacy', category: Category.HEALTH, goalType: undefined },
+      { name: 'Vitamins', price: 18.00, store: 'Holland & Barrett', category: Category.HEALTH, goalType: undefined },
+      { name: 'GP Visit', price: 60.00, store: 'Medical Centre', category: Category.HEALTH, goalType: undefined },
+      { name: 'Dentist Checkup', price: 80.00, store: 'Dental Practice', category: Category.HEALTH, goalType: undefined },
+      { name: 'Gym Membership', price: 45.00, store: 'Flyefit', category: Category.HEALTH, goalType: undefined },
+      { name: 'Protein Powder', price: 55.00, store: 'Supplement Store', category: Category.HEALTH, goalType: undefined },
+
+      // --- TRANSPORT ---
+      { name: 'Petrol Refill', price: 75.00, store: 'Circle K', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Diesel Refill', price: 80.00, store: 'Applegreen', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Bus Leap Card', price: 20.00, store: 'Dublin Bus', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Train Ticket', price: 35.00, store: 'Irish Rail', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Uber Ride', price: 18.50, store: 'Uber', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
+      { name: 'Taxi Fare', price: 22.00, store: 'FreeNow', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
+      { name: 'Car Wash', price: 12.00, store: 'Maxol', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Parking Fee', price: 15.00, store: 'Q-Park', category: Category.TRANSPORT, goalType: undefined },
+
+      // --- EDUCATION ---
+      { name: 'School Books', price: 120.00, store: 'Easons', category: Category.EDUCATION, goalType: undefined },
       { name: 'School Uniform', price: 85.00, store: 'Marks & Spencer', category: Category.EDUCATION, goalType: undefined },
-      { name: 'Pharmacy Meds', price: 25.00, store: 'Boots', category: Category.HEALTH, goalType: undefined },
+      { name: 'Stationery', price: 15.00, store: 'Reads', category: Category.EDUCATION, goalType: undefined },
+      { name: 'Music Lessons', price: 40.00, store: 'Music School', category: Category.EDUCATION, goalType: undefined },
+      { name: 'Online Course', price: 29.99, store: 'Udemy', category: Category.EDUCATION, goalType: undefined },
+
+      // --- OTHER ---
+      { name: 'Birthday Gift', price: 50.00, store: 'Amazon', category: Category.OTHER, goalType: GoalType.ONLINE_SHOPPING },
+      { name: 'Charity Donation', price: 20.00, store: 'Concern', category: Category.OTHER, goalType: undefined },
+      { name: 'Bank Fees', price: 6.00, store: 'AIB', category: Category.OTHER, goalType: undefined },
+      { name: 'Post Office', price: 12.00, store: 'An Post', category: Category.OTHER, goalType: undefined },
+
+      // --- PETS ---
+      { name: 'Dog Food', price: 45.00, store: 'PetMania', category: Category.HOUSEHOLD, goalType: undefined },
+      { name: 'Vet Visit', price: 85.00, store: 'Local Vet', category: Category.HEALTH, goalType: undefined },
+      { name: 'Cat Litter', price: 12.00, store: 'Maxi Zoo', category: Category.HOUSEHOLD, goalType: undefined },
+
+      // --- BEAUTY & GROOMING ---
+      { name: 'Haircut', price: 25.00, store: 'Barber Shop', category: Category.NECESSITY, goalType: undefined },
+      { name: 'Salon Visit', price: 120.00, store: 'Hair Salon', category: Category.LUXURY, goalType: undefined },
+      { name: 'Skincare', price: 45.00, store: 'Space NK', category: Category.LUXURY, goalType: undefined },
+
+      // --- TRAVEL ---
+      { name: 'Flight Booking', price: 150.00, store: 'Ryanair', category: Category.LUXURY, goalType: undefined },
+      { name: 'Hotel Stay', price: 200.00, store: 'Booking.com', category: Category.LUXURY, goalType: undefined },
+      { name: 'Airbnb', price: 180.00, store: 'Airbnb', category: Category.LUXURY, goalType: undefined },
+
+      // --- CAR MAINTENANCE ---
+      { name: 'NCT Booking', price: 55.00, store: 'NCT', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Car Service', price: 250.00, store: 'Mechanic', category: Category.TRANSPORT, goalType: undefined },
+      { name: 'Tyres', price: 180.00, store: 'Tyre Centre', category: Category.TRANSPORT, goalType: undefined },
     ];
 
     const newReceipts: Receipt[] = [];
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
 
-    // Generate 40 receipts to ensure good coverage
-    for (let i = 0; i < 40; i++) {
-      const day = Math.floor(Math.random() * 28) + 1;
-      const date = new Date(currentYear, currentMonth, day);
-      const product = dummyProducts[Math.floor(Math.random() * dummyProducts.length)];
+    // Generate receipts for the last 30 days (Broad Spectrum)
+    for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - dayOffset);
+      const dateStr = date.toISOString().split('T')[0];
 
-      // Add some variance to price
-      const finalPrice = parseFloat((product.price * (0.8 + Math.random() * 0.4)).toFixed(2));
+      // Random number of receipts per day (0 to 5)
+      // More receipts on weekends (Fri/Sat/Sun)
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
+      const dailyCount = isWeekend ? Math.floor(Math.random() * 4) + 2 : Math.floor(Math.random() * 3) + 1;
 
-      // Add some child related items occasionally
-      const isChild = Math.random() > 0.8;
+      for (let i = 0; i < dailyCount; i++) {
+        const product = dummyProducts[Math.floor(Math.random() * dummyProducts.length)];
 
-      newReceipts.push({
-        id: `dummy_${Date.now()}_${i}`,
-        storeName: product.store,
-        date: date.toISOString().split('T')[0],
-        total: finalPrice,
-        items: [{
-          name: product.name,
-          price: finalPrice,
-          quantity: 1,
-          category: product.category,
-          isChildRelated: isChild,
-          goalType: product.goalType
-        }],
-        scannedAt: new Date().toISOString(),
-        type: 'receipt'
-      });
+        // Add some variance to price (±20%)
+        const variance = 1 + (Math.random() * 0.4 - 0.2);
+        const finalPrice = parseFloat((product.price * variance).toFixed(2));
+
+        // Add some child related items occasionally (20% chance)
+        const isChild = Math.random() < 0.2;
+
+        newReceipts.push({
+          id: `dummy_${Date.now()}_${dayOffset}_${i} `,
+          storeName: product.store,
+          date: dateStr,
+          total: finalPrice,
+          items: [{
+            name: product.name,
+            price: finalPrice,
+            quantity: 1,
+            category: product.category,
+            isChildRelated: isChild,
+            goalType: product.goalType
+          }],
+          scannedAt: new Date().toISOString(),
+          type: 'receipt'
+        });
+      }
     }
 
     setReceipts(prev => [...newReceipts, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -461,7 +602,7 @@ const App: React.FC = () => {
     });
     setCategoryBudgets(newCategoryBudgets);
 
-    alert("Added 40 diverse dummy receipts and set random category budgets!");
+    alert("Added comprehensive dummy data for the last 30 days!");
   };
 
   const handleUpdateCustodyDay = (day: CustodyDay) => {
@@ -480,7 +621,43 @@ const App: React.FC = () => {
   };
 
   if (isAuthLoading || !isDataLoaded) {
-    return <div className="h-screen w-full bg-background flex items-center justify-center text-slate-500">Loading...</div>;
+    return (
+      <div className="fixed top-0 left-0 w-full h-[100dvh] z-[9999] bg-[#020617] flex flex-col items-center justify-center overflow-hidden">
+        {/* Ambient Background for Loading */}
+        <div className="absolute top-[-20%] left-[-20%] w-[70%] h-[70%] bg-blue-500/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[70%] h-[70%] bg-purple-500/10 rounded-full blur-[100px] animate-pulse delay-700" />
+
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="relative mb-6">
+            {/* Glow behind logo */}
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse"></div>
+            {/* Logo with animated fill */}
+            <Shield
+              className="w-12 h-12 text-white animate-[pulse_3s_ease-in-out_infinite]"
+              strokeWidth={1.5}
+              style={{
+                fill: 'rgba(56, 189, 248, 0.2)', // Initial fill
+                animation: 'fillPulse 3s ease-in-out infinite'
+              }}
+            />
+            <style>{`
+@keyframes fillPulse {
+  0 %, 100 % { fill: rgba(56, 189, 248, 0.1); }
+  50 % { fill: rgba(56, 189, 248, 0.6); }
+}
+`}</style>
+          </div>
+          <h1 className="text-xl font-heading font-bold text-white tracking-tight">TrueTrack</h1>
+        </div>
+
+        {/* Loading Dots - Positioned at bottom */}
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+          <div className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="w-1 h-1 bg-primary rounded-full animate-bounce"></div>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -491,7 +668,7 @@ const App: React.FC = () => {
     switch (currentView) {
       case 'dashboard':
         return (
-          <div className="flex flex-col h-full bg-slate-900">
+          <div className="flex flex-col h-full">
             {/* Debug Button for Widget - MOVED TO TOP LEFT */}
             {/* <div style={{
               position: 'absolute',
@@ -549,7 +726,7 @@ const App: React.FC = () => {
                   color: 'white',
                   borderRadius: '8px',
                   fontWeight: 'bold',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                  boxShadow: '0 44px 12px rgba(0,0,0,0.5)',
                   border: '2px solid white'
                 }}
               >
@@ -557,7 +734,7 @@ const App: React.FC = () => {
               </button>
             </div> */}
             <Dashboard
-              key={`dashboard-${receipts.length}-${monthlyBudget}-${ageRestricted}`}
+              key={`dashboard - ${receipts.length} -${monthlyBudget} -${ageRestricted} `}
               receipts={receipts}
               monthlyBudget={monthlyBudget}
               ageRestricted={ageRestricted}
@@ -570,7 +747,12 @@ const App: React.FC = () => {
               onProvisionClick={() => setCurrentView('provision')}
               onSettlementClick={() => setCurrentView('settlement')}
               onCustodyClick={() => setCurrentView('custody')}
+              onHabitsClick={() => setCurrentView('settings')}
               goals={goals}
+              custodyDays={custodyDays}
+              ambientMode={ambientMode}
+              childEvents={childEvents}
+              setChildEvents={setChildEvents}
             />
           </div>
         );
@@ -587,6 +769,9 @@ const App: React.FC = () => {
           <ReceiptScanner
             onScanComplete={handleScanComplete}
             onCancel={() => setCurrentView('dashboard')}
+            ageRestricted={ageRestricted}
+            userId="user-1" // Hardcoded for now as per App structure
+            categories={categories}
           />
         );
       case 'history':
@@ -642,18 +827,78 @@ const App: React.FC = () => {
             onDeleteAll={handleDeleteAllReceipts}
             goals={goals}
             setGoals={setGoals}
+            setReceipts={setReceipts}
+            onSeedData={generateDummyData}
+            ambientMode={ambientMode}
+            setAmbientMode={(value) => {
+              console.log('App: setAmbientMode called', value);
+              setAmbientMode(value);
+            }}
+            showGlobalAmbient={showGlobalAmbient}
+            setShowGlobalAmbient={setShowGlobalAmbient}
           />
         );
       default:
         // Force re-render when switching back to dashboard to trigger animations
-        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} onViewReceipt={handleViewReceipt} onProvisionClick={() => setCurrentView('provision')} goals={goals} />;
+        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} onViewReceipt={handleViewReceipt} onProvisionClick={() => setCurrentView('provision')} goals={goals} ambientMode={ambientMode} />;
     }
   };
 
+
+
   return (
-    <div className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-safe safe-area-top">
-      <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
+    <div
+      className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-safe safe-area-top"
+      onTouchStart={(e) => {
+        const touch = e.touches[0];
+        // Ignore swipes starting in the bottom navigation area (approx 90px)
+        if (touch.clientY > window.innerHeight - 90) return;
+
+        setTouchStart({ x: touch.clientX, y: touch.clientY, time: Date.now() });
+      }}
+      onTouchEnd={(e) => {
+        if (!touchStart) return;
+
+        const touch = e.changedTouches[0];
+        const diffX = touchStart.x - touch.clientX;
+        const diffY = touchStart.y - touch.clientY;
+        const timeDiff = Date.now() - touchStart.time;
+
+        setTouchStart(null);
+
+        // Optimized Thresholds
+        const minSwipeDistance = 30; // Reduced from 50
+        const maxTime = 800; // Increased from 500
+
+        // Dominant Axis Check (Horizontal > Vertical * 1.2)
+        if (
+          Math.abs(diffX) > minSwipeDistance &&
+          Math.abs(diffX) > Math.abs(diffY) * 1.2 &&
+          timeDiff < maxTime
+        ) {
+          const navOrder = ['dashboard', 'scan', 'history', ...(childSupportMode ? ['support'] : []), 'settings'];
+          const currentIndex = navOrder.indexOf(currentView);
+
+          if (currentIndex === -1) return;
+
+          if (diffX > 0) {
+            // Swipe Left -> Next Tab
+            if (currentIndex < navOrder.length - 1) {
+              setDirection(1);
+              setCurrentView(navOrder[currentIndex + 1] as ViewState);
+            }
+          } else {
+            // Swipe Right -> Previous Tab
+            if (currentIndex > 0) {
+              setDirection(-1);
+              setCurrentView(navOrder[currentIndex - 1] as ViewState);
+            }
+          }
+        }
+      }}
+    >
+      {ambientMode && showGlobalAmbient && <AmbientBackground spendRatio={spendRatio} />}
+
 
       {isMockMode && showDevBanner && (
         <div className="bg-indigo-900/90 text-indigo-100 text-[10px] py-1 px-3 text-center border-b border-indigo-500/30 flex items-center justify-between relative z-50 backdrop-blur-sm">
@@ -670,15 +915,32 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 w-full max-w-md mx-auto relative z-10 h-full">
-        <div key={currentView} className="h-full animate-fade-in">
-          <ErrorBoundary>
-            {renderView()}
-          </ErrorBoundary>
-        </div>
+      <main
+        className="flex-1 w-full max-w-md mx-auto relative z-10 h-full"
+      >
+        <AnimatePresence initial={false} custom={direction}>
+          <motion.div
+            key={currentView}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "tween", ease: "circOut", duration: 0.3 }
+            }}
+            className={`h-full w-full ${showGlobalAmbient ? '' : 'bg-background'}`}
+          >
+            <ErrorBoundary>
+              {renderView()}
+            </ErrorBoundary>
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      <Navigation currentView={currentView} setView={setCurrentView} isVisible={!!user} childSupportMode={childSupportMode} />
+      <Navigation currentView={currentView} setView={handleSetView} isVisible={!!user} childSupportMode={childSupportMode} />
+      {/* Intro Tour Overlay */}
+      {showTour && <IntroTour onComplete={handleTourComplete} />}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Receipt, Category } from '../types';
 import { ArrowLeft, CheckCircle2, FileText, Download, Activity, ShoppingBag, Wallet, TrendingUp, TrendingDown, ArrowUpRight, Store } from 'lucide-react';
+import AnimatedSection from './AnimatedSection';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend, AreaChart, Area } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -278,7 +279,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
             <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-32 space-y-6">
 
                 {/* 1. Monthly Trend (Stacked Area Chart) */}
-                <div className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-2xl relative overflow-hidden">
+                <AnimatedSection className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-2xl relative overflow-hidden" animateContainer={true}>
                     <div className="flex items-center gap-2 mb-4">
                         <TrendingUp className="text-blue-400 w-5 h-5" />
                         <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Monthly Trend</h3>
@@ -314,13 +315,13 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </AnimatedSection>
 
                 {/* Grid for Daily Activity & Top Vendors */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     {/* 2. Daily Activity */}
-                    <div className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg">
+                    <AnimatedSection className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg" animateContainer={true} delay={100}>
                         <div className="flex items-center gap-2 mb-4">
                             <Activity className="text-blue-500 w-5 h-5" />
                             <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Daily Activity</h3>
@@ -353,10 +354,10 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </AnimatedSection>
 
                     {/* 3. Top Vendors */}
-                    <div className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg">
+                    <AnimatedSection className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg" animateContainer={true} delay={200}>
                         <div className="flex items-center gap-2 mb-4">
                             <Store className="text-indigo-400 w-5 h-5" />
                             <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Top Vendors</h3>
@@ -378,11 +379,11 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                                 <div className="text-xs text-slate-500 text-center py-4">No data</div>
                             )}
                         </div>
-                    </div>
+                    </AnimatedSection>
                 </div>
 
                 {/* 4. Spending Breakdown */}
-                <div className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg">
+                <AnimatedSection className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg" animateContainer={true} delay={300}>
                     <div className="flex items-center gap-2 mb-4">
                         <ShoppingBag className="text-emerald-400 w-5 h-5" />
                         <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Spending Breakdown</h3>
@@ -409,7 +410,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                             <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
                         )}
                     </div>
-                </div>
+                </AnimatedSection>
 
                 {/* Download Button */}
                 <button

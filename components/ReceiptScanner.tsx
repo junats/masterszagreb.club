@@ -20,9 +20,10 @@ interface ReceiptScannerProps {
   onCancel: () => void;
   ageRestricted: boolean;
   userId: string;
+  categories: { name: string }[];
 }
 
-const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCancel, ageRestricted, userId }) => {
+const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCancel, ageRestricted, userId, categories }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
@@ -111,7 +112,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
       // 3. Analyze with Unified Smart Service
       console.log('🔄 Step 3: Calling analyzeReceiptImage...');
-      const result: AnalysisResult = await analyzeReceiptImage(base64ForAI);
+      const result: AnalysisResult = await analyzeReceiptImage(base64ForAI, categories);
       console.log('✅ Step 3 complete, result:', result);
 
       // 4. Upload Image via Storage Service (Cloud or Mock)

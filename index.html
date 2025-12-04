@@ -6,11 +6,10 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>TrueTrack</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap"
-    rel="stylesheet">
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' https://*.supabase.co https://*.supabase.in; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.supabase.in https://generativelanguage.googleapis.com;">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -28,8 +27,8 @@
             food: '#fbbf24',       // Amber 400
           },
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            heading: ['Outfit', 'sans-serif'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', 'sans-serif'],
+            heading: ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', 'sans-serif'],
           }
         }
       }
@@ -38,6 +37,8 @@
   <style>
     :root {
       --background: 224 71.4% 4.1%;
+      background-color: hsl(var(--background));
+      /* Ensure html has bg color */
       --foreground: 210 40% 98%;
       --card: 224 71.4% 6.1%;
       --card-foreground: 210 40% 98%;
@@ -90,7 +91,7 @@
     .glow-text {
       text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
     }
-    
+
     .shadow-glow {
       box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
     }
@@ -148,6 +149,23 @@
         transform: scale(1);
       }
     }
+
+    @keyframes glow-pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .animate-glow-pulse {
+      animation: glow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
 
     .animate-fade-in {
       animation: fadeIn 0.3s ease-out forwards;

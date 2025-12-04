@@ -5,6 +5,7 @@ import {
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { TrendingUp, PieChart as PieIcon, Activity, Wallet, Baby } from 'lucide-react';
+import AnimatedSection from './AnimatedSection';
 
 interface HistoryAnalyticsProps {
     receipts: Receipt[];
@@ -210,7 +211,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
             <div className="bg-surface border border-white/5 rounded-3xl p-4 shadow-sm min-h-[256px] relative">
 
                 {activeTab === 'trend' && (
-                    <div className="h-64 w-full animate-in fade-in duration-300">
+                    <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Spending Composition</h4>
                         </div>
@@ -235,11 +236,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </AnimatedSection>
                 )}
 
                 {activeTab === 'child' && (
-                    <div className="h-64 w-full animate-in fade-in duration-300">
+                    <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Child Spending Trend</h4>
                         </div>
@@ -259,11 +260,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </AnimatedSection>
                 )}
 
                 {activeTab === 'dist' && (
-                    <div className="h-64 w-full animate-in fade-in duration-300 relative">
+                    <AnimatedSection className="h-64 w-full relative" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Category Breakdown</h4>
                         </div>
@@ -292,11 +293,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 <span className="text-lg font-heading font-bold text-white tabular-nums">€{categoryData.total.toFixed(0)}</span>
                             </div>
                         </div>
-                    </div>
+                    </AnimatedSection>
                 )}
 
                 {activeTab === 'sources' && (
-                    <div className="h-64 w-full animate-in fade-in duration-300">
+                    <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Top Merchants</h4>
                         </div>
@@ -317,11 +318,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </AnimatedSection>
                 )}
 
                 {activeTab === 'budgets' && (
-                    <div className="h-full w-full animate-in fade-in duration-300 overflow-y-auto no-scrollbar pb-2">
+                    <AnimatedSection className="h-full w-full overflow-y-auto no-scrollbar pb-2" animateContainer={true}>
                         <div className="flex justify-between items-center mb-4 px-1">
                             <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Budget vs Actual</h4>
                             <span className="text-[10px] text-slate-500 font-medium">Set limits in Settings</span>
@@ -355,7 +356,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 <p className="text-center text-slate-500 text-xs py-8">No spending data or budgets set.</p>
                             )}
                         </div>
-                    </div>
+                    </AnimatedSection>
                 )}
             </div>
         </div>

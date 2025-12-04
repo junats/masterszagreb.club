@@ -40,8 +40,8 @@ async function compressImage(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
-// Define the expected schema for the AI response
-const receiptSchema: Schema = {
+// Define the expected schema for the AI response (Factory function)
+const createReceiptSchema = (categoryNames: string[]): Schema => ({
   type: Type.OBJECT,
   properties: {
     storeName: {
@@ -80,17 +80,8 @@ const receiptSchema: Schema = {
           quantity: { type: Type.NUMBER, description: "Quantity purchased (default to 1)." },
           category: {
             type: Type.STRING,
-            enum: [
-              "Necessity",
-              "Food",
-              "Luxury",
-              "Household",
-              "Health",
-              "Transport",
-              "Education",
-              "Other"
-            ],
-            description: "Classify strictly. Kindergarten/Tuition/Childcare = 'Education'. Education is always a Necessity.",
+            enum: categoryNames,
+            description: `Classify strictly into one of: ${categoryNames.join(', ')}.`,
           },
           isRestricted: {
             type: Type.BOOLEAN,
@@ -124,10 +115,11 @@ const receiptSchema: Schema = {
     },
   },
   required: ["storeName", "date", "total", "items"],
-};
+});
 
-export const analyzeReceiptImage = async (base64Image: string): Promise<AnalysisResult> => {
+export const analyzeReceiptImage = async (base64Image: string, categories: { name: string }[] = []): Promise<AnalysisResult> => {
   console.log('🔍 analyzeReceiptImage called, image length:', base64Image?.length);
+  console.log('📋 Using categories:', categories.map(c => c.name));
 
   let apiKey: string | undefined;
 
@@ -144,7 +136,7 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
   // Fallback for production builds (especially iOS) where process.env doesn't work
   if (!apiKey) {
     console.log('📌 Using fallback API key');
-    apiKey = 'AIzaSyA-w-s5GVM5xVkS1siyypYRqXfSFIVy3wI';
+    apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
   }
 
   if (!apiKey) {
@@ -153,6 +145,11 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
 
   console.log('✅ API key present, initializing GoogleGenAI...');
   const ai = new GoogleGenAI({ apiKey });
+
+  // Prepare Category List for Prompt
+  const defaultCategories = ["Necessity", "Food", "Dining", "Alcohol", "Luxury", "Household", "Health", "Transport", "Education", "Other"];
+  const categoryNames = categories.length > 0 ? categories.map(c => c.name) : defaultCategories;
+  const categoryListString = categoryNames.join(', ');
 
   // Unified Smart Prompt
   const promptText = `
@@ -163,20 +160,23 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
     3. If it is a bill, extract the 'Reference Code', 'Invoice Number', or 'Payment ID' if visible.
     4. If it is a retail receipt, extract the 'Transaction ID', 'Receipt Number', 'Slip #', or any unique alphanumeric code that identifies this specific transaction.
     5. Extract EVERY single line item individually. Do not group items. Do not return a single 'Total' item. If the receipt has 20 items, return 20 items.
-    6. Categorize each item strictly into: Necessity, Food, Luxury, Household, Health, Transport, Education, or Other.
-       - 'Food': STRICTLY for edible items, groceries, supermarkets, bakery, meat, veg, snacks, drinks. If it goes in your mouth and isn't medicine/alcohol, it is Food.
-       - 'Necessity': Only for essential non-food items (e.g. clothes, basic utilities). DO NOT use this for Food.
-       - 'Luxury': Dining Out, Restaurants, Fast Food, Takeaway, Coffee Shops, Alcohol, Tobacco, Electronics, Decor, Toys (unless educational).
-       - 'Household': Cleaning supplies, Toiletries, Maintenance, Kitchenware.
-       - 'Health': Medicine, Pharmacy, Doctor, Dentist, Vitamins.
-       - 'Transport': Fuel, Public Transit. Taxis/Uber are 'Luxury' unless clearly medical/school.
-       - 'Education': Tuition, School Fees, Books, School Supplies.
+    6. Categorize each item strictly into one of the following categories: ${categoryListString}.
+       - Use your best judgment to match the item to the most appropriate category name provided.
+       - "Alcohol": Beer, Wine, Spirits, Cocktails, Cider. (Even if bought at a grocery store).
+       - "Dining": Restaurants, Fast Food (McDonalds, KFC), Takeaway, Cafes (if sitting in), Coffee Shops.
+       - "Food": Groceries, Supermarket items, Snacks, Drinks (non-alcoholic) bought at a store.
+       - "Luxury": Entertainment, Electronics, Designer Clothing, Toys, Games, Gifts, Non-essential gadgets.
+       - "Necessity": Basic clothing, Work items.
+       - "Education": Tuition, School Fees, Books, School Supplies.
+       - "Health": Medicine, Pharmacy, Doctors, Gym.
+       - "Transport": Fuel, Parking, Public Transit, Taxi/Uber.
+       - "Household": Cleaning supplies, Furniture, Decor.
     7. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true.
     8. CRITICAL: Identify items meant for children (18 and younger) and set 'isChildRelated' to true.
        - EXAMPLES: Diapers, Baby Food, Formula, Kids Clothing, Toys, School Supplies, Tuition, Kindergarten Fees, Pediatric Medicine, Children's Books.
        - INFERENCE: If the store is "Toys R Us" or "Kindergarten", items are likely child-related.
     9. Ensure numeric values handle commas as decimals if standard in the receipt region.
-    10. If the image is blurry or items are unclear, try to infer the category from the store type (e.g., a Pharmacy receipt with unclear items should have items categorized as Health).
+    10. If the image is blurry or items are unclear, try to infer the category from the store type.
     
     CRITICAL FOR TOTAL EXTRACTION:
     - The 'Total' must be the POSITIVE amount to be paid.
@@ -202,7 +202,7 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
       },
       config: {
         responseMimeType: "application/json",
-        responseSchema: receiptSchema,
+        responseSchema: createReceiptSchema(categoryNames),
         temperature: 0.1, // Low temperature for factual extraction
       },
     });

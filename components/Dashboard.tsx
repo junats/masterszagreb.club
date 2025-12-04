@@ -1,7 +1,32 @@
 import React, { useMemo, useState } from 'react';
-import { Receipt, Category, CategoryDefinition, Goal, GoalType } from '../types';
-import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
+import { motion } from 'framer-motion';
+import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay, ChildEvent } from '../types';
+import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart as PieIcon, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users, Gift } from 'lucide-react';
+import { HapticsService } from '../services/haptics';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, PolarAngleAxis, PieChart, Pie, Cell } from 'recharts';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 24
+        }
+    }
+};
 
 interface DashboardProps {
     receipts: Receipt[];
@@ -14,7 +39,12 @@ interface DashboardProps {
     onProvisionClick?: () => void;
     onSettlementClick?: () => void;
     onCustodyClick?: () => void;
+    onHabitsClick?: () => void;
     goals?: Goal[];
+    custodyDays?: CustodyDay[];
+    ambientMode?: boolean;
+    childEvents?: ChildEvent[];
+    setChildEvents?: React.Dispatch<React.SetStateAction<ChildEvent[]>>;
 }
 
 interface DrillDownState {
@@ -24,72 +54,18 @@ interface DrillDownState {
 
 type DateFilter = 'all' | 'this_month' | 'last_month';
 
-// Hook for scroll animations
-function useInView(options = { threshold: 0.1, rootMargin: '0px' }, triggerOnce = false) {
-    const [ref, setRef] = useState<HTMLDivElement | null>(null);
-    const [isInView, setIsInView] = useState(false);
+import AnimatedSection from './AnimatedSection';
+import { AmbientBackground } from './AmbientBackground';
+import { ChildEvents } from './ChildEvents';
 
-    React.useEffect(() => {
-        if (!ref) return;
-
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-                setIsInView(true);
-                if (triggerOnce) observer.disconnect();
-            } else {
-                if (!triggerOnce) setIsInView(false);
-            }
-        }, options);
-
-        observer.observe(ref);
-
-        // Fallback: Force visible after 100ms to ensure content shows even if observer fails
-        const timeout = setTimeout(() => {
-            setIsInView(true);
-        }, 100);
-
-        return () => {
-            observer.disconnect();
-            clearTimeout(timeout);
-        };
-    }, [ref, options.threshold, options.rootMargin, triggerOnce]);
-
-    return [setRef, isInView] as const;
-}
-
-const AnimatedSection: React.FC<{ children: React.ReactNode | ((props: { isInView: boolean }) => React.ReactNode); className?: string; delay?: number; triggerOnce?: boolean; animateContainer?: boolean }> = ({ children, className = "", delay = 0, triggerOnce = false, animateContainer = true }) => {
-    const [ref, isInView] = useInView({ threshold: 0.1, rootMargin: '0px' }, triggerOnce);
-
-    const containerClasses = animateContainer
-        ? `transition-all duration-1000 ease-out transform ${isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`
-        : '';
-
-    return (
-        <div
-            ref={ref}
-            className={`${containerClasses} ${className}`}
-            style={animateContainer ? { transitionDelay: `${delay}ms` } : {}}
-        >
-            {typeof children === 'function'
-                ? children({ isInView })
-                : React.Children.map(children, child => {
-                    if (React.isValidElement(child)) {
-                        return React.cloneElement(child as React.ReactElement<any>, { isInView });
-                    }
-                    return child;
-                })
-            }
-        </div>
-    );
-};
-
-const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, goals = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, onHabitsClick, goals = [], custodyDays = [], ambientMode = true, childEvents = [], setChildEvents = () => { } }) => {
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
     const [chartView, setChartView] = useState<'week' | 'month' | 'year'>('week');
     const [insightView, setInsightView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [goalView, setGoalView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+    const [custodyView, setCustodyView] = useState<'weekly' | 'monthly'>('weekly');
     const [showIndicators, setShowIndicators] = useState(false);
 
     // Helper to get category color
@@ -196,6 +172,24 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 </div>
             </div>
         );
+    };
+
+    // Custom Tooltip Component
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            // payload[0].payload contains the full data object for this X-axis point
+            // We want the 'total' property which we pre-calculated
+            const data = payload[0].payload;
+            return (
+                <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-xl">
+                    <p className="text-slate-400 text-[10px] font-medium mb-1 uppercase tracking-wider">{label}</p>
+                    <p className="text-white text-sm font-bold font-mono">
+                        €{(data.total || 0).toFixed(2)}
+                    </p>
+                </div>
+            );
+        }
+        return null;
     };
 
     // Calculate Metrics
@@ -829,13 +823,37 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         return "All Time"; // Simplified for dashboard
     };
 
+    // Ambient Health State Logic
+    const healthState = useMemo(() => {
+        const ratio = monthlyBudget > 0 ? metrics.thisMonthTotal / monthlyBudget : 0;
+        if (ratio >= 0.9) return 'critical';
+        if (ratio >= 0.75) return 'warning';
+        return 'healthy';
+    }, [metrics.thisMonthTotal, monthlyBudget]);
+
+    const cardGlowStyles = useMemo(() => {
+        switch (healthState) {
+            case 'critical':
+                return 'shadow-[0_0_50px_-5px_rgba(220,38,38,0.6)] border-red-500/60 bg-red-900/30 animate-glow-pulse';
+            case 'warning':
+                return 'shadow-[0_0_50px_-5px_rgba(245,158,11,0.6)] border-amber-500/60 bg-amber-900/30 animate-glow-pulse';
+            case 'healthy':
+                return 'shadow-[0_0_40px_-5px_rgba(16,185,129,0.4)] border-emerald-500/50 bg-emerald-900/20 transition-all duration-1000';
+        }
+    }, [healthState]);
+
     return (
-        <div className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar bg-background">
+        <motion.div
+            className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+        >
             {/* Header */}
-            <div className="flex justify-between items-end mb-6">
+            <motion.div className="flex justify-between items-end mb-6" variants={itemVariants}>
                 <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Shield className="w-6 h-6 text-white fill-white/10" strokeWidth={2} />
+                    <div className="flex items-center gap-3 mb-1">
+                        <img src="/logo.png" alt="TrueTrack Logo" className="w-8 h-8" />
                         <h1 className="text-2xl font-heading font-bold text-white tracking-tighter">TrueTrack</h1>
                     </div>
 
@@ -855,204 +873,131 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         <span className="text-[10px] font-bold text-white uppercase tracking-wide">{getDateFilterLabel()}</span>
                     </button> */}
                 </div>
-            </div>
+            </motion.div>
 
             {/* HERO: Budget Progress */}
-            <AnimatedSection delay={100} className="mb-6" animateContainer={false}>
+            <motion.div variants={itemVariants}><AnimatedSection delay={100} className="mb-6" animateContainer={false}>
                 {({ isInView }: { isInView?: boolean } = {}) => (
-                    <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-6 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                    <div className="relative rounded-3xl p-6 transition-all overflow-hidden">
+                        {/* Glow Overlay */}
+                        {ambientMode && (
+                            <div className="absolute inset-0 pointer-events-none z-0">
+                                {ambientMode && <AmbientBackground spendRatio={monthlyBudget > 0 ? metrics.thisMonthTotal / monthlyBudget : 0} />}
+                            </div>
+                        )}
+                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 ${!ambientMode ? 'border border-slate-800 bg-card shadow-lg' : ''}`} />
+
+                        {ambientMode && <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>}
 
                         <div className="flex items-center justify-between mb-6 relative z-10">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.1)]">
+                            <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
+                                <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.1)] flex-shrink-0">
                                     <Wallet className="w-6 h-6 text-indigo-400" />
                                 </div>
-                                <div>
-                                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Monthly Budget</h3>
-                                    <div className="flex items-baseline gap-2">
-                                        <p className="text-3xl font-heading font-bold text-white tracking-tight">€{metrics.thisMonthTotal.toFixed(2)}</p>
-                                        <span className="text-sm text-slate-500 font-medium">/ €{monthlyBudget}</span>
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide truncate">Monthly Budget</h3>
+                                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                                        <p className={`${(metrics.thisMonthTotal.toFixed(2).length + (monthlyBudget.toString().length)) > 12 ? 'text-xl' : 'text-3xl'} font-heading font-bold text-white tracking-tight`}>
+                                            €{metrics.thisMonthTotal.toFixed(2)}
+                                        </p>
+                                        <span className="text-sm text-slate-500 font-medium whitespace-nowrap">/ €{monthlyBudget}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-shrink-0">
                                 <span className={`text-2xl font-bold ${isOverBudget ? 'text-red-500' : 'text-emerald-400'}`}>
                                     {Math.round(isInView ? budgetProgress : 0)}%
                                 </span>
                                 <p className="text-xs text-slate-500 font-medium mt-1">{isOverBudget ? 'Over Budget' : 'Used'}</p>
                             </div>
                         </div>
-                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10">
+                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10 mb-6">
                             <div
                                 className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_currentColor] opacity-90 ${isOverBudget ? 'bg-red-500 text-red-500' : 'bg-emerald-500 text-emerald-500'}`}
                                 style={{ width: `${isInView ? Math.min(budgetProgress, 100) : 0}%` }}
                             ></div>
                         </div>
-                    </div>
-                )}
-            </AnimatedSection>
 
-            {/* Goal Breakdown Chart */}
-            {goals && goals.some(g => g.isEnabled) ? (
-                <AnimatedSection delay={300} className="mb-6" animateContainer={false}>
-                    {({ isInView }: { isInView?: boolean } = {}) => {
-                        // Filter receipts based on goalView
-                        const filteredGoalReceipts = useMemo(() => {
-                            const now = new Date();
-                            return receipts.filter(r => {
-                                const rDate = new Date(r.date);
-                                if (goalView === 'daily') {
-                                    return rDate.toDateString() === now.toDateString();
-                                } else if (goalView === 'weekly') {
-                                    const oneWeekAgo = new Date();
-                                    oneWeekAgo.setDate(now.getDate() - 7);
-                                    return rDate >= oneWeekAgo;
-                                } else {
-                                    return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
-                                }
-                            });
-                        }, [receipts, goalView]);
-
-                        // Calculate Previous Period Data for Trends
-                        const previousGoalReceipts = useMemo(() => {
-                            const now = new Date();
-                            return receipts.filter(r => {
-                                const rDate = new Date(r.date);
-                                if (goalView === 'daily') {
-                                    const yesterday = new Date();
-                                    yesterday.setDate(now.getDate() - 1);
-                                    return rDate.toDateString() === yesterday.toDateString();
-                                } else if (goalView === 'weekly') {
-                                    const oneWeekAgo = new Date();
-                                    oneWeekAgo.setDate(now.getDate() - 7);
-                                    const twoWeeksAgo = new Date();
-                                    twoWeeksAgo.setDate(now.getDate() - 14);
-                                    return rDate >= twoWeeksAgo && rDate < oneWeekAgo;
-                                } else {
-                                    const lastMonth = new Date();
-                                    lastMonth.setMonth(now.getMonth() - 1);
-                                    return rDate.getMonth() === lastMonth.getMonth() && rDate.getFullYear() === lastMonth.getFullYear();
-                                }
-                            });
-                        }, [receipts, goalView]);
-
-                        return (
-                            <div className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg transition-all">
-                                <div className="mb-6">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                                <Target className="w-4 h-4 text-purple-400" />
-                                                Goal Breakdown
-                                            </h3>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setShowIndicators(!showIndicators); }}
-                                                className={`p-1.5 rounded-lg transition-all ${showIndicators ? 'bg-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'}`}
-                                                title="Toggle Impact Mode"
+                        {/* Distribution Gauge */}
+                        <div className="relative z-10 border-t border-white/5 pt-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Spending Distribution</h4>
+                            </div>
+                            <div className="flex items-center justify-between h-48 w-full">
+                                {/* Pie Chart Container - Left Side */}
+                                <div className="h-full w-1/2 relative">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart key={isInView ? 'visible' : 'hidden'}>
+                                            <Pie
+                                                data={metrics.categoryData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={45} // Thicker donut
+                                                outerRadius={75} // Thicker donut
+                                                paddingAngle={4}
+                                                dataKey="value"
+                                                stroke="none"
+                                                isAnimationActive={true}
+                                                animationBegin={0}
+                                                animationDuration={1500}
+                                                animationEasing="ease-out"
                                             >
-                                                <Zap size={14} fill={showIndicators ? "currentColor" : "none"} />
-                                            </button>
-                                        </div>
-                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                            {(['daily', 'weekly', 'monthly'] as const).map((view) => (
-                                                <button
-                                                    key={view}
-                                                    onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
-                                                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                                >
-                                                    {view.charAt(0).toUpperCase() + view.slice(1)}
-                                                </button>
-                                            ))}
-                                        </div>
+                                                {(metrics.categoryData || []).map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name)} />
+                                                ))}
+                                            </Pie>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    {/* Centered Text Overlay */}
+                                    <div
+                                        className="absolute flex flex-col items-center justify-center pointer-events-none"
+                                        style={{
+                                            left: '50%',
+                                            top: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            width: '80px'
+                                        }}
+                                    >
+                                        <span className="text-[9px] text-slate-500 font-medium uppercase mb-0.5">Top</span>
+                                        <span className="text-xs font-heading font-bold text-white tabular-nums text-center leading-tight whitespace-normal break-words w-full line-clamp-2">
+                                            {metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-'}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div className={`relative z-10 w-full ${goals.filter(g => g.isEnabled).length === 1 ? 'flex justify-center py-8' : 'grid grid-cols-4 gap-4'}`}>
-                                    {goals.filter(g => g.isEnabled).map(goal => {
-                                        let total = 0;
-                                        filteredGoalReceipts.forEach(r => {
-                                            r.items.forEach(i => {
-                                                const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                if (i.goalType === goal.type || matchesKeyword) {
-                                                    total += i.price * (i.quantity || 1);
-                                                }
-                                            });
-                                        });
-
-                                        let prevTotal = 0;
-                                        previousGoalReceipts.forEach(r => {
-                                            r.items.forEach(i => {
-                                                const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                if (i.goalType === goal.type || matchesKeyword) {
-                                                    prevTotal += i.price * (i.quantity || 1);
-                                                }
-                                            });
-                                        });
-
-                                        // Determine Trend
-                                        let trend: 'up' | 'down' | 'flat' = 'flat';
-                                        if (total > prevTotal * 1.1) trend = 'up';
-                                        else if (total < prevTotal * 0.9) trend = 'down';
-
-                                        // Determine Intensity (Mock Limit 100)
-                                        let intensity: 'low' | 'medium' | 'high' = 'low';
-                                        if (total > 80) intensity = 'high';
-                                        else if (total > 50) intensity = 'medium';
-
-                                        return (
-                                            <div key={goal.id} className="flex justify-center w-full">
-                                                <GoalGauge
-                                                    goal={goal}
-                                                    total={total}
-                                                    isInView={isInView}
-                                                    trend={trend}
-                                                    intensity={intensity}
-                                                    showIndicators={showIndicators}
+                                {/* Legend Container - Right Side */}
+                                <div className="w-1/2 pl-2 flex flex-col justify-center space-y-2">
+                                    {(metrics.categoryData || []).slice(0, 5).map((entry, index) => (
+                                        <div key={index} className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <div
+                                                    className="w-2.5 h-2.5 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0"
+                                                    style={{ backgroundColor: getCategoryColor(entry.name), color: getCategoryColor(entry.name) }}
                                                 />
+                                                <span className="text-slate-300 font-medium truncate">{entry.name}</span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {goals.filter(g => g.isEnabled).every(g => {
-                                    let total = 0;
-                                    filteredGoalReceipts.forEach(r => {
-                                        r.items.forEach(i => {
-                                            const matchesKeyword = g.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                            if (i.goalType === g.type || matchesKeyword) {
-                                                total += i.price * (i.quantity || 1);
-                                            }
-                                        });
-                                    });
-                                    return total === 0;
-                                }) && (
-                                        <div className="flex items-center justify-center py-8">
-                                            <div className="bg-slate-800/50 px-6 py-3 rounded-full border border-white/5 text-slate-400 text-xs font-medium">
-                                                No goal spending detected for this period! 🎉
-                                            </div>
+                                            <span className="text-slate-400 font-mono tabular-nums ml-2">
+                                                {entry.percentage.toFixed(0)}%
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {metrics.categoryData.length > 5 && (
+                                        <div className="text-[10px] text-slate-500 text-right pt-1 italic">
+                                            + {metrics.categoryData.length - 5} more
                                         </div>
                                     )}
+                                </div>
                             </div>
-                        );
-                    }}
-                </AnimatedSection>
-            ) : (
-                <AnimatedSection delay={300} className="mb-6">
-                    <div className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg relative overflow-hidden flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
-                                <Target className="w-4 h-4 text-purple-400" />
-                                Track Your Habits
-                            </h3>
-                            <p className="text-xs text-slate-500">Enable goals in settings to track spending.</p>
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                            <ArrowRight size={16} className="text-purple-400" />
                         </div>
                     </div>
-                </AnimatedSection>
-            )}
+                )}
+            </AnimatedSection></motion.div>
+
+
+
+
+
+
 
             {/* BENTO GRID LAYOUT */}
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -1061,38 +1006,41 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
                 {/* Monthly Insights (Expanded) */}
                 {/* Monthly Insights (Expanded) */}
-                <AnimatedSection delay={300} className="col-span-2" animateContainer={false}>
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={200} animateContainer={false}>
                     {({ isInView }: { isInView?: boolean } = {}) => (
-                        <div
+                        <motion.div
+                            whileTap={childSupportMode ? { scale: 0.98 } : {}}
                             onClick={childSupportMode ? onProvisionClick : undefined}
                             className={`rounded-3xl border border-slate-800 bg-card p-6 shadow-lg transition-all ${childSupportMode ? 'cursor-pointer hover:border-slate-700' : ''} `}
                         >
                             <div className="mb-6">
 
-                                <div className="flex justify-between items-center mb-6">
+                                <div className="flex flex-col gap-4 mb-6">
                                     <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                         <Sparkles className="w-4 h-4 text-yellow-500" />
                                         Insights
                                     </h3>
-                                    <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setInsightView('daily'); }}
-                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'daily' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'} `}
-                                        >
-                                            Daily
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setInsightView('weekly'); }}
-                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'weekly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'} `}
-                                        >
-                                            Weekly
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setInsightView('monthly'); }}
-                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'monthly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'} `}
-                                        >
-                                            Monthly
-                                        </button>
+                                    <div className="w-full flex justify-end">
+                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setInsightView('daily'); }}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'daily' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Daily
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setInsightView('weekly'); }}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'weekly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Weekly
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setInsightView('monthly'); }}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'monthly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Monthly
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1193,143 +1141,183 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     )}
-                </AnimatedSection>
+                </AnimatedSection></motion.div>
 
                 {/* Co-Parenting Cards */}
                 {childSupportMode && (
                     <div className="col-span-2 grid grid-cols-2 gap-3">
-                        {/* Settlement Card Removed */}
+                        {/* Child Events Section */}
+                        <motion.div variants={itemVariants} className="col-span-2">
+                            <AnimatedSection delay={200} animateContainer={false}>
+                                {({ isInView }: { isInView?: boolean } = {}) => (
+                                    <div className="relative rounded-3xl border border-slate-800 bg-card p-4 shadow-lg overflow-hidden">
+                                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 ${cardGlowStyles}`} />
+                                        <div className="relative z-10">
+                                            <ChildEvents events={childEvents} setEvents={setChildEvents} />
+                                        </div>
+                                    </div>
+                                )}
+                            </AnimatedSection>
+                        </motion.div>
 
-                        <AnimatedSection delay={300}>
-                            {({ isInView }: { isInView?: boolean } = {}) => (
-                                <button
-                                    onClick={onCustodyClick}
-                                    className="w-full h-full rounded-2xl border border-slate-800 bg-card p-4 shadow-lg flex flex-col justify-between group hover:border-slate-700 transition-all"
-                                >
-                                    <div className="bg-purple-500/10 p-2.5 rounded-xl text-purple-400 w-fit mb-3 group-hover:scale-110 transition-transform">
-                                        <CalendarDays size={20} />
-                                    </div>
-                                    <div className="text-left">
-                                        <h3 className="text-sm font-bold text-slate-200">Custody</h3>
-                                        <p className="text-[10px] text-slate-500 font-medium">Track days</p>
-                                    </div>
-                                </button>
-                            )}
-                        </AnimatedSection>
+                        <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} animateContainer={false}>
+                            {({ isInView }: { isInView?: boolean } = {}) => {
+                                // Calculate Custody Data
+                                const today = new Date();
+                                const currentDay = today.getDay(); // 0 = Sunday
+                                const startOfWeek = new Date(today);
+                                startOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1)); // Mon start
+
+                                const weekDays = Array.from({ length: 7 }, (_, i) => {
+                                    const d = new Date(startOfWeek);
+                                    d.setDate(startOfWeek.getDate() + i);
+                                    return d;
+                                });
+
+                                const getDayStatus = (date: Date) => {
+                                    const dateStr = date.toISOString().split('T')[0];
+                                    const custody = (custodyDays || []).find(d => d.date === dateStr);
+                                    return custody ? custody.status : null;
+                                };
+
+                                const monthDaysCount = (custodyDays || []).filter(d => {
+                                    const dDate = new Date(d.date);
+                                    return dDate.getMonth() === today.getMonth() && dDate.getFullYear() === today.getFullYear() && d.status === 'me';
+                                }).length;
+
+                                return (
+                                    <motion.div
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => {
+                                            HapticsService.selection();
+                                            onCustodyClick();
+                                        }}
+                                        className="w-full h-full relative rounded-3xl p-4 flex flex-col justify-between group transition-all cursor-pointer overflow-hidden"
+                                    >
+                                        {/* Glow Overlay */}
+                                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 group-hover:border-white/20 ${cardGlowStyles}`} />
+
+                                        <div className="relative z-10 flex flex-col justify-between h-full">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="bg-purple-500/10 p-2 rounded-xl text-purple-400">
+                                                    <CalendarDays size={18} />
+                                                </div>
+                                                <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5" onClick={(e) => e.stopPropagation()}>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={() => { HapticsService.selection(); setCustodyView('weekly'); }}
+                                                        className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'weekly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                    >
+                                                        Week
+                                                    </motion.button>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={() => { HapticsService.selection(); setCustodyView('monthly'); }}
+                                                        className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'monthly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                    >
+                                                        Month
+                                                    </motion.button>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex-1 flex flex-col justify-end">
+                                                {custodyView === 'weekly' ? (
+                                                    <div className="flex justify-between items-center mt-2">
+                                                        {weekDays.map((d, i) => {
+                                                            const status = getDayStatus(d);
+                                                            const isToday = d.toDateString() === today.toDateString();
+                                                            const dayLabel = d.toLocaleDateString('en-US', { weekday: 'narrow' });
+
+                                                            return (
+                                                                <div key={i} className="flex flex-col items-center gap-1">
+                                                                    <div
+                                                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${status === 'me' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_8px_rgba(168,85,247,0.4)]' :
+                                                                            (status === 'partner' || status === 'split') ? 'bg-blue-500 border-blue-500 text-white' :
+                                                                                'bg-slate-800/50 border-slate-700 text-slate-500'
+                                                                            } ${isToday ? 'ring-2 ring-white/20' : ''}`}
+                                                                    >
+                                                                        {status === 'me' ? <Check size={12} strokeWidth={4} /> : status ? <div className="w-1.5 h-1.5 rounded-full bg-white" /> : dayLabel}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-end justify-between">
+                                                        <div>
+                                                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">My Days</p>
+                                                            <p className="text-2xl font-heading font-bold text-white">{monthDaysCount} <span className="text-sm text-slate-500 font-normal">days</span></p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Next</p>
+                                                            <p className="text-xs font-bold text-purple-400">
+                                                                {(custodyDays || [])
+                                                                    .filter(d => d.status === 'me' && new Date(d.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
+                                                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+                                                                    ? new Date((custodyDays || []).filter(d => d.status === 'me' && new Date(d.date) >= new Date(new Date().setHours(0, 0, 0, 0))).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                                                    : '-'
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            }}
+                        </AnimatedSection></motion.div>
                     </div>
                 )}
 
-                {/* Category Budgets */}
-                <AnimatedSection delay={200}>
-                    {({ isInView }: { isInView?: boolean } = {}) => {
-                        // Calculate category spending
-                        const categorySpending = useMemo(() => {
-                            const spending: Record<string, number> = {};
-                            const currentMonth = new Date().getMonth();
-                            const currentYear = new Date().getFullYear();
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} animateContainer={false}>
+                    {({ isInView }: { isInView?: boolean } = {}) => (
+                        <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-3 flex flex-col min-h-[280px] overflow-hidden shadow-lg">
 
-                            receipts.forEach(r => {
-                                const rDate = new Date(r.date);
-                                if (rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear) {
-                                    r.items.forEach(item => {
-                                        // Map item category to ID
-                                        const catId = (categories || []).find(c => c.name === item.category || c.id === item.category.toLowerCase())?.id || item.category.toLowerCase();
-                                        spending[catId] = (spending[catId] || 0) + item.price;
-                                    });
-                                }
-                            });
-                            return spending;
-                        }, [receipts, categories]);
-
-                        // Get categories with budgets
-                        const budgetedCategories = (categories || []).filter(c => (categoryBudgets[c.id] || 0) > 0);
-
-                        if (budgetedCategories.length === 0) return null;
-
-                        return (
-                            <div className="rounded-2xl border border-slate-800 bg-card p-4 shadow-lg mb-3">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <PieChart className="w-4 h-4 text-emerald-400" />
-                                    <h3 className="text-sm font-medium text-slate-400">Category Budgets</h3>
-                                </div>
-                                <div className="space-y-4">
-                                    {budgetedCategories.map(cat => {
-                                        const budget = categoryBudgets[cat.id];
-                                        const spent = categorySpending[cat.id] || 0;
-                                        const percentage = Math.min((spent / budget) * 100, 100);
-                                        const isOverBudget = spent > budget;
-
-                                        return (
-                                            <div key={cat.id}>
-                                                <div className="flex justify-between items-center text-xs mb-1.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                                        <span className="text-slate-200 font-medium">{cat.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className={`font-mono tabular-nums ${isOverBudget ? 'text-red-400 font-bold' : 'text-slate-300'} `}>€{spent.toFixed(0)}</span>
-                                                        <span className="text-slate-600">/</span>
-                                                        <span className="text-slate-500 font-mono tabular-nums">€{budget}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={`h-full rounded-full transition-all duration-1000 ease-out ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'} `}
-                                                        style={{ width: `${isInView ? percentage : 0}% `, backgroundColor: isOverBudget ? '#ef4444' : cat.color }}
-                                                    ></div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    }}
-                </AnimatedSection>
-
-                {/* Trend (Area Chart) & Top Vendors */}
-                <div className="grid grid-cols-2 gap-3 col-span-2">
-                    <AnimatedSection className="col-span-2" delay={400} animateContainer={false}>
-                        {({ isInView }: { isInView?: boolean } = {}) => (
-                            <div className="h-full rounded-2xl border border-slate-800 bg-card p-3 shadow-lg flex flex-col min-h-[280px]">
-                                <div className="flex justify-between items-center mb-2">
+                            <div className="relative z-10 flex flex-col h-full">
+                                <div className="flex flex-col gap-4 mb-2">
                                     <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                         <TrendingUp className="w-4 h-4 text-blue-400" />
                                         Trends
                                     </h3>
-                                    <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                        <button
-                                            onClick={() => setChartView('week')}
-                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'week' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'} `}
-                                        >
-                                            Week
-                                        </button>
-                                        <button
-                                            onClick={() => setChartView('month')}
-                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'month' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'} `}
-                                        >
-                                            Month
-                                        </button>
-                                        <button
-                                            onClick={() => setChartView('year')}
-                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'year' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'} `}
-                                        >
-                                            Year
-                                        </button>
+                                    <div className="w-full flex justify-end">
+                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                            <motion.button
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => { HapticsService.selection(); setChartView('week'); }}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'week' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Week
+                                            </motion.button>
+                                            <motion.button
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => { HapticsService.selection(); setChartView('month'); }}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'month' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Month
+                                            </motion.button>
+                                            <motion.button
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => { HapticsService.selection(); setChartView('year'); }}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'year' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                Year
+                                            </motion.button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex-1 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart
                                             data={chartView === 'week' ? metrics.weekData : chartView === 'month' ? metrics.monthData : metrics.yearData}
-                                            key={`${chartView} -${isInView ? 'visible' : 'hidden'} `}
+                                            key={chartView}
                                             margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
                                         >
                                             <defs>
                                                 {categories.map((cat) => (
-                                                    <linearGradient key={cat.id} id={`gradient - trend - ${cat.name} `} x1="0" y1="0" x2="0" y2="1">
+                                                    <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
                                                         <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
                                                         <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
                                                     </linearGradient>
@@ -1337,6 +1325,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             </defs>
                                             <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
                                             <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
                                             <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                             {categories.map((cat) => (
                                                 <Area
@@ -1352,13 +1341,371 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div >
-                            </div >
-                        )}
-                    </AnimatedSection >
+                            </div>
+                        </div >
+                    )}
+                </AnimatedSection ></motion.div>
 
-                    <AnimatedSection className="col-span-2" delay={500} animateContainer={false}>
-                        {({ isInView }: { isInView?: boolean } = {}) => (
-                            <div className="h-full rounded-2xl border border-slate-800 bg-card p-5 shadow-lg">
+
+
+                {/* Goal Breakdown (500ms) */}
+                {goals && goals.some(g => g.isEnabled) ? (
+                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} animateContainer={false}>
+                        {({ isInView }: { isInView?: boolean } = {}) => {
+                            // Filter receipts based on goalView
+                            const filteredGoalReceipts = useMemo(() => {
+                                const now = new Date();
+                                return receipts.filter(r => {
+                                    const rDate = new Date(r.date);
+                                    if (goalView === 'daily') {
+                                        return rDate.toDateString() === now.toDateString();
+                                    } else if (goalView === 'weekly') {
+                                        const oneWeekAgo = new Date();
+                                        oneWeekAgo.setDate(now.getDate() - 7);
+                                        return rDate >= oneWeekAgo;
+                                    } else {
+                                        return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+                                    }
+                                });
+                            }, [receipts, goalView]);
+
+                            // Calculate Previous Period Data for Trends
+                            const previousGoalReceipts = useMemo(() => {
+                                const now = new Date();
+                                return receipts.filter(r => {
+                                    const rDate = new Date(r.date);
+                                    if (goalView === 'daily') {
+                                        const yesterday = new Date();
+                                        yesterday.setDate(now.getDate() - 1);
+                                        return rDate.toDateString() === yesterday.toDateString();
+                                    } else if (goalView === 'weekly') {
+                                        const oneWeekAgo = new Date();
+                                        oneWeekAgo.setDate(now.getDate() - 7);
+                                        const twoWeeksAgo = new Date();
+                                        twoWeeksAgo.setDate(now.getDate() - 14);
+                                        return rDate >= twoWeeksAgo && rDate < oneWeekAgo;
+                                    } else {
+                                        const lastMonth = new Date();
+                                        lastMonth.setMonth(now.getMonth() - 1);
+                                        return rDate.getMonth() === lastMonth.getMonth() && rDate.getFullYear() === lastMonth.getFullYear();
+                                    }
+                                });
+                            }, [receipts, goalView]);
+
+                            // Calculate Achievements (Moved inside Goal Breakdown)
+                            const achievements = useMemo(() => {
+                                const badges = [
+                                    {
+                                        id: 'goal_setter',
+                                        label: 'Goal Setter',
+                                        icon: <Target className="w-5 h-5" />,
+                                        unlocked: goals && goals.some(g => g.isEnabled),
+                                        color: 'text-purple-400',
+                                        bgColor: 'bg-purple-500/10',
+                                        borderColor: 'border-purple-500/20'
+                                    },
+                                    {
+                                        id: 'budget_master',
+                                        label: 'Budget Master',
+                                        icon: <Shield className="w-5 h-5" />,
+                                        unlocked: metrics.thisMonthTotal < monthlyBudget * 0.9,
+                                        color: 'text-emerald-400',
+                                        bgColor: 'bg-emerald-500/10',
+                                        borderColor: 'border-emerald-500/20'
+                                    },
+                                    {
+                                        id: 'trend_setter',
+                                        label: 'Trend Setter',
+                                        icon: <TrendingDown className="w-5 h-5" />,
+                                        unlocked: metrics.thisWeekTotal < metrics.lastWeekTotal,
+                                        color: 'text-blue-400',
+                                        bgColor: 'bg-blue-500/10',
+                                        borderColor: 'border-blue-500/20'
+                                    },
+                                    {
+                                        id: 'consistent_tracker',
+                                        label: 'Consistent',
+                                        icon: <FileText className="w-5 h-5" />,
+                                        unlocked: receipts.some(r => {
+                                            const diff = new Date().getTime() - new Date(r.date).getTime();
+                                            return diff < 48 * 60 * 60 * 1000; // 48 hours
+                                        }),
+                                        color: 'text-yellow-400',
+                                        bgColor: 'bg-yellow-500/10',
+                                        borderColor: 'border-yellow-500/20'
+                                    },
+                                    {
+                                        id: 'clean_sheet',
+                                        label: 'Clean Sheet',
+                                        icon: <Sparkles className="w-5 h-5" />,
+                                        unlocked: goals && goals.some(g => g.isEnabled) && !goals.some(g => {
+                                            let total = 0;
+                                            const currentMonth = new Date().getMonth();
+                                            receipts.forEach(r => {
+                                                if (new Date(r.date).getMonth() === currentMonth) {
+                                                    r.items.forEach(i => {
+                                                        if (i.goalType === g.type) total += i.price * (i.quantity || 1);
+                                                    });
+                                                }
+                                            });
+                                            return total > 80;
+                                        }),
+                                        color: 'text-pink-400',
+                                        bgColor: 'bg-pink-500/10',
+                                        borderColor: 'border-pink-500/20'
+                                    },
+                                    {
+                                        id: 'early_bird',
+                                        label: 'Early Bird',
+                                        icon: <Coffee className="w-5 h-5" />,
+                                        unlocked: receipts.some(r => {
+                                            const h = new Date(r.date).getHours();
+                                            return h < 9 && h >= 5;
+                                        }),
+                                        color: 'text-orange-400',
+                                        bgColor: 'bg-orange-500/10',
+                                        borderColor: 'border-orange-500/20'
+                                    },
+                                    {
+                                        id: 'night_owl',
+                                        label: 'Night Owl',
+                                        icon: <Tv className="w-5 h-5" />,
+                                        unlocked: receipts.some(r => {
+                                            const h = new Date(r.date).getHours();
+                                            return h >= 21 || h < 4;
+                                        }),
+                                        color: 'text-indigo-400',
+                                        bgColor: 'bg-indigo-500/10',
+                                        borderColor: 'border-indigo-500/20'
+                                    },
+                                    {
+                                        id: 'high_roller',
+                                        label: 'High Roller',
+                                        icon: <Car className="w-5 h-5" />,
+                                        unlocked: receipts.some(r => r.total > 100),
+                                        color: 'text-cyan-400',
+                                        bgColor: 'bg-cyan-500/10',
+                                        borderColor: 'border-cyan-500/20'
+                                    },
+                                    {
+                                        id: 'penny_pincher',
+                                        label: 'Penny Pincher',
+                                        icon: <PiggyBank className="w-5 h-5" />,
+                                        unlocked: receipts.some(r => r.total < 5 && r.total > 0),
+                                        color: 'text-lime-400',
+                                        bgColor: 'bg-lime-500/10',
+                                        borderColor: 'border-lime-500/20'
+                                    },
+                                    {
+                                        id: 'weekend_warrior',
+                                        label: 'Weekender',
+                                        icon: <Beer className="w-5 h-5" />,
+                                        unlocked: receipts.some(r => {
+                                            const d = new Date(r.date).getDay();
+                                            return d === 0 || d === 6;
+                                        }),
+                                        color: 'text-red-400',
+                                        bgColor: 'bg-red-500/10',
+                                        borderColor: 'border-red-500/20'
+                                    }
+                                ];
+                                return badges;
+                            }, [goals, metrics, monthlyBudget, receipts]);
+
+                            const unlockedCount = achievements.filter(a => a.unlocked).length;
+                            const totalAchievements = achievements.length;
+                            const discountThreshold = 5;
+                            const discountUnlocked = unlockedCount >= discountThreshold;
+                            const discountProgress = Math.min((unlockedCount / discountThreshold) * 100, 100);
+
+                            return (
+                                <div className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg transition-all">
+                                    <div className="mb-6">
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                                    <Target className="w-4 h-4 text-purple-400" />
+                                                    Goal Breakdown
+                                                </h3>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setShowIndicators(!showIndicators); }}
+                                                    className={`p-1.5 rounded-lg transition-all ${showIndicators ? 'bg-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'}`}
+                                                    title="Toggle Impact Mode"
+                                                >
+                                                    <Zap size={14} fill={showIndicators ? "currentColor" : "none"} />
+                                                </button>
+                                            </div>
+                                            <div className="w-full flex justify-end">
+                                                <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                                    {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                                        <button
+                                                            key={view}
+                                                            onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
+                                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                        >
+                                                            {view.charAt(0).toUpperCase() + view.slice(1)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={`relative z-10 w-full ${goals.filter(g => g.isEnabled).length === 1 ? 'flex justify-center py-8' : 'grid grid-cols-4 gap-4'}`}>
+                                        {goals.filter(g => g.isEnabled).map(goal => {
+                                            let total = 0;
+                                            filteredGoalReceipts.forEach(r => {
+                                                r.items.forEach(i => {
+                                                    const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
+                                                    if (i.goalType === goal.type || matchesKeyword) {
+                                                        total += i.price * (i.quantity || 1);
+                                                    }
+                                                });
+                                            });
+
+                                            let prevTotal = 0;
+                                            previousGoalReceipts.forEach(r => {
+                                                r.items.forEach(i => {
+                                                    const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
+                                                    if (i.goalType === goal.type || matchesKeyword) {
+                                                        prevTotal += i.price * (i.quantity || 1);
+                                                    }
+                                                });
+                                            });
+
+                                            // Determine Trend
+                                            let trend: 'up' | 'down' | 'flat' = 'flat';
+                                            if (total > prevTotal * 1.1) trend = 'up';
+                                            else if (total < prevTotal * 0.9) trend = 'down';
+
+                                            // Determine Intensity (Mock Limit 100)
+                                            let intensity: 'low' | 'medium' | 'high' = 'low';
+                                            if (total > 80) intensity = 'high';
+                                            else if (total > 50) intensity = 'medium';
+
+                                            return (
+                                                <div key={goal.id} className="flex justify-center w-full">
+                                                    <GoalGauge
+                                                        goal={goal}
+                                                        total={total}
+                                                        isInView={isInView}
+                                                        trend={trend}
+                                                        intensity={intensity}
+                                                        showIndicators={showIndicators}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {goals.filter(g => g.isEnabled).every(g => {
+                                        let total = 0;
+                                        filteredGoalReceipts.forEach(r => {
+                                            r.items.forEach(i => {
+                                                const matchesKeyword = g.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
+                                                if (i.goalType === g.type || matchesKeyword) {
+                                                    total += i.price * (i.quantity || 1);
+                                                }
+                                            });
+                                        });
+                                        return total === 0;
+                                    }) && (
+                                            <div className="flex items-center justify-center py-8">
+                                                <div className="bg-slate-800/50 px-6 py-3 rounded-full border border-white/5 text-slate-400 text-xs font-medium">
+                                                    No goal spending detected for this period! 🎉
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    {/* Merged Achievements Section */}
+                                    <div className="mt-8 pt-8 border-t border-white/5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                                <Trophy className="w-4 h-4 text-yellow-500" />
+                                                Achievements
+                                            </h3>
+                                            <span className="text-xs text-slate-500 font-medium">{unlockedCount}/{totalAchievements} Unlocked</span>
+                                        </div>
+
+                                        {/* Incentive Progress */}
+                                        <div className="mb-6 bg-slate-800/30 rounded-xl p-4 border border-white/5 relative overflow-hidden">
+                                            {discountUnlocked && (
+                                                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 z-0"></div>
+                                            )}
+                                            <div className="relative z-10 flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-lg ${discountUnlocked ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-400'}`}>
+                                                        <Gift size={14} />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-xs font-bold ${discountUnlocked ? 'text-yellow-400' : 'text-slate-300'}`}>
+                                                            {discountUnlocked ? '50% OFF Subscription Unlocked!' : 'Unlock 50% OFF Subscription'}
+                                                        </p>
+                                                        {!discountUnlocked && (
+                                                            <p className="text-[10px] text-slate-500">Collect {discountThreshold} badges to claim reward</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-bold tabular-nums text-white">{unlockedCount}/{discountThreshold}</span>
+                                            </div>
+                                            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-1000 ease-out ${discountUnlocked ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'bg-slate-600'}`}
+                                                    style={{ width: `${discountProgress}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-5 gap-2">
+                                            {achievements.map((badge) => (
+                                                <div key={badge.id} className="flex flex-col items-center gap-2 group cursor-default">
+                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-500 ${badge.unlocked
+                                                        ? `${badge.bgColor} ${badge.borderColor} ${badge.color} shadow-[0_0_15px_rgba(0,0,0,0.3)] group-hover:scale-110`
+                                                        : 'bg-slate-800/50 border-white/5 text-slate-600 grayscale opacity-50'
+                                                        }`}>
+                                                        {badge.icon}
+                                                    </div>
+                                                    <span className={`text-[9px] font-bold uppercase tracking-wide text-center transition-colors ${badge.unlocked ? 'text-slate-300' : 'text-slate-600'
+                                                        }`}>
+                                                        {badge.label}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }}
+                    </AnimatedSection></motion.div>
+                ) : (
+                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} animateContainer={false}>
+                        <motion.div
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                                HapticsService.selection();
+                                onHabitsClick();
+                            }}
+                            className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg relative overflow-hidden flex items-center justify-between cursor-pointer hover:border-slate-700 transition-all"
+                        >
+                            <div>
+                                <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
+                                    <Target className="w-4 h-4 text-purple-400" />
+                                    Track Your Habits
+                                </h3>
+                                <p className="text-xs text-slate-500">Enable goals in settings to track spending.</p>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                                <ArrowRight size={16} className="text-purple-400" />
+                            </div>
+                        </motion.div>
+                    </AnimatedSection></motion.div>
+                )}
+
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} animateContainer={false}>
+                    {({ isInView }: { isInView?: boolean } = {}) => (
+                        <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-5 overflow-hidden shadow-lg">
+
+                            <div className="relative z-10">
                                 <h3 className="text-sm font-medium text-slate-400 mb-4">Top Vendors</h3>
                                 <div className="space-y-3">
                                     {metrics.topStores.length > 0 ? (
@@ -1378,79 +1725,87 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     )}
                                 </div>
                             </div>
-                        )}
-                    </AnimatedSection>
-                </div >
+                        </div>
+                    )}
+                </AnimatedSection></motion.div>
 
                 {/* 4. Financial Snapshot (Grid of 3) */}
-                < AnimatedSection delay={600} className="col-span-2" animateContainer={false} >
-                    <div className="bg-surface border border-white/5 rounded-3xl p-5 shadow-sm hover:border-white/10 transition-all duration-300">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Wallet className="text-emerald-400 w-4 h-4" />
-                            <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                            {/* Avg Spend */}
-                            <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                <p className="text-[10px] text-slate-500 mb-1 font-medium">Average</p>
-                                <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.avgReceipt.toFixed(0)}</p>
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} animateContainer={false}>
+                    <div className="relative rounded-3xl border border-slate-800 bg-card p-5 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
+
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Wallet className="text-emerald-400 w-4 h-4" />
+                                <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
                             </div>
-                            {/* Max Spend */}
-                            <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                <p className="text-[10px] text-slate-500 mb-1 font-medium">Highest</p>
-                                <div className="flex items-center gap-1">
-                                    <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.maxSingleReceipt.toFixed(0)}</p>
-                                    <ArrowUpRight size={12} className="text-red-400" />
+                            <div className="grid grid-cols-3 gap-3">
+                                {/* Avg Spend */}
+                                <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                    <p className="text-[10px] text-slate-500 mb-1 font-medium">Average</p>
+                                    <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.avgReceipt.toFixed(0)}</p>
                                 </div>
-                            </div>
-                            {/* Monthly Comparison (New) */}
-                            <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                <p className="text-[10px] text-slate-500 mb-1 font-medium">vs Last Month</p>
-                                <div className="flex items-center gap-1">
-                                    <p className={`text-sm font-bold tabular-nums tracking-tight ${metrics.monthDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                        {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
-                                    </p>
-                                    {metrics.monthDiff > 0 ? <TrendingUp size={12} className="text-red-400" /> : <TrendingDown size={12} className="text-emerald-400" />}
+                                {/* Max Spend */}
+                                <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                    <p className="text-[10px] text-slate-500 mb-1 font-medium">Highest</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.maxSingleReceipt.toFixed(0)}</p>
+                                        <ArrowUpRight size={12} className="text-red-400" />
+                                    </div>
+                                </div>
+                                {/* Monthly Comparison (New) */}
+                                <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                    <p className="text-[10px] text-slate-500 mb-1 font-medium">vs Last Month</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className={`text-sm font-bold tabular-nums tracking-tight ${metrics.monthDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                            {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
+                                        </p>
+                                        {metrics.monthDiff > 0 ? <TrendingUp size={12} className="text-red-400" /> : <TrendingDown size={12} className="text-emerald-400" />}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </AnimatedSection >
+                </AnimatedSection ></motion.div>
 
                 {/* 6. Category Breakdown (Linear Bars) */}
-                < div className="col-span-2 bg-surface border border-white/5 rounded-3xl p-5 shadow-sm hover:border-white/10 transition-all duration-300" >
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-heading font-semibold text-slate-400 uppercase tracking-wide">Spending Breakdown</h3>
-                        <ShoppingBag className="text-slate-600 w-4 h-4" />
-                    </div>
-                    <div className="space-y-4">
-                        {(metrics.categoryData || []).slice(0, 4).map((d, i) => (
-                            <AnimatedSection key={i} delay={700 + (i * 100)} animateContainer={false}>
-                                {({ isInView }: { isInView?: boolean } = {}) => (
-                                    <div onClick={() => {
-                                        const items = metrics.categoryItems[d.name] || [];
-                                        if (items.length > 0) setDrillDown({ category: d.name, items });
-                                    }} className="cursor-pointer group">
-                                        <div className="flex justify-between items-center text-xs mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}></div>
-                                                <span className="text-slate-200 font-medium group-hover:text-white transition-colors duration-300">{d.name}</span>
+                <div className="col-span-2 relative rounded-3xl border border-slate-800 bg-card p-5 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
+
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xs font-heading font-semibold text-slate-400 uppercase tracking-wide">Spending Breakdown</h3>
+                            <ShoppingBag className="text-slate-600 w-4 h-4" />
+                        </div>
+                        <div className="space-y-4">
+                            {(metrics.categoryData || []).slice(0, 4).map((d, i) => (
+                                <AnimatedSection key={i} delay={700 + (i * 100)} animateContainer={false}>
+                                    {({ isInView }: { isInView?: boolean } = {}) => (
+                                        <motion.div
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => {
+                                                const items = metrics.categoryItems[d.name] || [];
+                                                if (items.length > 0) setDrillDown({ category: d.name, items });
+                                            }} className="cursor-pointer group">
+                                            <div className="flex justify-between items-center text-xs mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}></div>
+                                                    <span className="text-slate-200 font-medium group-hover:text-white transition-colors duration-300">{d.name}</span>
+                                                </div>
+                                                <span className="text-slate-400 font-mono tabular-nums group-hover:text-white transition-colors duration-300">€{d.value.toFixed(0)}</span>
                                             </div>
-                                            <span className="text-slate-400 font-mono tabular-nums group-hover:text-white transition-colors duration-300">€{d.value.toFixed(0)}</span>
-                                        </div>
-                                        <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-125 group-hover:shadow-[0_0_15px_currentColor]"
-                                                style={{ width: `${isInView ? d.percentage : 0}%`, backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                )}
-                            </AnimatedSection>
-                        ))}
-                        {metrics.categoryData.length === 0 && (
-                            <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
-                        )}
+                                            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-125 group-hover:shadow-[0_0_15px_currentColor]"
+                                                    style={{ width: `${isInView ? d.percentage : 0}%`, backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}
+                                                ></div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatedSection>
+                            ))}
+                            {metrics.categoryData.length === 0 && (
+                                <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
+                            )}
+                        </div>
                     </div>
                 </div >
 
@@ -1459,7 +1814,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     <h3 className="text-xs font-heading font-semibold text-slate-500 uppercase tracking-wide mb-3 ml-1 mt-2">Recent Logs</h3>
                     <div className="space-y-2">
                         {(receipts || []).slice(0, 3).map(r => (
-                            <button
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
                                 key={r.id}
                                 onClick={() => onViewReceipt?.(r)}
                                 className="w-full bg-surface border border-white/5 rounded-2xl p-3 flex justify-between items-center shadow-sm hover:border-white/15 hover:bg-surfaceHighlight transition-all duration-300 text-left group"
@@ -1484,12 +1840,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         €{r.items.reduce((acc, i) => (!ageRestricted || !i.isRestricted ? acc + i.price : acc), 0).toFixed(2)}
                                     </span>
                                 </div>
-                            </button>
+                            </motion.button>
                         ))}
                     </div>
                 </div >
 
             </div >
+
+
 
             {/* Drill Down Modal */}
             {
@@ -1585,7 +1943,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             </div>
 
             <div className="h-20"></div>
-        </div >
+        </motion.div >
     );
 };
 
