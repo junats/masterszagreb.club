@@ -793,8 +793,15 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
 
     // COLORS moved outside
-    console.log("Dashboard Render - Category Data:", metrics.categoryData);
-    console.log("Dashboard Render - Trend Data:", metrics.trendData);
+    console.log('Dashboard Chart Debug:', {
+        view: chartView,
+        weekDataLen: metrics.weekData?.length,
+        monthDataLen: metrics.monthData?.length,
+        yearDataLen: metrics.yearData?.length,
+        categoriesLen: categories.length,
+        firstWeekItem: metrics.weekData?.[0],
+        firstMonthItem: metrics.monthData?.[0]
+    });
 
     // const [isMounted, setIsMounted] = useState(false); // No longer needed
     // React.useEffect(() => {
@@ -1153,7 +1160,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                             <AnimatedSection delay={200} animateContainer={false}>
                                 {({ isInView }: { isInView?: boolean } = {}) => (
                                     <div className="relative rounded-3xl border border-slate-800 bg-card p-4 shadow-lg overflow-hidden">
-                                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 ${cardGlowStyles}`} />
                                         <div className="relative z-10">
                                             <ChildEvents events={childEvents} setEvents={setChildEvents} />
                                         </div>
@@ -1196,8 +1202,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         }}
                                         className="w-full h-full relative rounded-3xl p-4 flex flex-col justify-between group transition-all cursor-pointer overflow-hidden"
                                     >
-                                        {/* Glow Overlay */}
-                                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 group-hover:border-white/20 ${cardGlowStyles}`} />
+                                        {/* Glow Overlay Removed */}
 
                                         <div className="relative z-10 flex flex-col justify-between h-full">
                                             <div className="flex justify-between items-start mb-2">
@@ -1272,7 +1277,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 )}
 
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} animateContainer={false}>
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} animateContainer={false} className="h-full">
                     {({ isInView }: { isInView?: boolean } = {}) => (
                         <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-3 flex flex-col min-h-[280px] overflow-hidden shadow-lg">
 
@@ -1312,7 +1317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart
                                             data={chartView === 'week' ? metrics.weekData : chartView === 'month' ? metrics.monthData : metrics.yearData}
-                                            key={chartView}
+                                            key={`${chartView}-${isInView}`}
                                             margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
                                         >
                                             <defs>

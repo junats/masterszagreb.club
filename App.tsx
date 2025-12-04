@@ -105,24 +105,33 @@ const App: React.FC = () => {
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? '100%' : '-100%',
+      scale: 1,
+      opacity: 1,
       position: 'absolute' as const,
       width: '100%',
       height: '100%',
-      zIndex: 1
+      zIndex: 2, // Entering slide is on top
+      boxShadow: '-5px 0 25px rgba(0,0,0,0.5)' // Shadow for depth
     }),
     center: {
       zIndex: 1,
       x: 0,
+      scale: 1,
+      opacity: 1,
       position: 'relative' as const,
       width: '100%',
-      height: '100%'
+      height: '100%',
+      boxShadow: 'none'
     },
     exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? '100%' : '-100%',
+      zIndex: 0, // Exiting slide is behind
+      x: direction < 0 ? '20%' : '-20%', // Parallax effect (moves less)
+      scale: 0.95, // Slight scale down
+      opacity: 0.8, // Slight fade
       position: 'absolute' as const,
       width: '100%',
-      height: '100%'
+      height: '100%',
+      boxShadow: 'none'
     })
   };
 

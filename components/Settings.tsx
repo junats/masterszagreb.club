@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Users, Bell, Shield, LogOut, ChevronRight, Wallet, Lock, FileDown, Database, Star, PieChart, Tag, Plus, Trash2, X as XIcon, Calendar, RefreshCw, FileText, Target, Trophy, Crown, AlertTriangle, AlertOctagon, Sparkles } from 'lucide-react';
 import { Receipt, User, SubscriptionTier, Category, CategoryDefinition, RecurringExpense, Goal, GoalType } from '../types';
 import { exportService } from '../services/exportService';
 import { PDFService } from '../services/pdfService';
 import { HapticsService } from '../services/haptics';
 import SubscriptionModal from './SubscriptionModal';
+import AnimatedSection from './AnimatedSection';
 
 interface SettingsProps {
     monthlyBudget: number;
@@ -202,315 +203,326 @@ const Settings: React.FC<SettingsProps> = ({
     return (
         <>
             <div className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar bg-background">
-                <div className="mb-6">
-                    <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Settings</h1>
-                    <p className="text-slate-400 text-sm font-medium">Manage your account and preferences</p>
-                </div>
+                <AnimatedSection delay={0}>
+                    <div className="mb-6">
+                        <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Settings</h1>
+                        <p className="text-slate-400 text-sm font-medium">Manage your account and preferences</p>
+                    </div>
+                </AnimatedSection>
 
                 {/* Profile Card */}
-                <div className="bg-surface p-5 rounded-3xl border border-white/5 flex items-center gap-4 mb-6 relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:border-white/10">
-                    {user.tier === SubscriptionTier.PRO && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/10 to-transparent w-2/3 h-full pointer-events-none"></div>
-                    )}
+                <AnimatedSection delay={100}>
+                    <div className="bg-surface p-5 rounded-3xl border border-white/5 flex items-center gap-4 mb-6 relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:border-white/10">
+                        {user.tier === SubscriptionTier.PRO && (
+                            <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/10 to-transparent w-2/3 h-full pointer-events-none"></div>
+                        )}
 
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-inner ring-1 ring-white/10 z-10 ${user.tier === SubscriptionTier.PRO
-                        ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
-                        : 'bg-slate-700'
-                        }`}>
-                        {user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="z-10 flex-1">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-white font-heading font-bold tracking-tight text-lg">{user.name}</h3>
-                            {user.tier === SubscriptionTier.PRO ? (
-                                <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide">PRO</span>
-                            ) : (
-                                <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide">FREE</span>
-                            )}
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-inner ring-1 ring-white/10 z-10 ${user.tier === SubscriptionTier.PRO
+                            ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                            : 'bg-slate-700'
+                            }`}>
+                            {user.name.charAt(0).toUpperCase()}
                         </div>
-                        <p className="text-slate-400 text-xs truncate max-w-[180px] font-medium">{user.email}</p>
+                        <div className="z-10 flex-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-white font-heading font-bold tracking-tight text-lg">{user.name}</h3>
+                                {user.tier === SubscriptionTier.PRO ? (
+                                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide">PRO</span>
+                                ) : (
+                                    <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide">FREE</span>
+                                )}
+                            </div>
+                            <p className="text-slate-400 text-xs truncate max-w-[180px] font-medium">{user.email}</p>
+                        </div>
                     </div>
-                </div>
+                </AnimatedSection>
 
                 {/* Subscription Upsell (If Free) */}
                 {user.tier === SubscriptionTier.FREE && (
-                    <button
-                        onClick={() => setShowPaywall(true)}
-                        className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 p-4 rounded-2xl shadow-lg mb-6 flex items-center justify-between group border border-white/10 transition-all duration-300 hover:shadow-[0_0_25px_rgba(79,70,229,0.25)]"
-                    >
-                        <div className="text-left">
-                            <p className="text-white font-heading font-bold text-sm flex items-center gap-1.5">
-                                <Star size={14} className="fill-yellow-400 text-yellow-400 animate-pulse" />
-                                Upgrade to Pro
-                            </p>
-                            <p className="text-indigo-100 text-xs mt-0.5 font-medium">Unlock Parental Controls & Exports</p>
-                        </div>
-                        <div className="bg-white/20 p-2 rounded-xl text-white group-hover:bg-white/30 transition-colors duration-300">
-                            <ChevronRight size={16} />
-                        </div>
-                    </button>
+                    <AnimatedSection delay={150}>
+                        <button
+                            onClick={() => setShowPaywall(true)}
+                            className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 p-4 rounded-2xl shadow-lg mb-6 flex items-center justify-between group border border-white/10 transition-all duration-300 hover:shadow-[0_0_25px_rgba(79,70,229,0.25)]"
+                        >
+                            <div className="text-left">
+                                <p className="text-white font-heading font-bold text-sm flex items-center gap-1.5">
+                                    <Star size={14} className="fill-yellow-400 text-yellow-400 animate-pulse" />
+                                    Upgrade to Pro
+                                </p>
+                                <p className="text-indigo-100 text-xs mt-0.5 font-medium">Unlock Parental Controls & Exports</p>
+                            </div>
+                            <div className="bg-white/20 p-2 rounded-xl text-white group-hover:bg-white/30 transition-colors duration-300">
+                                <ChevronRight size={16} />
+                            </div>
+                        </button>
+                    </AnimatedSection>
                 )}
 
                 <div className="space-y-6">
                     {/* App Mode Configuration */}
-                    <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">App Mode</h4>
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
-                            <div className="w-full flex items-center justify-between p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${childSupportMode ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <Users size={18} />
+                    <AnimatedSection delay={200}>
+                        <section>
+                            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">App Mode</h4>
+                            <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                                <div className="w-full flex items-center justify-between p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl ${childSupportMode ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
+                                            <Users size={18} />
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-200 text-sm font-bold block">Co-Parenting Features</span>
+                                            <span className="text-xs text-slate-500 font-medium block">Enable provision analysis & support</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span className="text-slate-200 text-sm font-bold block">Co-Parenting Features</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Enable provision analysis & support</span>
-                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={childSupportMode}
+                                            onChange={(e) => {
+                                                HapticsService.impactMedium();
+                                                setChildSupportMode(e.target.checked);
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
+                                    </label>
                                 </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={childSupportMode}
-                                        onChange={(e) => {
-                                            HapticsService.impactMedium();
-                                            setChildSupportMode(e.target.checked);
-                                        }}
-                                    />
-                                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
-                                </label>
+
+                                {/* Ambient Mode Toggle */}
+                                {setAmbientMode && (
+                                    <div className="w-full flex items-center justify-between p-4 border-t border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-xl ${ambientMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                <Star size={18} />
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-200 text-sm font-bold block">Ambient Effects</span>
+                                                <span className="text-xs text-slate-500 font-medium block">Enable dynamic lighting effects</span>
+                                            </div>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={ambientMode}
+                                                onChange={(e) => {
+                                                    HapticsService.impactMedium();
+                                                    setAmbientMode(e.target.checked);
+                                                }}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 peer-checked:shadow-[0_0_15px_rgba(168,85,247,0.3)]"></div>
+                                        </label>
+                                    </div>
+                                )}
+
+                                {/* Global App Background Toggle (Sub-option) */}
+                                {setAmbientMode && setShowGlobalAmbient && ambientMode && (
+                                    <div className="w-full flex items-center justify-between p-4 border-t border-white/5 pl-8 bg-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-xl ${showGlobalAmbient ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                <Sparkles size={18} />
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-200 text-sm font-bold block">App Background</span>
+                                                <span className="text-xs text-slate-500 font-medium block">Show effect on main screens</span>
+                                            </div>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={showGlobalAmbient}
+                                                onChange={(e) => {
+                                                    HapticsService.impactMedium();
+                                                    setShowGlobalAmbient(e.target.checked);
+                                                }}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]"></div>
+                                        </label>
+                                    </div>
+                                )}
                             </div>
-
-                            {/* Ambient Mode Toggle */}
-                            {setAmbientMode && (
-                                <div className="w-full flex items-center justify-between p-4 border-t border-white/5">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl ${ambientMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            <Star size={18} />
-                                        </div>
-                                        <div>
-                                            <span className="text-slate-200 text-sm font-bold block">Ambient Effects</span>
-                                            <span className="text-xs text-slate-500 font-medium block">Enable dynamic lighting effects</span>
-                                        </div>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={ambientMode}
-                                            onChange={(e) => {
-                                                HapticsService.impactMedium();
-                                                setAmbientMode(e.target.checked);
-                                            }}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 peer-checked:shadow-[0_0_15px_rgba(168,85,247,0.3)]"></div>
-                                    </label>
-                                </div>
-                            )}
-
-                            {/* Global App Background Toggle (Sub-option) */}
-                            {setAmbientMode && setShowGlobalAmbient && ambientMode && (
-                                <div className="w-full flex items-center justify-between p-4 border-t border-white/5 pl-8 bg-white/5">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl ${showGlobalAmbient ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            <Sparkles size={18} />
-                                        </div>
-                                        <div>
-                                            <span className="text-slate-200 text-sm font-bold block">App Background</span>
-                                            <span className="text-xs text-slate-500 font-medium block">Show effect on main screens</span>
-                                        </div>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={showGlobalAmbient}
-                                            onChange={(e) => {
-                                                HapticsService.impactMedium();
-                                                setShowGlobalAmbient(e.target.checked);
-                                            }}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]"></div>
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                    </section>
+                        </section>
+                    </AnimatedSection>
 
                     {/* Category Management */}
-                    <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Categories</h4>
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
-                            <button
-                                onClick={() => setShowCategoryModal(true)}
-                                className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-purple-500/20 p-2 rounded-xl text-purple-400">
-                                        <Tag size={18} />
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Manage Categories</span>
-                                        <span className="text-xs text-slate-500 font-medium">Add or remove custom tags</span>
-                                    </div>
-                                </div>
-                                <div className="bg-slate-800 p-1.5 rounded-lg text-slate-400">
-                                    <Plus size={16} />
-                                </div>
-                            </button>
-
-                            <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                {categories.map(cat => (
-                                    <div key={cat.id} className="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
-                                            <span className="text-slate-200 text-sm font-medium">{cat.name}</span>
+                    <AnimatedSection delay={250}>
+                        <section>
+                            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Categories</h4>
+                            <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                                <button
+                                    onClick={() => setShowCategoryModal(true)}
+                                    className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-purple-500/20 p-2 rounded-xl text-purple-400">
+                                            <Tag size={18} />
                                         </div>
-                                        <button
-                                            onClick={() => handleDeleteCategory(cat.id)}
-                                            className="text-slate-600 hover:text-red-400 transition-colors p-2"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div className="text-left">
+                                            <span className="text-slate-200 text-sm font-bold block">Manage Categories</span>
+                                            <span className="text-xs text-slate-500 font-medium">Add or remove custom tags</span>
+                                        </div>
                                     </div>
-                                ))}
+                                    <div className="bg-slate-800 p-1.5 rounded-lg text-slate-400">
+                                        <Plus size={16} />
+                                    </div>
+                                </button>
+
+                                <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                    {categories.map(cat => (
+                                        <div key={cat.id} className="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
+                                                <span className="text-slate-200 text-sm font-medium">{cat.name}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteCategory(cat.id)}
+                                                className="text-slate-600 hover:text-red-400 transition-colors p-2"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    </AnimatedSection>
 
                     {/* Spending Configuration */}
-                    <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Finances</h4>
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300 mb-4">
-                            <div className="w-full p-4 border-b border-white/5">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary/20 p-2 rounded-xl text-primary">
-                                            <Wallet size={18} />
-                                        </div>
-                                        <div>
-                                            <span className="text-slate-200 text-sm font-bold block">Monthly Budget</span>
-                                            <span className="text-slate-500 text-xs font-medium">Target limit for all spending</span>
-                                        </div>
-                                    </div>
-                                    <span className="text-white font-mono font-bold tabular-nums">€{monthlyBudget}</span>
-                                </div>
-
-                                {/* Range Slider */}
-                                <div className="px-1 pb-1 mb-8">
-                                    <input
-                                        type="range"
-                                        min="100"
-                                        max="3000"
-                                        step="50"
-                                        value={monthlyBudget}
-                                        onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
-                                    />
-                                    <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-medium">
-                                        <span>€100</span>
-                                        <span>€3000</span>
-                                    </div>
-                                </div>
-
-                                {/* Goals & Habits */}
-                                <div className="pt-8 border-t border-white/5">
-                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                        <Target size={14} className="text-purple-400" />
-                                        Goals & Habits
-                                    </h3>
-
-                                    <div className="space-y-3">
-                                        {goals.map(goal => (
-                                            <div key={goal.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${goal.isEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
-                                                        {goal.type === GoalType.JUNK_FOOD && <span className="text-lg">🍔</span>}
-                                                        {goal.type === GoalType.ALCOHOL && <span className="text-lg">🍺</span>}
-                                                        {goal.type === GoalType.SMOKING && <span className="text-lg">🚬</span>}
-                                                        {goal.type === GoalType.GAMING && <span className="text-lg">🎮</span>}
-                                                        {goal.type === GoalType.GAMBLING && <span className="text-lg">🎲</span>}
-                                                        {goal.type === GoalType.CAFFEINE && <span className="text-lg">☕</span>}
-                                                        {goal.type === GoalType.SUGAR && <span className="text-lg">🍩</span>}
-                                                        {goal.type === GoalType.ONLINE_SHOPPING && <span className="text-lg">🛍️</span>}
-                                                        {goal.type === GoalType.FAST_FASHION && <span className="text-lg">👗</span>}
-                                                        {goal.type === GoalType.RIDE_SHARING && <span className="text-lg">🚕</span>}
-                                                        {goal.type === GoalType.STREAMING && <span className="text-lg">📺</span>}
-                                                        {goal.type === GoalType.SAVINGS && <span className="text-lg">💰</span>}
-                                                    </div>
-                                                    <div>
-                                                        <p className={`text-sm font-bold ${goal.isEnabled ? 'text-white' : 'text-slate-400'}`}>{goal.name}</p>
-                                                        <p className="text-[10px] text-slate-500">
-                                                            {goal.isEnabled ? `Tracking ${goal.streak} day streak` : 'Enable to track habits'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={goal.isEnabled}
-                                                        onChange={() => {
-                                                            HapticsService.impactLight();
-                                                            const updatedGoals = goals.map(g =>
-                                                                g.id === goal.id ? { ...g, isEnabled: !g.isEnabled } : g
-                                                            );
-                                                            setGoals(updatedGoals);
-                                                        }}
-                                                    />
-                                                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                                                </label>
+                    <AnimatedSection delay={300}>
+                        <section>
+                            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Finances</h4>
+                            <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300 mb-4">
+                                <div className="w-full p-4 border-b border-white/5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-primary/20 p-2 rounded-xl text-primary">
+                                                <Wallet size={18} />
                                             </div>
-                                        ))}
+                                            <div>
+                                                <span className="text-slate-200 text-sm font-bold block">Monthly Budget</span>
+                                                <span className="text-slate-500 text-xs font-medium">Target limit for all spending</span>
+                                            </div>
+                                        </div>
+                                        <span className="text-white font-mono font-bold tabular-nums">€{monthlyBudget}</span>
+                                    </div>
+
+                                    {/* Range Slider */}
+                                    <div className="px-1 pb-1 mb-8">
+                                        <input
+                                            type="range"
+                                            min="100"
+                                            max="3000"
+                                            step="50"
+                                            value={monthlyBudget}
+                                            onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                                            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                        <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-medium">
+                                            <span>€100</span>
+                                            <span>€3000</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Goals & Habits */}
+                                    <div className="pt-8 border-t border-white/5">
+                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                            <Target size={14} className="text-purple-400" />
+                                            Goals & Habits
+                                        </h3>
+
+                                        <div className="space-y-3">
+                                            {goals.map(goal => (
+                                                <div key={goal.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${goal.isEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                            {goal.type === GoalType.JUNK_FOOD && <span className="text-lg">🍔</span>}
+                                                            {goal.type === GoalType.ALCOHOL && <span className="text-lg">🍺</span>}
+                                                            {goal.type === GoalType.SMOKING && <span className="text-lg">🚬</span>}
+                                                            {goal.type === GoalType.GAMING && <span className="text-lg">🎮</span>}
+                                                            {goal.type === GoalType.GAMBLING && <span className="text-lg">🎲</span>}
+                                                            {goal.type === GoalType.CAFFEINE && <span className="text-lg">☕</span>}
+                                                            {goal.type === GoalType.SUGAR && <span className="text-lg">🍩</span>}
+                                                            {goal.type === GoalType.ONLINE_SHOPPING && <span className="text-lg">🛍️</span>}
+                                                            {goal.type === GoalType.FAST_FASHION && <span className="text-lg">👗</span>}
+                                                            {goal.type === GoalType.RIDE_SHARING && <span className="text-lg">🚕</span>}
+                                                            {goal.type === GoalType.STREAMING && <span className="text-lg">📺</span>}
+                                                            {goal.type === GoalType.SAVINGS && <span className="text-lg">💰</span>}
+                                                        </div>
+                                                        <div>
+                                                            <p className={`text-sm font-bold ${goal.isEnabled ? 'text-white' : 'text-slate-400'}`}>{goal.name}</p>
+                                                            <p className="text-[10px] text-slate-500">
+                                                                {goal.isEnabled ? `Tracking ${goal.streak} day streak` : 'Enable to track habits'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="sr-only peer"
+                                                            checked={goal.isEnabled}
+                                                            onChange={() => {
+                                                                HapticsService.impactLight();
+                                                                const updatedGoals = goals.map(g =>
+                                                                    g.id === goal.id ? { ...g, isEnabled: !g.isEnabled } : g
+                                                                );
+                                                                setGoals(updatedGoals);
+                                                            }}
+                                                        />
+                                                        <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
+                    </AnimatedSection>
+                    {/* Category Budgets */}
+                    <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                        <button
+                            onClick={() => {
+                                const el = document.getElementById('category-budgets');
+                                if (el) el.classList.toggle('hidden');
+                            }}
+                            className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
+                                    <PieChart size={18} />
+                                </div>
+                                <div className="text-left">
+                                    <span className="text-slate-200 text-sm font-bold block">Category Budgets</span>
+                                    <span className="text-slate-500 text-xs font-medium">Set limits per category</span>
+                                </div>
+                            </div>
+                            <ChevronRight size={16} className="text-slate-600" />
+                        </button>
 
-                        {/* Category Budgets */}
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
-                            <button
-                                onClick={() => {
-                                    const el = document.getElementById('category-budgets');
-                                    if (el) el.classList.toggle('hidden');
-                                }}
-                                className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
-                                        <PieChart size={18} />
+                        <div id="category-budgets" className="hidden border-t border-white/5 bg-black/20 p-4 space-y-3">
+                            {categories.map(cat => (
+                                <div key={cat.id} className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 w-24">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                                        <span className="text-slate-400 text-xs font-medium truncate">{cat.name}</span>
                                     </div>
-                                    <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Category Budgets</span>
-                                        <span className="text-slate-500 text-xs font-medium">Set limits per category</span>
+                                    <div className="flex items-center gap-2 flex-1">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1000"
+                                            step="10"
+                                            value={categoryBudgets[cat.id] || 0}
+                                            onChange={(e) => setCategoryBudgets({ ...categoryBudgets, [cat.id]: Number(e.target.value) })}
+                                            className="flex-1 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                        />
+                                        <span className="text-white font-mono text-xs w-12 text-right">€{categoryBudgets[cat.id] || 0}</span>
                                     </div>
                                 </div>
-                                <ChevronRight size={16} className="text-slate-600" />
-                            </button>
-
-                            <div id="category-budgets" className="hidden border-t border-white/5 bg-black/20 p-4 space-y-3">
-                                {categories.map(cat => (
-                                    <div key={cat.id} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 w-24">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                            <span className="text-slate-400 text-xs font-medium truncate">{cat.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-1">
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max="1000"
-                                                step="10"
-                                                value={categoryBudgets[cat.id] || 0}
-                                                onChange={(e) => setCategoryBudgets({ ...categoryBudgets, [cat.id]: Number(e.target.value) })}
-                                                className="flex-1 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                                            />
-                                            <span className="text-white font-mono text-xs w-12 text-right">€{categoryBudgets[cat.id] || 0}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            ))}
                         </div>
-                    </section>
+                    </div>
 
                     {/* Pro Features */}
                     <section>
@@ -680,25 +692,25 @@ const Settings: React.FC<SettingsProps> = ({
                             </div>
                         </div>
                     </section>
+                </div>
 
-                    <button
-                        onClick={onSignOut}
-                        className="w-full py-4 text-red-400 text-sm font-bold hover:bg-red-500/10 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 border border-transparent hover:border-red-500/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.1)]"
-                    >
-                        <LogOut size={16} />
-                        Sign Out
-                    </button>
-                </div >
-
-                <SubscriptionModal
-                    isOpen={showPaywall}
-                    onClose={() => setShowPaywall(false)}
-                    onUpgrade={() => {
-                        onUpgrade();
-                        setShowPaywall(false);
-                    }}
-                />
+                <button
+                    onClick={onSignOut}
+                    className="w-full py-4 text-red-400 text-sm font-bold hover:bg-red-500/10 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 border border-transparent hover:border-red-500/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+                >
+                    <LogOut size={16} />
+                    Sign Out
+                </button>
             </div >
+
+            <SubscriptionModal
+                isOpen={showPaywall}
+                onClose={() => setShowPaywall(false)}
+                onUpgrade={() => {
+                    onUpgrade();
+                    setShowPaywall(false);
+                }}
+            />
 
             {/* Add Category Modal */}
             {
