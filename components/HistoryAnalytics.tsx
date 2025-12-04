@@ -10,6 +10,7 @@ interface HistoryAnalyticsProps {
     receipts: Receipt[];
     ageRestricted: boolean;
     categoryBudgets: Record<string, number>;
+    childSupportMode: boolean;
 }
 
 const COLORS = {
@@ -23,8 +24,14 @@ const COLORS = {
     [Category.OTHER]: '#94a3b8',     // Slate
 };
 
-const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestricted, categoryBudgets }) => {
+const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestricted, categoryBudgets, childSupportMode }) => {
     const [activeTab, setActiveTab] = useState<'trend' | 'child' | 'dist' | 'sources' | 'budgets'>('trend');
+
+    React.useEffect(() => {
+        if (!childSupportMode && activeTab === 'child') {
+            setActiveTab('trend');
+        }
+    }, [childSupportMode, activeTab]);
 
     // 1. Trend Data (Stacked Area: Essentials vs Luxury/Other)
     const trendData = useMemo(() => {
@@ -39,11 +46,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
             data[key] = { name: key, essentials: 0, discretionary: 0 };
         }
 
-        receipts.forEach(r => {
+        (receipts || []).forEach(r => {
             const d = new Date(r.date);
             const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
             if (data.hasOwnProperty(key)) {
-                r.items.forEach(item => {
+                (r.items || []).forEach(item => {
                     if (ageRestricted && item.isRestricted) return;
 
                     const isEssential = [Category.FOOD, Category.NECESSITY, Category.HEALTH, Category.EDUCATION, Category.HOUSEHOLD, Category.TRANSPORT].includes(item.category);
@@ -72,11 +79,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
             data[key] = { name: key, child: 0 };
         }
 
-        receipts.forEach(r => {
+        (receipts || []).forEach(r => {
             const d = new Date(r.date);
             const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
             if (data.hasOwnProperty(key)) {
-                r.items.forEach(item => {
+                (r.items || []).forEach(item => {
                     if (ageRestricted && item.isRestricted) return;
                     if (item.isChildRelated) {
                         data[key].child += item.price;
@@ -114,8 +121,8 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
     const storeData = useMemo(() => {
         const data: Record<string, number> = {};
 
-        receipts.forEach(r => {
-            const validTotal = r.items.reduce((sum, item) =>
+        (receipts || []).forEach(r => {
+            const validTotal = (r.items || []).reduce((sum, item) =>
                 (!ageRestricted || !item.isRestricted) ? sum + item.price : sum, 0);
             if (validTotal > 0) {
                 data[r.storeName] = (data[r.storeName] || 0) + validTotal;
@@ -134,8 +141,8 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
 
         // Calculate actuals
         const actuals: Record<string, number> = {};
-        receipts.forEach(r => {
-            r.items.forEach(item => {
+        (receipts || []).forEach(r => {
+            (r.items || []).forEach(item => {
                 if (ageRestricted && item.isRestricted) return;
                 const cat = item.category || Category.OTHER;
                 actuals[cat] = (actuals[cat] || 0) + item.price;
@@ -159,7 +166,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
         return data.sort((a, b) => b.percent - a.percent);
     }, [receipts, ageRestricted, categoryBudgets]);
 
-    if (receipts.length === 0) return null;
+    if ((receipts || []).length === 0) return null;
 
     return (
         <div className="mb-4 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
@@ -171,12 +178,14 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 >
                     <TrendingUp size={14} /> Trend
                 </button>
-                <button
-                    onClick={() => setActiveTab('child')}
-                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'child' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                    <Baby size={14} /> Child
-                </button>
+                {childSupportMode && (
+                    <button
+                        onClick={() => setActiveTab('child')}
+                        className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'child' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                        <Baby size={14} /> Child
+                    </button>
+                )}
                 <button
                     onClick={() => setActiveTab('dist')}
                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'dist' ? 'bg-pink-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
@@ -219,10 +228,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                         </linearGradient>
                                     </defs>
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
+
                                     <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                     <Area type="monotone" dataKey="discretionary" name="Wants" stackId="1" stroke="#f472b6" fill="url(#colorDiscretionary)" />
                                     <Area type="monotone" dataKey="essentials" name="Needs" stackId="1" stroke="#34d399" fill="url(#colorEssentials)" />
@@ -247,10 +253,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                         </linearGradient>
                                     </defs>
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
+
                                     <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                     <Area type="monotone" dataKey="child" name="Child Expenses" stroke="#10b981" fill="url(#colorChild)" />
                                 </AreaChart>
@@ -276,14 +279,11 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                         paddingAngle={5}
                                         dataKey="value"
                                     >
-                                        {categoryData.data.map((entry, index) => (
+                                        {(categoryData.data || []).map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#94a3b8'} stroke="rgba(0,0,0,0.2)" />
                                         ))}
                                     </Pie>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
+
                                     <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -311,11 +311,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                     </defs>
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                    />
+
                                     <Legend wrapperStyle={{ fontSize: '10px' }} />
                                     <Bar dataKey="value" name="Spend (€)" fill="url(#colorSource)" radius={[0, 4, 4, 0]} barSize={20} />
                                 </BarChart>
@@ -331,7 +327,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                             <span className="text-[10px] text-slate-500 font-medium">Set limits in Settings</span>
                         </div>
                         <div className="space-y-4">
-                            {budgetData.map((item) => {
+                            {(budgetData || []).map((item) => {
                                 const isOverBudget = item.actual > item.budget && item.budget > 0;
                                 const barColor = isOverBudget ? 'bg-red-500' : 'bg-emerald-500';
                                 const widthPercent = Math.min((item.actual / (item.budget || item.actual || 1)) * 100, 100);

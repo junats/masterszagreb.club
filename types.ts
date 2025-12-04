@@ -13,10 +13,27 @@ export enum Category {
 export interface ReceiptItem {
   name: string;
   price: number;
-  category: Category;
+  category: string;
   quantity?: number;
   isRestricted?: boolean;
   isChildRelated?: boolean;
+  goalType?: string; // e.g. 'junk_food', 'alcohol'
+}
+
+export interface CategoryDefinition {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface RecurringExpense {
+  id: string;
+  name: string;
+  amount: number;
+  category: string;
+  frequency: 'weekly' | 'monthly' | 'yearly';
+  nextDueDate: string; // ISO Date
+  autoAdd: boolean;
 }
 
 export interface Receipt {
@@ -33,6 +50,7 @@ export interface Receipt {
   imageHash?: string; // Deterministic hash of image for duplicate detection
   storagePath?: string; // Path in Cloud Storage (Production mode)
   fileHash?: string; // Hash of the file metadata
+  categoryId?: string; // ID of the assigned category
 }
 
 export interface AnalysisResult {
@@ -58,4 +76,38 @@ export interface User {
   avatarUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'scan' | 'history' | 'support' | 'settings' | 'provision';
+export type ViewState = 'dashboard' | 'scanner' | 'history' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody';
+
+export type CustodyStatus = 'me' | 'partner' | 'split' | 'none';
+
+export interface CustodyDay {
+  date: string; // YYYY-MM-DD
+  status: CustodyStatus;
+  note?: string;
+}
+
+export enum GoalType {
+  JUNK_FOOD = 'junk_food',
+  ALCOHOL = 'alcohol',
+  SMOKING = 'smoking',
+  GAMING = 'gaming',
+  SAVINGS = 'savings',
+  CAFFEINE = 'caffeine',
+  SUGAR = 'sugar',
+  ONLINE_SHOPPING = 'online_shopping',
+  GAMBLING = 'gambling',
+  FAST_FASHION = 'fast_fashion',
+  RIDE_SHARING = 'ride_sharing',
+  STREAMING = 'streaming'
+}
+
+export interface Goal {
+  id: string;
+  type: GoalType;
+  name: string;
+  isEnabled: boolean;
+  keywords: string[]; // Keywords to match in receipt items
+  streak: number; // Days compliant
+  lastComplianceDate?: string; // ISO Date
+  emoji?: string;
+}

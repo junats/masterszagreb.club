@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Receipt, Category } from '../types';
+import { Receipt, Category, CategoryDefinition, ReceiptItem } from '../types';
 import { Search, ChevronRight, Share2, MapPin, Trash2, FileText, Receipt as ReceiptIcon, Copy, Image as ImageIcon, X, BarChart3, PieChart, TrendingUp, Baby } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { Share } from '@capacitor/share';
@@ -13,13 +13,16 @@ interface HistoryViewProps {
     onUpdate?: (receipt: Receipt) => void;
     selectedReceipt: Receipt | null;
     onSelectReceipt: (receipt: Receipt | null) => void;
+    childSupportMode: boolean;
+    categories: CategoryDefinition[];
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, categoryBudgets, onDelete, onUpdate, selectedReceipt, onSelectReceipt }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, categoryBudgets, onDelete, onUpdate, selectedReceipt, onSelectReceipt, childSupportMode, categories }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showFullImage, setShowFullImage] = useState(false);
     const [showStats, setShowStats] = useState(false);
     const [isEditingDate, setIsEditingDate] = useState(false);
+
 
     // Zoom & Pan State
     const [zoomLevel, setZoomLevel] = useState(1);
@@ -167,15 +170,27 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
     };
 
     const handleToggleRestriction = (itemIndex: number) => {
-        if (selectedReceipt && onUpdate) {
-            const updatedItems = [...selectedReceipt.items];
-            updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                isRestricted: !updatedItems[itemIndex].isRestricted
-            };
-            onUpdate({ ...selectedReceipt, items: updatedItems });
-            onSelectReceipt({ ...selectedReceipt, items: updatedItems });
-        }
+        if (!onUpdate || !selectedReceipt) return;
+        const updatedItems = [...selectedReceipt.items];
+        updatedItems[itemIndex] = {
+            ...updatedItems[itemIndex],
+            isRestricted: !updatedItems[itemIndex].isRestricted
+        };
+        const updatedReceipt = { ...selectedReceipt, items: updatedItems };
+        onUpdate(updatedReceipt);
+        onSelectReceipt(updatedReceipt);
+    };
+
+    const handleToggleChildRelated = (itemIndex: number) => {
+        if (!onUpdate || !selectedReceipt) return;
+        const updatedItems = [...selectedReceipt.items];
+        updatedItems[itemIndex] = {
+            ...updatedItems[itemIndex],
+            isChildRelated: !updatedItems[itemIndex].isChildRelated
+        };
+        const updatedReceipt = { ...selectedReceipt, items: updatedItems };
+        onUpdate(updatedReceipt);
+        onSelectReceipt(updatedReceipt);
     };
 
     const handleShare = async () => {
@@ -298,7 +313,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                                 {item.isRestricted && !ageRestricted && (
                                                     <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
                                                 )}
-                                                {item.isChildRelated && (
+                                                {item.isChildRelated && childSupportMode && (
                                                     <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
                                                         <Baby size={10} /> Child
                                                     </span>
@@ -309,6 +324,15 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                             <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
                                                 €{item.price.toFixed(2)}
                                             </span>
+                                            {onUpdate && childSupportMode && (
+                                                <button
+                                                    onClick={() => handleToggleChildRelated(idx)}
+                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
+                                                    title="Toggle Child Related"
+                                                >
+                                                    <Baby size={14} />
+                                                </button>
+                                            )}
                                             {onUpdate && !ageRestricted && (
                                                 <button
                                                     onClick={() => handleToggleRestriction(idx)}
@@ -443,7 +467,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                     </div>
                     <button
                         onClick={() => setShowStats(!showStats)}
-                        className={`p-3 rounded-xl border transition-all duration-300 ${showStats ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-surface border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-surfaceHighlight'}`}
+                        className={`p-3 rounded-xl border transition-all duration-300 ${showStats ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_15px_rgba(56,189,248,0.15)]' : 'bg-surface border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-surfaceHighlight'}`}
                     >
                         <BarChart3 size={20} />
                     </button>
@@ -476,18 +500,20 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                     </select>
 
                     {/* Child Filter Toggle */}
-                    <button
-                        onClick={() => setChildFilter(!childFilter)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-300 flex items-center gap-1 ${childFilter ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-surface border-white/10 text-slate-400 hover:text-slate-200'}`}
-                    >
-                        <Baby size={12} /> Child Items
-                    </button>
+                    {childSupportMode && (
+                        <button
+                            onClick={() => setChildFilter(!childFilter)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-300 flex items-center gap-1 ${childFilter ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-surface border-white/10 text-slate-400 hover:text-slate-200'}`}
+                        >
+                            <Baby size={12} /> Child Items
+                        </button>
+                    )}
                 </div>
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                 {showStats && filteredReceipts.length > 0 && (
-                    <HistoryAnalytics receipts={filteredReceipts} ageRestricted={ageRestricted} categoryBudgets={categoryBudgets} />
+                    <HistoryAnalytics receipts={filteredReceipts} ageRestricted={ageRestricted} categoryBudgets={categoryBudgets} childSupportMode={childSupportMode} />
                 )}
                 {filteredReceipts.length === 0 ? (
                     <div className="text-center py-10">
@@ -505,7 +531,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                 key={receipt.id}
                                 onClick={() => onSelectReceipt(receipt)}
                                 className={`w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group ${isBill
-                                    ? 'bg-gradient-to-r from-slate-900 to-indigo-950/30 border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                                    ? 'bg-gradient-to-r from-slate-900 to-indigo-950/30 border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.1)]'
                                     : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
                                     }`}
                             >

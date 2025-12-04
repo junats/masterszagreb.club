@@ -98,14 +98,32 @@ const receiptSchema: Schema = {
           },
           isChildRelated: {
             type: Type.BOOLEAN,
-            description: "Set to true if the item is meant for children (18 and younger), e.g., toys, baby food, kids clothes, school supplies, diapers. Otherwise false.",
+            description: "Set to true if the item is for a child (e.g. toys, baby food, nappies, kids clothes). Otherwise false.",
           },
+          goalType: {
+            type: Type.STRING,
+            enum: [
+              "junk_food",
+              "alcohol",
+              "smoking",
+              "gaming",
+              "gambling",
+              "caffeine",
+              "sugar",
+              "online_shopping",
+              "fast_fashion",
+              "ride_sharing",
+              "streaming",
+              "savings"
+            ],
+            description: "Classify if item fits a goal: 'junk_food' (fast food/chips/candy), 'alcohol', 'smoking', 'gaming', 'gambling', 'caffeine' (coffee/energy drinks), 'sugar' (sweets/soda), 'online_shopping', 'fast_fashion', 'ride_sharing', 'streaming'. Return null if none match.",
+          }
         },
-        required: ["name", "price", "category"],
+        required: ["name", "price", "category", "isRestricted", "isChildRelated"],
       },
     },
   },
-  required: ["storeName", "total", "items", "type"],
+  required: ["storeName", "date", "total", "items"],
 };
 
 export const analyzeReceiptImage = async (base64Image: string): Promise<AnalysisResult> => {
@@ -154,7 +172,9 @@ export const analyzeReceiptImage = async (base64Image: string): Promise<Analysis
        - 'Transport': Fuel, Public Transit. Taxis/Uber are 'Luxury' unless clearly medical/school.
        - 'Education': Tuition, School Fees, Books, School Supplies.
     7. IMPORTANT: Identify any items related to alcohol, tobacco, nicotine, gambling, or adult-only products and set their 'isRestricted' field to true.
-    8. IMPORTANT: Identify items meant for children (18 and younger) such as toys, baby products, kids clothing, school supplies, diapers, etc., and set 'isChildRelated' to true.
+    8. CRITICAL: Identify items meant for children (18 and younger) and set 'isChildRelated' to true.
+       - EXAMPLES: Diapers, Baby Food, Formula, Kids Clothing, Toys, School Supplies, Tuition, Kindergarten Fees, Pediatric Medicine, Children's Books.
+       - INFERENCE: If the store is "Toys R Us" or "Kindergarten", items are likely child-related.
     9. Ensure numeric values handle commas as decimals if standard in the receipt region.
     10. If the image is blurry or items are unclear, try to infer the category from the store type (e.g., a Pharmacy receipt with unclear items should have items categorized as Health).
     

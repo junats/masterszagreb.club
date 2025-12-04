@@ -8,6 +8,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        // FORCE LINKER TO INCLUDE TrueTrackWidgetImplementation
+        let _ = TrueTrackWidgetImplementation()
+        print("AppDelegate: Forced instantiation of TrueTrackWidgetImplementation")
+        
+        if let protocolType = NSProtocolFromString("CAPBridgedPlugin") {
+            let conforms = TrueTrackWidgetImplementation.self.conforms(to: protocolType)
+            print("AppDelegate: TrueTrackWidgetPlugin conforms to CAPBridgedPlugin: \(conforms)")
+        } else {
+            print("AppDelegate: CAPBridgedPlugin protocol not found!")
+        }
+        
         return true
     }
 

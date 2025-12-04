@@ -47,7 +47,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
             trendData.push(monthEntry);
         }
 
-        receipts.forEach(r => {
+        (receipts || []).forEach(r => {
             const d = new Date(r.date);
             const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
             const monthData = trendData.find(m => m.name === key);
@@ -96,7 +96,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
             });
             if (dayEntry[Category.OTHER] === undefined) dayEntry[Category.OTHER] = 0;
 
-            receipts.forEach(r => {
+            (receipts || []).forEach(r => {
                 let rDateStr = r.date;
                 if (r.date.includes('T')) {
                     rDateStr = r.date.split('T')[0];
@@ -137,7 +137,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
         }
 
         // --- 3. Top Vendors & Category Breakdown (Current Month) ---
-        const currentMonthReceipts = receipts.filter(r => {
+        const currentMonthReceipts = (receipts || []).filter(r => {
             const d = new Date(r.date);
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
@@ -296,12 +296,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                                 </defs>
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(value) => `€${value}`} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#0B1221', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                                    itemStyle={{ color: '#fff', fontSize: '12px' }}
-                                    formatter={(value: number, name: string) => [`€${value.toFixed(2)}`, name]}
-                                    wrapperStyle={{ zIndex: 1000 }}
-                                />
+
                                 {Object.keys(COLORS).map((cat) => (
                                     <Area
                                         key={cat}
@@ -340,11 +335,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                                         </linearGradient>
                                     </defs>
                                     <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#0B1221', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                                        itemStyle={{ color: '#fff', fontSize: '12px' }}
-                                        formatter={(value: number) => [`€${value.toFixed(2)}`, 'Spent']}
-                                    />
+
                                     {Object.keys(COLORS).map((cat) => (
                                         <Area
                                             key={cat}
@@ -371,8 +362,8 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                             <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Top Vendors</h3>
                         </div>
                         <div className="space-y-5">
-                            {data.topStores.length > 0 ? (
-                                data.topStores.map((store, idx) => (
+                            {(data.topStores || []).length > 0 ? (
+                                (data.topStores || []).map((store, idx) => (
                                     <div key={idx} className="space-y-2">
                                         <div className="flex justify-between items-end text-xs">
                                             <span className="text-slate-300 font-medium mr-2">{store.name}</span>
@@ -397,7 +388,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
                         <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Spending Breakdown</h3>
                     </div>
                     <div className="space-y-5">
-                        {data.categoryData.map((d, i) => (
+                        {(data.categoryData || []).map((d, i) => (
                             <div key={i} className="group space-y-2">
                                 <div className="flex justify-between items-center text-xs">
                                     <div className="flex items-center gap-2">

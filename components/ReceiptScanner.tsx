@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera as CameraIcon, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine, Edit2, Save, X } from 'lucide-react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { analyzeReceiptImage } from '../services/geminiService';
 import { storageService } from '../services/storageService';
@@ -26,6 +26,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [scannedReceipt, setScannedReceipt] = useState<Receipt | null>(null);
 
   // Helper to compress image before sending/storing
   const optimizeImage = async (blob: Blob): Promise<Blob> => {
@@ -133,10 +135,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
       return {
         id: generateId(),
-        storeName: result.storeName,
-        date: result.date,
-        total: result.total,
-        items: result.items,
+        storeName: result.storeName || 'Unknown Store',
+        date: result.date || new Date().toISOString().split('T')[0],
+        total: result.total || 0,
+        items: result.items || [],
         scannedAt: new Date().toISOString(),
         type: result.type || 'receipt',
         referenceCode: result.referenceCode,
@@ -230,11 +232,28 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       if (errors.length > 0) {
         console.warn("Some files failed to process:", errors);
       }
-      onScanComplete(newReceipts);
+      // Open Review Modal for the first receipt (assuming single scan for now)
+      setScannedReceipt(newReceipts[0]);
+      setShowReviewModal(true);
+      setIsAnalyzing(false);
+      setProgress(null);
     } else {
       setError("Failed to analyze images. " + (errors.length > 0 ? `Error with: ${errors[0]}` : "Please try again."));
       setIsAnalyzing(false);
       setProgress(null);
+    }
+  };
+
+  const handleSave = () => {
+    if (scannedReceipt) {
+      // Ensure date is valid, fallback to today if somehow empty
+      const finalReceipt = {
+        ...scannedReceipt,
+        date: scannedReceipt.date || new Date().toISOString().split('T')[0]
+      };
+      onScanComplete([finalReceipt]);
+      setShowReviewModal(false);
+      setScannedReceipt(null);
     }
   };
 
@@ -282,7 +301,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         <p className="text-slate-500 text-xs mt-1">AI will automatically classify it for you.</p>
 
         {ageRestricted && (
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold shadow-[0_0_10px_rgba(245,158,11,0.1)]">
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.1)]">
             <CheckCircle size={12} />
             <span>Parental Mode Active</span>
           </div>
@@ -290,7 +309,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+        <div className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col gap-3 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
             <p className="text-red-200 text-sm font-medium">{error}</p>
@@ -308,7 +327,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
         <button
           onClick={handleCameraCapture}
-          className="group relative flex flex-col items-center justify-center w-60 h-60 rounded-full bg-surface border-2 border-dashed border-slate-700 hover:border-primary hover:bg-surfaceHighlight transition-all duration-500 shadow-2xl shadow-black/50 hover:shadow-[0_0_40px_rgba(56,189,248,0.15)]"
+          className="group relative flex flex-col items-center justify-center w-60 h-60 rounded-full bg-surface border-2 border-dashed border-slate-700 hover:border-primary hover:bg-surfaceHighlight transition-all duration-500 shadow-2xl shadow-black/50 hover:shadow-[0_0_50px_rgba(56,189,248,0.1)]"
         >
           <div className="absolute inset-0 rounded-full bg-primary/0 group-hover:bg-primary/5 transition-colors duration-500 pointer-events-none"></div>
           <div className="p-7 bg-slate-900 rounded-full mb-4 shadow-inner ring-1 ring-white/10 group-hover:ring-primary/50 transition-all duration-500">
@@ -339,6 +358,95 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           Cancel
         </button>
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && scannedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface w-full max-w-lg max-h-[90vh] rounded-3xl border border-white/10 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+
+            <div className="p-6 border-b border-white/10 flex justify-between items-center">
+              <h2 className="text-xl font-heading font-bold text-white">Review Scan</h2>
+              <button onClick={() => setShowReviewModal(false)} className="text-slate-400 hover:text-white">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Store & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
+                  <input
+                    type="text"
+                    value={scannedReceipt.storeName}
+                    onChange={(e) => setScannedReceipt({ ...scannedReceipt, storeName: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
+                  <input
+                    type="date"
+                    value={scannedReceipt.date}
+                    onChange={(e) => setScannedReceipt({ ...scannedReceipt, date: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Total */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Total Amount</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400">€</span>
+                  <input
+                    type="number"
+                    value={scannedReceipt.total}
+                    onChange={(e) => setScannedReceipt({ ...scannedReceipt, total: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Items Preview */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
+                  <span>Items ({scannedReceipt.items.length})</span>
+                  <span className="text-primary text-[10px]">Tap to edit details</span>
+                </label>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  {scannedReceipt.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <p className="text-sm text-white font-medium truncate">{item.name}</p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
+                          {item.isChildRelated && (
+                            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <CheckCircle size={8} /> Child
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-mono text-slate-300">€{item.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl">
+              <button
+                onClick={handleSave}
+                className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Save size={20} />
+                Save Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
