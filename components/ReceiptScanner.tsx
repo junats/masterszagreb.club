@@ -29,7 +29,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [scannedReceipt, setScannedReceipt] = useState<Receipt | null>(null);
+  const [scannedReceipts, setScannedReceipts] = useState<Receipt[]>([]);
 
   // Helper to compress image before sending/storing
   const optimizeImage = async (blob: Blob): Promise<Blob> => {
@@ -139,7 +139,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         id: generateId(),
         storeName: result.storeName || 'Unknown Store',
         date: result.date || new Date().toISOString().split('T')[0],
-        total: result.total || 0,
+        total: result.total || (result.items || []).reduce((sum, item) => sum + item.price, 0) || 0,
         items: result.items || [],
         scannedAt: new Date().toISOString(),
         type: result.type || 'receipt',
@@ -234,8 +234,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       if (errors.length > 0) {
         console.warn("Some files failed to process:", errors);
       }
-      // Open Review Modal for the first receipt (assuming single scan for now)
-      setScannedReceipt(newReceipts[0]);
+      // Save ALL receipts for review
+      setScannedReceipts(newReceipts);
       setShowReviewModal(true);
       setIsAnalyzing(false);
       setProgress(null);
@@ -247,15 +247,24 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
 
   const handleSave = () => {
-    if (scannedReceipt) {
-      // Ensure date is valid, fallback to today if somehow empty
-      const finalReceipt = {
-        ...scannedReceipt,
-        date: scannedReceipt.date || new Date().toISOString().split('T')[0]
-      };
-      onScanComplete([finalReceipt]);
+    if (scannedReceipts.length > 0) {
+      // Ensure all receipts have valid dates
+      const finalReceipts = scannedReceipts.map(receipt => ({
+        ...receipt,
+        date: receipt.date || new Date().toISOString().split('T')[0]
+      }));
+      onScanComplete(finalReceipts);
       setShowReviewModal(false);
-      setScannedReceipt(null);
+      setScannedReceipts([]);
+    }
+  };
+
+  // Helper to update the first receipt in the array
+  const updateFirstReceipt = (updates: Partial<Receipt>) => {
+    if (scannedReceipts.length > 0) {
+      const updated = [...scannedReceipts];
+      updated[0] = { ...updated[0], ...updates };
+      setScannedReceipts(updated);
     }
   };
 
@@ -368,12 +377,17 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         </div>
 
         {/* Review Modal */}
-        {showReviewModal && scannedReceipt && (
+        {showReviewModal && scannedReceipts.length > 0 && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-surface w-full max-w-lg max-h-[90vh] rounded-3xl border border-white/10 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
 
               <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                <h2 className="text-xl font-heading font-bold text-white">Review Scan</h2>
+                <div>
+                  <h2 className="text-xl font-heading font-bold text-white">Review Scan</h2>
+                  {scannedReceipts.length > 1 && (
+                    <p className="text-xs text-slate-400 mt-1">{scannedReceipts.length} receipts scanned</p>
+                  )}
+                </div>
                 <button onClick={() => setShowReviewModal(false)} className="text-slate-400 hover:text-white">
                   <X size={24} />
                 </button>
@@ -386,8 +400,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
                     <input
                       type="text"
-                      value={scannedReceipt.storeName}
-                      onChange={(e) => setScannedReceipt({ ...scannedReceipt, storeName: e.target.value })}
+                      value={scannedReceipts[0]?.storeName || ''}
+                      onChange={(e) => updateFirstReceipt({ storeName: e.target.value })}
                       className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
                     />
                   </div>
@@ -395,8 +409,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
                     <input
                       type="date"
-                      value={scannedReceipt.date}
-                      onChange={(e) => setScannedReceipt({ ...scannedReceipt, date: e.target.value })}
+                      value={scannedReceipts[0]?.date || ''}
+                      onChange={(e) => updateFirstReceipt({ date: e.target.value })}
                       className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
                     />
                   </div>
@@ -409,8 +423,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     <span className="absolute left-3 top-2.5 text-slate-400">€</span>
                     <input
                       type="number"
-                      value={scannedReceipt.total}
-                      onChange={(e) => setScannedReceipt({ ...scannedReceipt, total: parseFloat(e.target.value) || 0 })}
+                      value={scannedReceipts[0]?.total || 0}
+                      onChange={(e) => updateFirstReceipt({ total: parseFloat(e.target.value) || 0 })}
                       className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
                     />
                   </div>
@@ -419,11 +433,11 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                 {/* Items Preview */}
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
-                    <span>Items ({scannedReceipt.items.length})</span>
+                    <span>Items ({scannedReceipts[0]?.items.length || 0})</span>
                     <span className="text-primary text-[10px]">Tap to edit details</span>
                   </label>
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {scannedReceipt.items.map((item, idx) => (
+                    {(scannedReceipts[0]?.items || []).map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
                         <div className="flex-1 min-w-0 pr-3">
                           <p className="text-sm text-white font-medium truncate">{item.name}</p>
@@ -449,7 +463,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                   className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   <Save size={20} />
-                  Save Receipt
+                  Save {scannedReceipts.length > 1 ? `${scannedReceipts.length} Receipts` : 'Receipt'}
                 </button>
               </div>
             </div>

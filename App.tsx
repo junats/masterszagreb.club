@@ -840,53 +840,6 @@ const App: React.FC = () => {
   return (
     <div
       className="h-screen w-full bg-background relative overflow-hidden flex flex-col pt-safe safe-area-top"
-      onTouchStart={(e) => {
-        const touch = e.touches[0];
-        // Ignore swipes starting in the bottom navigation area (approx 90px)
-        if (touch.clientY > window.innerHeight - 90) return;
-
-        setTouchStart({ x: touch.clientX, y: touch.clientY, time: Date.now() });
-      }}
-      onTouchEnd={(e) => {
-        if (!touchStart) return;
-
-        const touch = e.changedTouches[0];
-        const diffX = touchStart.x - touch.clientX;
-        const diffY = touchStart.y - touch.clientY;
-        const timeDiff = Date.now() - touchStart.time;
-
-        setTouchStart(null);
-
-        // Optimized Thresholds
-        const minSwipeDistance = 30; // Reduced from 50
-        const maxTime = 800; // Increased from 500
-
-        // Dominant Axis Check (Horizontal > Vertical * 1.2)
-        if (
-          Math.abs(diffX) > minSwipeDistance &&
-          Math.abs(diffX) > Math.abs(diffY) * 1.2 &&
-          timeDiff < maxTime
-        ) {
-          const navOrder = ['dashboard', 'scan', 'history', ...(childSupportMode ? ['support'] : []), 'settings'];
-          const currentIndex = navOrder.indexOf(currentView);
-
-          if (currentIndex === -1) return;
-
-          if (diffX > 0) {
-            // Swipe Left -> Next Tab
-            if (currentIndex < navOrder.length - 1) {
-              setDirection(1);
-              setCurrentView(navOrder[currentIndex + 1] as ViewState);
-            }
-          } else {
-            // Swipe Right -> Previous Tab
-            if (currentIndex > 0) {
-              setDirection(-1);
-              setCurrentView(navOrder[currentIndex - 1] as ViewState);
-            }
-          }
-        }
-      }}
     >
       {ambientMode && showGlobalAmbient && <AmbientBackground spendRatio={spendRatio} />}
 

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay } from '../types';
 import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart as PieIcon, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users, Gift } from 'lucide-react';
 import { HapticsService } from '../services/haptics';
@@ -58,9 +58,15 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     const [goalView, setGoalView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [custodyView, setCustodyView] = useState<'weekly' | 'monthly'>('weekly');
     const [showIndicators, setShowIndicators] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    // Item Colors for Drilldown
+    const ITEM_COLORS = ['#f472b6', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa', '#f87171', '#fb923c', '#a3e635'];
+    const getItemColor = (index: number) => ITEM_COLORS[index % ITEM_COLORS.length];
 
     // Helper to get category color
     const getCategoryColor = (catName: string) => {
+        if (SUB_CATEGORY_COLORS[catName]) return SUB_CATEGORY_COLORS[catName];
         const cat = (categories || []).find(c => c.name === catName || c.id === catName.toLowerCase());
         return cat ? cat.color : '#94a3b8';
     };
@@ -79,6 +85,18 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         [GoalType.FAST_FASHION]: '#d946ef', // Fuchsia
         [GoalType.RIDE_SHARING]: '#0ea5e9', // Sky
         [GoalType.STREAMING]: '#8b5cf6',    // Violet
+    };
+
+    const SUB_CATEGORY_COLORS: Record<string, string> = {
+        'Fruit': '#fbbf24', // Amber-400
+        'Vegetables': '#4ade80', // Green-400
+        'Soda': '#f87171', // Red-400
+        'Organic': '#a3e635', // Lime-400
+        'Meat': '#f472b6', // Pink-400
+        'Dairy': '#60a5fa', // Blue-400
+        'Bakery': '#fb923c', // Orange-400
+        'Alcohol': '#ef4444', // Red-500
+        'Snacks': '#c084fc', // Purple-400
     };
 
     // Goal Gauge Component
@@ -185,6 +203,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     // Calculate Metrics
     const metrics = useMemo(() => {
+        console.log(`📊 Dashboard: Calculating metrics with ${receipts.length} receipts`);
         console.log("Dashboard Receipts:", receipts);
 
         // 1. Filter Receipts based on Date Filter
@@ -224,7 +243,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 let normalizedCat = cat;
                 if (typeof cat === 'string') {
                     const lower = cat.toLowerCase();
-                    if (['groceries', 'food', 'dining', 'alcohol'].includes(lower)) normalizedCat = Category.FOOD;
+                    if (['groceries', 'food', 'dining'].includes(lower)) normalizedCat = Category.FOOD;
+                    else if (['alcohol', 'beer', 'wine', 'spirits'].includes(lower)) normalizedCat = Category.ALCOHOL;
                     else if (['health', 'pharmacy', 'medical'].includes(lower)) normalizedCat = Category.HEALTH;
                     else if (['household', 'cleaning', 'furniture'].includes(lower)) normalizedCat = Category.HOUSEHOLD;
                     else if (['education', 'school', 'tuition', 'child'].includes(lower)) normalizedCat = Category.EDUCATION;
@@ -232,6 +252,19 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     else if (['luxury', 'electronics', 'entertainment'].includes(lower)) normalizedCat = Category.LUXURY;
                     else if (['necessity'].includes(lower)) normalizedCat = Category.NECESSITY;
                     else normalizedCat = Category.OTHER;
+                }
+
+                // Sub-categorize Food
+                if (normalizedCat === Category.FOOD) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/apple|banana|orange|grape|fruit|berry|melon|lemon|lime|pear|peach/)) normalizedCat = "Fruit";
+                    else if (nameLower.match(/carrot|potato|onion|pepper|vegetable|salad|tomato|cucumber|lettuce|spinach|garlic|ginger/)) normalizedCat = "Vegetables";
+                    else if (nameLower.match(/coke|pepsi|soda|fanta|sprite|drink|beverage|water|juice|cola/)) normalizedCat = "Soda";
+                    else if (nameLower.match(/organic|bio|eco/)) normalizedCat = "Organic";
+                    else if (nameLower.match(/chicken|beef|pork|meat|steak|lamb|turkey|ham|bacon|sausage/)) normalizedCat = "Meat";
+                    else if (nameLower.match(/milk|cheese|yogurt|butter|cream|dairy/)) normalizedCat = "Dairy";
+                    else if (nameLower.match(/bread|bakery|cake|pastry|croissant|bagel|bun|roll/)) normalizedCat = "Bakery";
+                    else if (nameLower.match(/chip|snack|chocolate|candy|sweet|cookie|biscuit/)) normalizedCat = "Snacks";
                 }
 
                 categoryTotals[normalizedCat] = (categoryTotals[normalizedCat] || 0) + i.price;
@@ -436,12 +469,17 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         });
 
         const thisMonthTotal = thisMonthReceipts.reduce((acc, r) => {
-            if (!ageRestricted) return acc + r.total;
+            if (!ageRestricted) {
+                // Use receipt total if available, otherwise sum items
+                return acc + (r.total > 0 ? r.total : r.items.reduce((s, i) => s + i.price, 0));
+            }
             return acc + r.items.reduce((s, i) => !i.isRestricted ? s + i.price : s, 0);
         }, 0);
 
         const lastMonthTotal = lastMonthReceipts.reduce((acc, r) => {
-            if (!ageRestricted) return acc + r.total;
+            if (!ageRestricted) {
+                return acc + (r.total > 0 ? r.total : r.items.reduce((s, i) => s + i.price, 0));
+            }
             return acc + r.items.reduce((s, i) => !i.isRestricted ? s + i.price : s, 0);
         }, 0);
 
@@ -640,7 +678,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             monthData,
             weekData,
             weeklyData,
-            thisMonthReceipts, // Export for debug
+            thisMonthReceipts,
             dailyAverage: daysPassed > 0 ? thisMonthTotal / daysPassed : 0,
             foodRatio: totalSpent > 0 ? ((categoryTotals[Category.FOOD] || 0) / totalSpent) * 100 : 0,
             luxuryRatio: totalSpent > 0 ? (luxuryTotal / totalSpent) * 100 : 0,
@@ -829,6 +867,56 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         return 'healthy';
     }, [metrics.thisMonthTotal, monthlyBudget]);
 
+    // Drill Down Data
+    const drillDownData = useMemo(() => {
+        if (!selectedCategory || !metrics.categoryItems[selectedCategory]) return [];
+        const items = metrics.categoryItems[selectedCategory];
+        const aggregated: Record<string, number> = {};
+        items.forEach(i => {
+            aggregated[i.name] = (aggregated[i.name] || 0) + i.price;
+        });
+        return Object.entries(aggregated)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10); // Top 10 items
+    }, [selectedCategory, metrics.categoryItems]);
+
+    // AI Smart Metrics
+    const aiMetrics = useMemo(() => {
+        const daysPassed = new Date().getDate();
+        const totalSpent = metrics.thisMonthTotal;
+        const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
+        const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+        const projected = (dailyAvg * daysInMonth);
+
+        // Biggest Purchase
+        const biggestPurchase = Math.max(...(metrics.thisMonthReceipts || []).map(r => r.total), 0);
+
+        // Top Category
+        const topCategory = metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-';
+
+        // Weekend Spend %
+        const weekendSpend = (metrics.thisMonthReceipts || []).reduce((acc, r) => {
+            const day = new Date(r.date).getDay();
+            return (day === 0 || day === 6) ? acc + (r.total || 0) : acc;
+        }, 0);
+        const weekendPercent = totalSpent > 0 ? (weekendSpend / totalSpent) * 100 : 0;
+
+        // Shopping Frequency
+        const frequency = daysPassed > 0 ? ((metrics.thisMonthReceipts || []).length / daysPassed).toFixed(1) : '0';
+
+        return [
+            { label: 'Daily Avg', value: `€${dailyAvg.toFixed(0)}`, trend: 'neutral', icon: CalendarDays },
+            { label: 'Forecast', value: `€${projected.toFixed(0)}`, trend: projected > monthlyBudget ? 'down' : 'up', icon: TrendingUp },
+            { label: 'Top Cat', value: topCategory, trend: 'neutral', icon: ShoppingBag },
+            { label: 'Big Buy', value: `€${biggestPurchase.toFixed(0)}`, trend: 'neutral', icon: ArrowUpRight },
+            { label: 'Weekend', value: `${weekendPercent.toFixed(0)}%`, trend: 'neutral', icon: Calendar },
+            { label: 'Freq/Day', value: frequency, trend: 'neutral', icon: Activity }
+        ];
+    }, [metrics.thisMonthTotal, metrics.thisMonthReceipts, metrics.categoryData, monthlyBudget]);
+
+    const activePieData = selectedCategory ? drillDownData : metrics.categoryData;
+
     const cardGlowStyles = useMemo(() => {
         switch (healthState) {
             case 'critical':
@@ -919,36 +1007,81 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         {/* Distribution Gauge */}
                         <div className="relative z-10 border-t border-white/5 pt-4">
                             <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Spending Distribution</h4>
+                                <h4
+                                    onClick={() => {
+                                        if (selectedCategory) {
+                                            HapticsService.selection();
+                                            setSelectedCategory(null);
+                                        }
+                                    }}
+                                    className={`text-[10px] uppercase tracking-wider font-bold ${selectedCategory ? 'text-indigo-400 cursor-pointer hover:text-indigo-300' : 'text-slate-500'} transition-colors`}
+                                >
+                                    {selectedCategory ? '← Back to Overview' : 'Spending Distribution'}
+                                </h4>
                             </div>
                             <div className="flex items-center justify-between h-48 w-full">
                                 {/* Pie Chart Container - Left Side */}
                                 <div className="h-full w-1/2 relative">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart key={isInView ? 'visible' : 'hidden'}>
-                                            <Pie
-                                                data={metrics.categoryData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={45} // Thicker donut
-                                                outerRadius={75} // Thicker donut
-                                                paddingAngle={4}
-                                                dataKey="value"
-                                                stroke="none"
-                                                isAnimationActive={true}
-                                                animationBegin={0}
-                                                animationDuration={1500}
-                                                animationEasing="ease-out"
+                                    <style>{`
+                                        .recharts-wrapper { outline: none !important; }
+                                        .recharts-surface { outline: none !important; }
+                                        *:focus { outline: none !important; }
+                                    `}</style>
+                                    <AnimatePresence mode="wait">
+                                        {isInView && (
+                                            <motion.div
+                                                key={selectedCategory ? 'drilldown' : 'overview'}
+                                                initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                exit={{ opacity: 0, scale: 1.1, rotate: 10 }}
+                                                transition={{ duration: 0.4, ease: "backOut" }}
+                                                className="h-full w-full outline-none focus:outline-none"
+                                                style={{ outline: 'none' }}
                                             >
-                                                {(metrics.categoryData || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name)} />
-                                                ))}
-                                            </Pie>
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={activePieData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={45} // Thicker donut
+                                                            outerRadius={75} // Thicker donut
+                                                            paddingAngle={4}
+                                                            dataKey="value"
+                                                            stroke="none"
+                                                            isAnimationActive={true}
+                                                            animationBegin={0}
+                                                            animationDuration={1000}
+                                                            animationEasing="ease-out"
+                                                            cursor="pointer"
+                                                            onClick={(data) => {
+                                                                if (!selectedCategory) {
+                                                                    HapticsService.selection();
+                                                                    const categoryName = data.name || (data.payload && data.payload.name);
+                                                                    if (categoryName) {
+                                                                        setSelectedCategory(categoryName);
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            {(activePieData || []).map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={selectedCategory ? getItemColor(index) : getCategoryColor(entry.name)} cursor="pointer" />
+                                                            ))}
+                                                        </Pie>
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                     {/* Centered Text Overlay */}
                                     <div
-                                        className="absolute flex flex-col items-center justify-center pointer-events-none"
+                                        onClick={() => {
+                                            if (selectedCategory) {
+                                                HapticsService.selection();
+                                                setSelectedCategory(null);
+                                            }
+                                        }}
+                                        className={`absolute flex flex-col items-center justify-center outline-none focus:outline-none ${selectedCategory ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}`}
                                         style={{
                                             left: '50%',
                                             top: '50%',
@@ -958,36 +1091,30 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     >
                                         <span className="text-[9px] text-slate-500 font-medium uppercase mb-0.5">Top</span>
                                         <span className="text-xs font-heading font-bold text-white tabular-nums text-center leading-tight whitespace-normal break-words w-full line-clamp-2">
-                                            {metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-'}
+                                            {selectedCategory ? selectedCategory : (metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-')}
                                         </span>
                                     </div>
                                 </div>
 
                                 {/* Legend Container - Right Side */}
                                 <div className="w-1/2 pl-2 flex flex-col justify-center space-y-2">
-                                    {(metrics.categoryData || []).slice(0, 5).map((entry, index) => (
-                                        <div key={index} className="flex items-center justify-between text-xs">
-                                            <div className="flex items-center gap-2 overflow-hidden">
-                                                <div
-                                                    className="w-2.5 h-2.5 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0"
-                                                    style={{ backgroundColor: getCategoryColor(entry.name), color: getCategoryColor(entry.name) }}
-                                                />
-                                                <span className="text-slate-300 font-medium truncate">{entry.name}</span>
+                                    {(activePieData || []).slice(0, 5).map((entry, index) => (
+                                        <div key={index} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: selectedCategory ? getItemColor(index) : getCategoryColor(entry.name) }}></div>
+                                                <span className="text-[10px] font-medium text-slate-400 truncate">{entry.name}</span>
                                             </div>
-                                            <span className="text-slate-400 font-mono tabular-nums ml-2">
-                                                {entry.percentage.toFixed(0)}%
+                                            <span className="text-[10px] font-bold text-slate-300">
+                                                {selectedCategory ? `€${entry.value.toFixed(0)}` : `${Math.round((entry as any).percentage)}%`}
                                             </span>
                                         </div>
                                     ))}
-                                    {metrics.categoryData.length > 5 && (
-                                        <div className="text-[10px] text-slate-500 text-right pt-1 italic">
-                                            + {metrics.categoryData.length - 5} more
-                                        </div>
-                                    )}
                                 </div>
+
                             </div>
                         </div>
                     </div>
+
                 )}
             </AnimatedSection></motion.div>
 
@@ -1311,7 +1438,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
                                             <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} />
                                             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
-                                            <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                            <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                             {categories.map((cat) => (
                                                 <Area
                                                     key={cat.id}
@@ -1724,29 +1851,19 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
                             </div>
                             <div className="grid grid-cols-3 gap-3">
-                                {/* Avg Spend */}
-                                <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                    <p className="text-[10px] text-slate-500 mb-1 font-medium">Average</p>
-                                    <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.avgReceipt.toFixed(0)}</p>
-                                </div>
-                                {/* Max Spend */}
-                                <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                    <p className="text-[10px] text-slate-500 mb-1 font-medium">Highest</p>
-                                    <div className="flex items-center gap-1">
-                                        <p className="text-sm font-bold text-white tabular-nums tracking-tight">€{metrics.maxSingleReceipt.toFixed(0)}</p>
-                                        <ArrowUpRight size={12} className="text-red-400" />
+                                {aiMetrics.map((metric, i) => (
+                                    <div key={i} className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <p className="text-[10px] text-slate-500 font-medium">{metric.label}</p>
+                                            <metric.icon size={10} className="text-slate-600" />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <p className={`text-sm font-bold tabular-nums tracking-tight ${metric.trend === 'down' ? 'text-red-400' : metric.trend === 'up' ? 'text-emerald-400' : 'text-white'}`}>
+                                                {metric.value}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                {/* Monthly Comparison (New) */}
-                                <div className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                    <p className="text-[10px] text-slate-500 mb-1 font-medium">vs Last Month</p>
-                                    <div className="flex items-center gap-1">
-                                        <p className={`text-sm font-bold tabular-nums tracking-tight ${metrics.monthDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                            {metrics.monthDiff > 0 ? '+' : ''}{metrics.monthDiff.toFixed(0)}%
-                                        </p>
-                                        {metrics.monthDiff > 0 ? <TrendingUp size={12} className="text-red-400" /> : <TrendingDown size={12} className="text-emerald-400" />}
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     </div>
