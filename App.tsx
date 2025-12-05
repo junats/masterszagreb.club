@@ -80,6 +80,7 @@ const App: React.FC = () => {
   const [showGlobalAmbient, setShowGlobalAmbient] = useState(true); // App background specific
   const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
   const [direction, setDirection] = useState(0);
+  const [dataVersion, setDataVersion] = useState(0);
 
   const handleViewReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
@@ -390,11 +391,13 @@ const App: React.FC = () => {
       // Sort by date descending (newest first)
       return updatedReceipts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
+    setDataVersion(v => v + 1);
     setCurrentView('dashboard');
   };
 
   const handleDeleteReceipt = (id: string) => {
     setReceipts(prev => prev.filter(r => r.id !== id));
+    setDataVersion(v => v + 1);
   };
 
   const handleDeleteAllReceipts = () => {
@@ -403,7 +406,11 @@ const App: React.FC = () => {
   };
 
   const handleUpdateReceipt = (updated: Receipt) => {
-    setReceipts(prev => prev.map(r => r.id === updated.id ? updated : r));
+    setReceipts(prev => {
+      const newReceipts = prev.map(r => r.id === updated.id ? updated : r);
+      return newReceipts;
+    });
+    setDataVersion(v => v + 1);
   };
 
   const handleSignOut = async () => {
@@ -727,7 +734,7 @@ const App: React.FC = () => {
               </button>
             </div> */}
             <Dashboard
-              key={`dashboard - ${receipts.length} -${monthlyBudget} -${ageRestricted} `}
+              key={`dashboard-${dataVersion}-${receipts.length}-${monthlyBudget}-${ageRestricted}`}
               receipts={receipts}
               monthlyBudget={monthlyBudget}
               ageRestricted={ageRestricted}

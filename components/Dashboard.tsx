@@ -203,8 +203,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     // Calculate Metrics
     const metrics = useMemo(() => {
-        console.log(`📊 Dashboard: Calculating metrics with ${receipts.length} receipts`);
-        console.log("Dashboard Receipts:", receipts);
+        // console.log(`📊 Dashboard: Calculating metrics with ${receipts.length} receipts`);
+
 
         // 1. Filter Receipts based on Date Filter
         const now = new Date();
@@ -942,7 +942,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         <img src="/logo.png" alt="TrueTrack Logo" className="w-8 h-8" />
                         <h1 className="text-2xl font-heading font-bold text-white tracking-tighter">TrueTrack</h1>
                     </div>
-
                 </div>
                 <div className="flex items-center gap-3">
                     {ageRestricted && (
@@ -962,7 +961,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             </motion.div>
 
             {/* HERO: Budget Progress */}
-            <motion.div variants={itemVariants}><AnimatedSection delay={100} className="mb-6" variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
+            <motion.div variants={itemVariants}><AnimatedSection key={metrics.thisMonthTotal} delay={100} className="mb-6" variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                 {({ isInView }: { isInView?: boolean } = {}) => (
                     <div className="relative rounded-3xl p-6 transition-all overflow-hidden">
                         {/* Glow Overlay */}
