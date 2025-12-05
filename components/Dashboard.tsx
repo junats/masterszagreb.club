@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay, ChildEvent } from '../types';
+import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay } from '../types';
 import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart as PieIcon, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users, Gift } from 'lucide-react';
 import { HapticsService } from '../services/haptics';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, PolarAngleAxis, PieChart, Pie, Cell } from 'recharts';
@@ -16,15 +16,9 @@ const containerVariants = {
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 1 },
     visible: {
-        opacity: 1,
-        y: 0,
-        transition: {
-            type: "spring",
-            stiffness: 300,
-            damping: 24
-        }
+        opacity: 1
     }
 };
 
@@ -43,8 +37,6 @@ interface DashboardProps {
     goals?: Goal[];
     custodyDays?: CustodyDay[];
     ambientMode?: boolean;
-    childEvents?: ChildEvent[];
-    setChildEvents?: React.Dispatch<React.SetStateAction<ChildEvent[]>>;
 }
 
 interface DrillDownState {
@@ -56,9 +48,8 @@ type DateFilter = 'all' | 'this_month' | 'last_month';
 
 import AnimatedSection from './AnimatedSection';
 import { AmbientBackground } from './AmbientBackground';
-import { ChildEvents } from './ChildEvents';
 
-const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, onHabitsClick, goals = [], custodyDays = [], ambientMode = true, childEvents = [], setChildEvents = () => { } }) => {
+const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, onHabitsClick, goals = [], custodyDays = [], ambientMode = true }) => {
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
@@ -883,7 +874,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             </motion.div>
 
             {/* HERO: Budget Progress */}
-            <motion.div variants={itemVariants}><AnimatedSection delay={100} className="mb-6" animateContainer={false}>
+            <motion.div variants={itemVariants}><AnimatedSection delay={100} className="mb-6" variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                 {({ isInView }: { isInView?: boolean } = {}) => (
                     <div className="relative rounded-3xl p-6 transition-all overflow-hidden">
                         {/* Glow Overlay */}
@@ -1013,7 +1004,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
                 {/* Monthly Insights (Expanded) */}
                 {/* Monthly Insights (Expanded) */}
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={200} animateContainer={false}>
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                     {({ isInView }: { isInView?: boolean } = {}) => (
                         <motion.div
                             whileTap={childSupportMode ? { scale: 0.98 } : {}}
@@ -1155,20 +1146,9 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 {/* Co-Parenting Cards */}
                 {childSupportMode && (
                     <div className="col-span-2 grid grid-cols-2 gap-3">
-                        {/* Child Events Section */}
-                        <motion.div variants={itemVariants} className="col-span-2">
-                            <AnimatedSection delay={200} animateContainer={false}>
-                                {({ isInView }: { isInView?: boolean } = {}) => (
-                                    <div className="relative rounded-3xl border border-slate-800 bg-card p-4 shadow-lg overflow-hidden">
-                                        <div className="relative z-10">
-                                            <ChildEvents events={childEvents} setEvents={setChildEvents} />
-                                        </div>
-                                    </div>
-                                )}
-                            </AnimatedSection>
-                        </motion.div>
+                        {/* Settlement Card Removed */}
 
-                        <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} animateContainer={false}>
+                        <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                             {({ isInView }: { isInView?: boolean } = {}) => {
                                 // Calculate Custody Data
                                 const today = new Date();
@@ -1277,7 +1257,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 )}
 
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} animateContainer={false} className="h-full">
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }} className="h-full">
                     {({ isInView }: { isInView?: boolean } = {}) => (
                         <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-3 flex flex-col min-h-[280px] overflow-hidden shadow-lg">
 
@@ -1355,7 +1335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
                 {/* Goal Breakdown (500ms) */}
                 {goals && goals.some(g => g.isEnabled) ? (
-                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} animateContainer={false}>
+                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                         {({ isInView }: { isInView?: boolean } = {}) => {
                             // Filter receipts based on goalView
                             const filteredGoalReceipts = useMemo(() => {
@@ -1683,7 +1663,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         }}
                     </AnimatedSection></motion.div>
                 ) : (
-                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} animateContainer={false}>
+                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                         <motion.div
                             whileTap={{ scale: 0.98 }}
                             onClick={() => {
@@ -1706,7 +1686,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </AnimatedSection></motion.div>
                 )}
 
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} animateContainer={false}>
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                     {({ isInView }: { isInView?: boolean } = {}) => (
                         <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-5 overflow-hidden shadow-lg">
 
@@ -1735,7 +1715,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 </AnimatedSection></motion.div>
 
                 {/* 4. Financial Snapshot (Grid of 3) */}
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} animateContainer={false}>
+                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                     <div className="relative rounded-3xl border border-slate-800 bg-card p-5 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
 
                         <div className="relative z-10">
@@ -1782,7 +1762,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         </div>
                         <div className="space-y-4">
                             {(metrics.categoryData || []).slice(0, 4).map((d, i) => (
-                                <AnimatedSection key={i} delay={700 + (i * 100)} animateContainer={false}>
+                                <AnimatedSection key={i} delay={700 + (i * 100)} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                                     {({ isInView }: { isInView?: boolean } = {}) => (
                                         <motion.div
                                             whileTap={{ scale: 0.98 }}

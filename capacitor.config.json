@@ -2,9 +2,7 @@
   "appId": "com.truetrack.app",
   "appName": "TrueTrack",
   "webDir": "dist",
-  "server": {
-    "androidScheme": "https"
-  },
+  "server": {},
   "plugins": {
     "CapacitorHttp": {
       "enabled": true
@@ -13,9 +11,7 @@
       "launchShowDuration": 3000,
       "launchAutoHide": true,
       "backgroundColor": "#020617",
-      "androidSplashResourceName": "splash",
       "showSpinner": true,
-      "androidSpinnerStyle": "large",
       "iosSpinnerStyle": "small",
       "spinnerColor": "#999999",
       "splashFullScreen": true,

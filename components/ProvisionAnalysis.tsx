@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Receipt, Category } from '../types';
 import { ArrowLeft, CheckCircle2, FileText, Download, Activity, ShoppingBag, Wallet, TrendingUp, TrendingDown, ArrowUpRight, Store } from 'lucide-react';
-import AnimatedSection from './AnimatedSection';
+import { AnimatedSection } from './AnimatedSection';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend, AreaChart, Area } from 'recharts';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';

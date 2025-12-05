@@ -200,8 +200,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
         try {
             const effectiveTotal = getEffectiveTotal(selectedReceipt);
             await Share.share({
-                title: `Receipt from ${selectedReceipt.storeName} `,
-                text: `Store: ${selectedReceipt.storeName} \nDate: ${new Date(selectedReceipt.date).toLocaleDateString()} \nTotal: €${effectiveTotal.toFixed(2)} \n\nSent via TrueTrack`,
+                title: `Receipt from ${selectedReceipt.storeName}`,
+                text: `Store: ${selectedReceipt.storeName}\nDate: ${new Date(selectedReceipt.date).toLocaleDateString()}\nTotal: €${effectiveTotal.toFixed(2)}\n\nSent via TrueTrack`,
                 url: selectedReceipt.imageUrl || undefined,
                 dialogTitle: 'Share Receipt'
             });
@@ -225,7 +225,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                     </button>
 
                     <div className={`rounded-3xl p-6 shadow-2xl border ${isBill ? 'bg-slate-900 border-indigo-500/50' : 'bg-surface border-white/10'} relative overflow-hidden`}>
-                        <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'} `}></div>
+                        <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
 
                         <div className="flex justify-between items-start mb-6 mt-2">
                             <div>
@@ -269,7 +269,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
-                                    <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'} `}>€{effectiveTotal.toFixed(2)}</p>
+                                    <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
                                 </div>
                             </div>
                         </div>
@@ -328,7 +328,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                             <Trash2 size={18} className="text-red-400" />
                                         </motion.div>
                                         <motion.div
-                                            className={`relative bg-surfaceHighlight flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''} `}
+                                            className={`relative bg-surfaceHighlight flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}
                                             drag="x"
                                             dragConstraints={{ left: -100, right: 0 }}
                                             onDragEnd={(e, info) => {
@@ -347,7 +347,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                                                 item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
                                                                     item.category === Category.DINING ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
                                                                         'bg-slate-800 border-slate-700 text-slate-400'
-                                                        } `}>
+                                                        }`}>
                                                         {item.category}
                                                     </span>
                                                     {item.isRestricted && !ageRestricted && (
@@ -361,13 +361,13 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'} `}>
+                                                <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
                                                     €{item.price.toFixed(2)}
                                                 </span>
                                                 {onUpdate && childSupportMode && (
                                                     <button
                                                         onClick={() => handleToggleChildRelated(idx)}
-                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'} `}
+                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
                                                         title="Toggle Child Related"
                                                     >
                                                         <Baby size={14} />
@@ -376,7 +376,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                                 {onUpdate && !ageRestricted && (
                                                     <button
                                                         onClick={() => handleToggleRestriction(idx)}
-                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'} `}
+                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
                                                         title="Toggle Restriction (18+)"
                                                     >
                                                         <X size={14} />
@@ -487,74 +487,70 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
 
     return (
         <div className="flex flex-col h-full px-4 pt-4 pb-32 bg-background">
-            <AnimatedSection delay={0}>
-                <div className="mb-6">
-                    <h1 className="text-3xl font-heading font-extrabold text-white tracking-tight mb-2">History</h1>
-                    <p className="text-slate-300 text-sm font-medium mb-4">Review receipts and bills {ageRestricted && <span className="text-amber-500">(Filtered)</span>}</p>
-                </div>
-            </AnimatedSection>
+            <div className="mb-6">
+                <h1 className="text-3xl font-heading font-extrabold text-white tracking-tight mb-2">History</h1>
+                <p className="text-slate-300 text-sm font-medium mb-4">Review receipts and bills {ageRestricted && <span className="text-amber-500">(Filtered)</span>}</p>
+            </div>
 
             {/* Filters */}
-            <AnimatedSection delay={100}>
-                <div className="mb-4 space-y-3">
-                    {/* Search & Chart Toggle */}
-                    <div className="flex items-center gap-2">
-                        <div className="relative flex-1 group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-hover:text-slate-300 transition-colors duration-300" />
-                            <input
-                                type="text"
-                                placeholder="Search store or reference..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-surface border border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-200 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 placeholder:text-slate-600 font-medium hover:border-white/20 hover:shadow-sm"
-                            />
-                        </div>
-                        <button
-                            onClick={() => setShowStats(!showStats)}
-                            className={`p-3 rounded-xl border transition-all duration-300 ${showStats ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_15px_rgba(56,189,248,0.15)]' : 'bg-surface border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-surfaceHighlight'} `}
-                        >
-                            <BarChart3 size={20} />
-                        </button>
+            <div className="mb-4 space-y-3">
+                {/* Search & Chart Toggle */}
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-hover:text-slate-300 transition-colors duration-300" />
+                        <input
+                            type="text"
+                            placeholder="Search store or reference..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-surface border border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-200 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 placeholder:text-slate-600 font-medium hover:border-white/20 hover:shadow-sm"
+                        />
                     </div>
-
-                    {/* Filter Chips */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        {/* Date Filter */}
-                        <select
-                            value={dateFilter}
-                            onChange={(e) => setDateFilter(e.target.value as any)}
-                            className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
-                        >
-                            <option value="all">All Time</option>
-                            <option value="thisMonth">This Month</option>
-                            <option value="lastMonth">Last Month</option>
-                            <option value="thisYear">This Year</option>
-                        </select>
-
-                        {/* Category Filter */}
-                        <select
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value as any)}
-                            className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
-                        >
-                            <option value="all">All Categories</option>
-                            {Object.values(Category).map(c => (
-                                <option key={c} value={c}>{c}</option>
-                            ))}
-                        </select>
-
-                        {/* Child Filter Toggle */}
-                        {childSupportMode && (
-                            <button
-                                onClick={() => setChildFilter(!childFilter)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-300 flex items-center gap-1 ${childFilter ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-surface border-white/10 text-slate-400 hover:text-slate-200'} `}
-                            >
-                                <Baby size={12} /> Child Items
-                            </button>
-                        )}
-                    </div>
+                    <button
+                        onClick={() => setShowStats(!showStats)}
+                        className={`p-3 rounded-xl border transition-all duration-300 ${showStats ? 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_15px_rgba(56,189,248,0.15)]' : 'bg-surface border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-surfaceHighlight'}`}
+                    >
+                        <BarChart3 size={20} />
+                    </button>
                 </div>
-            </AnimatedSection>
+
+                {/* Filter Chips */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {/* Date Filter */}
+                    <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as any)}
+                        className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
+                    >
+                        <option value="all">All Time</option>
+                        <option value="thisMonth">This Month</option>
+                        <option value="lastMonth">Last Month</option>
+                        <option value="thisYear">This Year</option>
+                    </select>
+
+                    {/* Category Filter */}
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value as any)}
+                        className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
+                    >
+                        <option value="all">All Categories</option>
+                        {Object.values(Category).map(c => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+
+                    {/* Child Filter Toggle */}
+                    {childSupportMode && (
+                        <button
+                            onClick={() => setChildFilter(!childFilter)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-300 flex items-center gap-1 ${childFilter ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-surface border-white/10 text-slate-400 hover:text-slate-200'}`}
+                        >
+                            <Baby size={12} /> Child Items
+                        </button>
+                    )}
+                </div>
+            </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                 {showStats && filteredReceipts.length > 0 && (
@@ -602,7 +598,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                     className={`relative z-10 w-full transition-colors duration-300 p-3 rounded-2xl border flex items-center gap-4 group cursor-pointer ${isBill
                                         ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-500/20'
                                         : 'bg-surface border-white/5 hover:bg-surfaceHighlight'
-                                        } `}
+                                        }`}
                                 >
                                     <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
                                         {thumbUrl ? (
@@ -622,7 +618,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                     <div className="flex-1 min-w-0 text-left">
                                         <div className="flex justify-between items-start mb-0.5">
                                             <h3 className="text-slate-200 font-bold text-sm truncate pr-2 tracking-tight group-hover:text-white transition-colors duration-300">{receipt.storeName}</h3>
-                                            <span className={`font-bold text-sm tabular-nums tracking-tight transition-colors duration-300 ${isBill ? 'text-indigo-400 group-hover:text-indigo-300' : 'text-white'} `}>€{effectiveTotal.toFixed(2)}</span>
+                                            <span className={`font-bold text-sm tabular-nums tracking-tight transition-colors duration-300 ${isBill ? 'text-indigo-400 group-hover:text-indigo-300' : 'text-white'}`}>€{effectiveTotal.toFixed(2)}</span>
                                         </div>
 
                                         {isBill && receipt.referenceCode && (

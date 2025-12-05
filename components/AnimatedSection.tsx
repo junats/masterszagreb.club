@@ -1,75 +1,72 @@
-import React, { useState, useEffect } from 'react';
-
-// Hook for scroll animations
-export function useInView(options = { threshold: 0.1, rootMargin: '0px' }, triggerOnce = false) {
-    const [ref, setRef] = useState<HTMLDivElement | null>(null);
-    const [isInView, setIsInView] = useState(false);
-
-    useEffect(() => {
-        if (!ref) return;
-
-        const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-                setIsInView(true);
-                if (triggerOnce) observer.disconnect();
-            } else {
-                if (!triggerOnce) setIsInView(false);
-            }
-        }, options);
-
-        observer.observe(ref);
-
-        // Fallback: Force visible after 100ms to ensure content shows even if observer fails
-        const timeout = setTimeout(() => {
-            setIsInView(true);
-        }, 100);
-
-        return () => {
-            observer.disconnect();
-            clearTimeout(timeout);
-        };
-    }, [ref, options.threshold, options.rootMargin, triggerOnce]);
-
-    return [setRef, isInView] as const;
-}
+import React, { useRef } from 'react';
+import { motion, useInView, Variants } from 'framer-motion';
 
 interface AnimatedSectionProps {
     children: React.ReactNode | ((props: { isInView: boolean }) => React.ReactNode);
     className?: string;
     delay?: number;
     triggerOnce?: boolean;
-    animateContainer?: boolean;
+    variants?: Variants;
+    threshold?: number;
+    noSlide?: boolean;
 }
+
+const defaultVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.6,
+            ease: [0.22, 1, 0.36, 1] // Custom easeOutCubic-like curve
+        }
+    }
+};
+
+const staticVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            duration: 0.6,
+            ease: "easeOut"
+        }
+    }
+};
 
 export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     children,
     className = "",
     delay = 0,
-    triggerOnce = false,
-    animateContainer = true
+    triggerOnce = false, // Default to false so it restarts when scrolling back/forth if desired, or true for one-time
+    variants,
+    threshold = 0.5,
+    noSlide = false
 }) => {
-    const [ref, isInView] = useInView({ threshold: 0.1, rootMargin: '0px' }, triggerOnce);
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: triggerOnce, amount: threshold });
 
-    const containerClasses = animateContainer
-        ? `transition-all duration-1000 ease-out transform ${isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`
-        : '';
+    const activeVariants = variants || (noSlide ? staticVariants : defaultVariants);
 
     return (
-        <div
+        <motion.div
             ref={ref}
-            className={`${containerClasses} ${className}`}
-            style={animateContainer ? { transitionDelay: `${delay}ms` } : {}}
-        >
-            {typeof children === 'function'
-                ? children({ isInView })
-                : React.Children.map(children, child => {
-                    if (React.isValidElement(child)) {
-                        return React.cloneElement(child as React.ReactElement<any>, { isInView });
+            initial="hidden"
+            animate={isInView ? "visible" : "hidden"}
+            variants={{
+                ...activeVariants,
+                visible: {
+                    ...activeVariants.visible,
+                    transition: {
+                        ...(activeVariants.visible as any)?.transition,
+                        delay: delay / 1000 // Convert ms to seconds for framer-motion
                     }
-                    return child;
-                })
-            }
-        </div>
+                }
+            }}
+            className={className}
+        >
+            {typeof children === 'function' ? children({ isInView }) : children}
+        </motion.div>
     );
 };
 

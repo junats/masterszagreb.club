@@ -5,7 +5,7 @@ import {
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { TrendingUp, PieChart as PieIcon, Activity, Wallet, Baby } from 'lucide-react';
-import AnimatedSection from './AnimatedSection';
+import { AnimatedSection } from './AnimatedSection';
 
 interface HistoryAnalyticsProps {
     receipts: Receipt[];

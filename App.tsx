@@ -14,7 +14,7 @@ import ProvisionAnalysis from './components/ProvisionAnalysis';
 import SettlementView from './components/SettlementView';
 import CustodyCalendar from './components/CustodyCalendar';
 import IntroTour from './components/IntroTour';
-import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType, ChildEvent } from './types';
+import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType } from './types';
 import { authService, isMockMode } from './services/authService';
 import { Database, X, Shield } from 'lucide-react';
 import { AmbientBackground } from './components/AmbientBackground';
@@ -74,7 +74,6 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<CategoryDefinition[]>(DEFAULT_CATEGORIES);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   const [custodyDays, setCustodyDays] = useState<CustodyDay[]>([]);
-  const [childEvents, setChildEvents] = useState<ChildEvent[]>([]);
   const [goals, setGoals] = useState<Goal[]>(DEFAULT_GOALS);
   const [showTour, setShowTour] = useState(false);
   const [ambientMode, setAmbientMode] = useState(true); // Master switch
@@ -105,33 +104,24 @@ const App: React.FC = () => {
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? '100%' : '-100%',
-      scale: 1,
-      opacity: 1,
       position: 'absolute' as const,
       width: '100%',
       height: '100%',
-      zIndex: 2, // Entering slide is on top
-      boxShadow: '-5px 0 25px rgba(0,0,0,0.5)' // Shadow for depth
+      zIndex: 1
     }),
     center: {
       zIndex: 1,
       x: 0,
-      scale: 1,
-      opacity: 1,
       position: 'relative' as const,
       width: '100%',
-      height: '100%',
-      boxShadow: 'none'
+      height: '100%'
     },
     exit: (direction: number) => ({
-      zIndex: 0, // Exiting slide is behind
-      x: direction < 0 ? '20%' : '-20%', // Parallax effect (moves less)
-      scale: 0.95, // Slight scale down
-      opacity: 0.8, // Slight fade
+      zIndex: 0,
+      x: direction < 0 ? '100%' : '-100%',
       position: 'absolute' as const,
       width: '100%',
-      height: '100%',
-      boxShadow: 'none'
+      height: '100%'
     })
   };
 
@@ -246,11 +236,6 @@ const App: React.FC = () => {
         if (savedCustody) {
           setCustodyDays(JSON.parse(savedCustody));
         }
-
-        const { value: savedEvents } = await Preferences.get({ key: 'truetrack_child_events' });
-        if (savedEvents) {
-          setChildEvents(JSON.parse(savedEvents));
-        }
       } catch (e) {
         console.error("Failed to load data", e);
       } finally {
@@ -271,10 +256,9 @@ const App: React.FC = () => {
     const saveSettings = async () => {
       await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient }) });
       await Preferences.set({ key: 'truetrack_custody', value: JSON.stringify(custodyDays) });
-      await Preferences.set({ key: 'truetrack_child_events', value: JSON.stringify(childEvents) });
     };
     saveSettings();
-  }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays, ambientMode, showGlobalAmbient, childEvents]);
+  }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays, ambientMode, showGlobalAmbient]);
 
   // Check for recurring expenses on load
   useEffect(() => {
@@ -760,8 +744,6 @@ const App: React.FC = () => {
               goals={goals}
               custodyDays={custodyDays}
               ambientMode={ambientMode}
-              childEvents={childEvents}
-              setChildEvents={setChildEvents}
             />
           </div>
         );
@@ -938,7 +920,7 @@ const App: React.FC = () => {
             transition={{
               x: { type: "tween", ease: "circOut", duration: 0.3 }
             }}
-            className={`h-full w-full ${showGlobalAmbient ? '' : 'bg-background'}`}
+            className="h-full w-full"
           >
             <ErrorBoundary>
               {renderView()}

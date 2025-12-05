@@ -113,14 +113,3 @@ export interface Goal {
   lastComplianceDate?: string; // ISO Date
   emoji?: string;
 }
-
-export interface ChildEvent {
-  id: string;
-  title: string;
-  date: string; // ISO Date (YYYY-MM-DD) or Day of Week (Mon, Tue...) for recurring
-  time?: string; // HH:mm
-  type: 'birthday' | 'activity' | 'appointment' | 'other';
-  isRecurring: boolean;
-  recurringDay?: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-  color?: string;
-}
