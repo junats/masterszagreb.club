@@ -45,9 +45,9 @@ export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     children,
     className = "",
     delay = 0,
-    triggerOnce = false, // Default to false so it restarts when scrolling back/forth if desired, or true for one-time
+    triggerOnce = false, // Default to false so it restarts when scrolling back/forth
     variants,
-    threshold = 0.5,
+    threshold = 0.2,
     noSlide = false
 }) => {
     const ref = useRef(null);

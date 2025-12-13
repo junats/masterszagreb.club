@@ -8,22 +8,22 @@ interface NavigationProps {
   currentView: ViewState;
   setView: (view: ViewState) => void;
   isVisible: boolean;
-  childSupportMode: boolean;
+  helpEnabled: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible, childSupportMode }) => {
+const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible, childSupportMode, helpEnabled }) => {
   if (!isVisible) return null;
 
   const navItems = [
     { id: 'dashboard', label: 'Home', icon: Home, hidden: false },
     { id: 'scan', label: 'Scan', icon: Scan, hidden: false },
     { id: 'history', label: 'History', icon: History, hidden: false },
-    { id: 'support', label: 'Help', icon: LifeBuoy, hidden: !childSupportMode },
+    { id: 'support', label: 'Help', icon: LifeBuoy, hidden: !helpEnabled },
     { id: 'settings', label: 'Settings', icon: SettingsIcon, hidden: false },
   ] as const;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface/80 backdrop-blur-xl border-t border-white/5 pb-safe pt-2 px-2 h-auto min-h-[80px] z-50 transition-all duration-300">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#0B1221]/60 backdrop-blur-2xl border-t border-white/10 pb-safe pt-2 px-2 h-auto min-h-[80px] z-50 transition-all duration-300">
       <div className="flex justify-between items-center max-w-md mx-auto h-full pb-2">
         {navItems.filter(item => !item.hidden).map((item) => {
           const isActive = currentView === item.id;

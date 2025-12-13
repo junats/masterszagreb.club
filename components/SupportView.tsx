@@ -130,13 +130,8 @@ const SupportView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full px-4 pt-4 pb-24 overflow-y-auto no-scrollbar">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Local Support</h1>
-        <p className="text-slate-400 text-sm">
-          {cityGuess ? `Showing resources near ${cityGuess}` : 'Finding local resources...'}
-        </p>
-      </div>
+    <div className="flex flex-col h-full px-4 pt-32 pb-40 overflow-y-auto no-scrollbar">
+
 
       {/* Location Status */}
       <div className="mb-6 bg-surface border border-slate-700 rounded-xl p-4 flex items-center justify-between">

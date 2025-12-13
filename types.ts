@@ -75,17 +75,27 @@ export interface User {
   name: string;
   email: string;
   tier: SubscriptionTier;
-  avatarUrl?: string;
+  avatarUrl?: string; // Base64 or URL
+  nickname?: string;
 }
 
-export type ViewState = 'dashboard' | 'scanner' | 'history' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody';
+export type ViewState = 'dashboard' | 'scan' | 'history' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody';
 
 export type CustodyStatus = 'me' | 'partner' | 'split' | 'none';
+
+export interface CalendarActivity {
+  id: string;
+  title: string;
+  type: 'birthday' | 'sport' | 'school' | 'playdate' | 'other';
+  startTime?: string;
+  endTime?: string;
+}
 
 export interface CustodyDay {
   date: string; // YYYY-MM-DD
   status: CustodyStatus;
   note?: string;
+  activities?: CalendarActivity[];
 }
 
 export enum GoalType {

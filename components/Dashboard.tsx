@@ -1,9 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay } from '../types';
-import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart as PieIcon, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users, Gift } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay, User } from '../types';
+import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart as PieIcon, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users, Gift, Plus, CheckCircle2 } from 'lucide-react';
 import { HapticsService } from '../services/haptics';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, PolarAngleAxis, PieChart, Pie, Cell } from 'recharts';
+import { WidgetService } from '../services/widgetService';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, PolarAngleAxis, PieChart, Pie, Cell, Sector } from 'recharts';
+
+import AnimatedSection from './AnimatedSection';
+import { AmbientBackground } from './AmbientBackground';
+import { CATEGORY_COLORS } from '../constants/colors';
+import { generateInsights, InsightMessage } from '../services/insightService';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -22,6 +28,15 @@ const itemVariants = {
     }
 };
 
+
+const VisibilitySensor = ({ children, threshold = 0.5 }: { children: (props: { isVisible: boolean }) => React.ReactNode, threshold?: number }) => {
+    const ref = useRef(null);
+    // Use amount to ensure 50% of element is in view before triggering
+    const isVisible = useInView(ref, { amount: threshold });
+
+    return <div ref={ref} className="w-full h-full">{children({ isVisible })}</div>;
+};
+
 interface DashboardProps {
     receipts: Receipt[];
     monthlyBudget: number;
@@ -37,6 +52,7 @@ interface DashboardProps {
     goals?: Goal[];
     custodyDays?: CustodyDay[];
     ambientMode?: boolean;
+    user?: User;
 }
 
 interface DrillDownState {
@@ -46,19 +62,27 @@ interface DrillDownState {
 
 type DateFilter = 'all' | 'this_month' | 'last_month';
 
-import AnimatedSection from './AnimatedSection';
-import { AmbientBackground } from './AmbientBackground';
+const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, onHabitsClick, goals = [], custodyDays = [], user, ambientMode }) => {
 
-const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, onHabitsClick, goals = [], custodyDays = [], ambientMode = true }) => {
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-
     const [chartView, setChartView] = useState<'week' | 'month' | 'year'>('week');
+
+
     const [insightView, setInsightView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [goalView, setGoalView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [custodyView, setCustodyView] = useState<'weekly' | 'monthly'>('weekly');
+    const [monthViewMode, setMonthViewMode] = useState<'share' | 'insights'>('share');
     const [showIndicators, setShowIndicators] = useState(false);
+    const [showMoney, setShowMoney] = useState(true); // Toggle for privacy mode
+    const [isCoParentingMode, setIsCoParentingMode] = useState(false); // Toggle for Co-parenting view
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'chart' | 'legend'>('chart');
+    const [currentTipIndex, setCurrentTipIndex] = useState(0);
+
+    // Optimization: Only animate heavy ambient effects when in view
+    const budgetCardRef = useRef(null);
+    const isBudgetInView = useInView(budgetCardRef, { margin: "-10% 0px" });
 
     // Item Colors for Drilldown
     const ITEM_COLORS = ['#f472b6', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa', '#f87171', '#fb923c', '#a3e635'];
@@ -66,9 +90,16 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     // Helper to get category color
     const getCategoryColor = (catName: string) => {
-        if (SUB_CATEGORY_COLORS[catName]) return SUB_CATEGORY_COLORS[catName];
+        // Direct match
+        if (CATEGORY_COLORS[catName]) return CATEGORY_COLORS[catName];
+
+        // ID match (e.g. 'food' vs 'Food')
+        const catId = catName.charAt(0).toUpperCase() + catName.slice(1).toLowerCase();
+        if (CATEGORY_COLORS[catId]) return CATEGORY_COLORS[catId];
+
+        // Fallback to CategoryDefinition color if available
         const cat = (categories || []).find(c => c.name === catName || c.id === catName.toLowerCase());
-        return cat ? cat.color : '#94a3b8';
+        return cat ? cat.color : CATEGORY_COLORS['Other'] || '#94a3b8';
     };
 
     // Goal Colors Mapping
@@ -87,18 +118,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         [GoalType.STREAMING]: '#8b5cf6',    // Violet
     };
 
-    const SUB_CATEGORY_COLORS: Record<string, string> = {
-        'Fruit': '#fbbf24', // Amber-400
-        'Vegetables': '#4ade80', // Green-400
-        'Soda': '#f87171', // Red-400
-        'Organic': '#a3e635', // Lime-400
-        'Meat': '#f472b6', // Pink-400
-        'Dairy': '#60a5fa', // Blue-400
-        'Bakery': '#fb923c', // Orange-400
-        'Alcohol': '#ef4444', // Red-500
-        'Snacks': '#c084fc', // Purple-400
-    };
-
     // Goal Gauge Component
     const GoalGauge = ({ goal, total, isInView = false, trend, intensity, showIndicators }: { goal: Goal, total: number, isInView?: boolean, trend?: 'up' | 'down' | 'flat', intensity?: 'low' | 'medium' | 'high', showIndicators?: boolean }) => {
         let color = GOAL_COLORS[goal.type] || '#a855f7';
@@ -107,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         if (showIndicators) {
             if (intensity === 'high') color = '#ef4444'; // Red
             else if (intensity === 'medium') color = '#eab308'; // Yellow
-            else color = '#22c55e'; // Green
+            else color = '#22c5e'; // Green
         }
 
         // Mock target for now (e.g., €100 limit per goal)
@@ -170,11 +189,11 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                    <span className={`text-[10px] font-bold uppercase tracking-wide text-center ${showIndicators && intensity === 'high' ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-400'}`}>
+                    <span className={`text - [10px] font - bold uppercase tracking - wide text - center ${showIndicators && intensity === 'high' ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-400'} `}>
                         €{total.toFixed(0)}
                     </span>
                     {showIndicators && trend && (
-                        <span className={`${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        <span className={`${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500'} `}>
                             {trend === 'up' ? <TrendingUp size={10} /> : trend === 'down' ? <TrendingDown size={10} /> : <Minus size={10} />}
                         </span>
                     )}
@@ -203,8 +222,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     // Calculate Metrics
     const metrics = useMemo(() => {
-        // console.log(`📊 Dashboard: Calculating metrics with ${receipts.length} receipts`);
-
+        console.log(`📊 Dashboard: Metrics Recalculating! Receipts: ${receipts?.length}, DateFilter: ${dateFilter}`);
 
         // 1. Filter Receipts based on Date Filter
         const now = new Date();
@@ -212,7 +230,13 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         const currentYear = now.getFullYear();
 
         const filteredReceipts = (receipts || []).filter(r => {
-            const d = new Date(r.date);
+            // Robust Date Parsing
+            let d = new Date(r.date);
+            if (r.date.includes('-') && !r.date.includes('T')) {
+                const parts = r.date.split('-');
+                d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
+
             if (dateFilter === 'this_month') {
                 return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
             } else if (dateFilter === 'last_month') {
@@ -406,10 +430,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 if (r.date.includes('T')) {
                     rDateStr = r.date.split('T')[0];
                 } else if (r.date.length === 10 && r.date.includes('-')) {
-                    // Already YYYY-MM-DD
+                    // Already YYYY-MM-DD - Verify validity
+                    // No-op
                 } else {
                     try {
-                        rDateStr = new Date(r.date).toISOString().split('T')[0];
+                        const parsed = new Date(r.date);
+                        if (!isNaN(parsed.getTime())) {
+                            rDateStr = parsed.toISOString().split('T')[0];
+                        }
                     } catch (e) {
                         rDateStr = '';
                     }
@@ -509,7 +537,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             // Format: "W23" or "Oct 12" (Start date)
             const weekStart = new Date(d);
             weekStart.setDate(weekStart.getDate() - 6);
-            const label = `${weekStart.getDate()} ${weekStart.toLocaleString('default', { month: 'short' })}`;
+            const label = `${weekStart.getDate()} ${weekStart.toLocaleString('default', { month: 'short' })} `;
 
             const weekEntry: any = {
                 name: label,
@@ -528,7 +556,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
         // Populate Weekly Data
         receipts.forEach(r => {
-            const d = new Date(r.date);
+            // Robust Date Parsing
+            let d = new Date(r.date);
+            if (r.date.includes('-') && !r.date.includes('T')) {
+                const parts = r.date.split('-');
+                d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
             const rWeekNum = getWeekNumber(d);
             const rYear = d.getFullYear();
 
@@ -576,7 +609,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
         for (let i = 11; i >= 0; i--) {
             const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
+            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)} `;
 
             // Initialize with all categories set to 0
             const monthEntry: any = { label: key, total: 0 };
@@ -595,7 +628,9 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             d.setDate(d.getDate() - i);
             const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-            const dayEntry: any = { label, date: d.toISOString().split('T')[0], total: 0 };
+            const offset = d.getTimezoneOffset();
+            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+            const dayEntry: any = { label, date: localDate.toISOString().split('T')[0], total: 0 };
             Object.values(Category).forEach(cat => {
                 dayEntry[cat] = 0;
             });
@@ -607,14 +642,22 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         const weekData = (weeklyActivity || []).map(d => ({ ...d, label: d.day }));
 
         receipts.forEach(r => {
-            const d = new Date(r.date);
+            // Robust Date Parsing
+            let d = new Date(r.date);
+            if (r.date.includes('-') && !r.date.includes('T')) {
+                const parts = r.date.split('-');
+                d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
 
             // Populate Year Data
-            const yearKey = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)}`;
+            const yearKey = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)} `;
             const yearEntry = (yearData || []).find(m => m.label === yearKey);
 
             // Populate Month Data
-            const rDateStr = r.date.split('T')[0];
+            // Use the robustly parsed local date for comparison
+            const offset = d.getTimezoneOffset();
+            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+            const rDateStr = localDate.toISOString().split('T')[0];
             const monthEntry = (monthData || []).find(m => m.date === rDateStr);
 
             r.items.forEach(item => {
@@ -746,7 +789,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                             type: 'info',
                             title: `High Spending on ${topCat.name}`,
                             message: `${topCat.name} accounts for ${(topCat.percentage).toFixed(0)}% of your spending this month.`,
-                            icon: <PieChart size={16} />
+                            icon: <PieIcon size={16} />
                         });
                     }
                 }
@@ -881,6 +924,17 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             .slice(0, 10); // Top 10 items
     }, [selectedCategory, metrics.categoryItems]);
 
+    // AI Suggestions
+    const suggestions = useMemo(() => {
+        return generateInsights(
+            metrics.thisMonthTotal,
+            monthlyBudget,
+            receipts,
+            custodyDays,
+            metrics.lastMonthTotal // Assuming this exists or pass 0 if not calculated yet in metrics
+        );
+    }, [metrics.thisMonthTotal, monthlyBudget, receipts, custodyDays]);
+
     // AI Smart Metrics
     const aiMetrics = useMemo(() => {
         const daysPassed = new Date().getDate();
@@ -905,15 +959,26 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         // Shopping Frequency
         const frequency = daysPassed > 0 ? ((metrics.thisMonthReceipts || []).length / daysPassed).toFixed(1) : '0';
 
+        // Use suggestions to find relevant tips
+        const warning = suggestions.find(s => s.severity === 'warning' || s.severity === 'danger');
+        const success = suggestions.find(s => s.severity === 'success');
+
         return [
             { label: 'Daily Avg', value: `€${dailyAvg.toFixed(0)}`, trend: 'neutral', icon: CalendarDays },
-            { label: 'Forecast', value: `€${projected.toFixed(0)}`, trend: projected > monthlyBudget ? 'down' : 'up', icon: TrendingUp },
+            // Replace Forecast with a dynamic tip if available, otherwise show Forecast
+            {
+                label: warning ? 'Alert' : (success ? 'Status' : 'Forecast'),
+                value: warning ? 'Check Budget' : (success ? 'On Track' : `€${projected.toFixed(0)}`),
+                trend: warning ? 'down' : (success ? 'up' : (projected > monthlyBudget ? 'down' : 'up')),
+                icon: warning ? AlertTriangle : (success ? CheckCircle2 : TrendingUp),
+                detail: warning?.text || success?.text
+            },
             { label: 'Top Cat', value: topCategory, trend: 'neutral', icon: ShoppingBag },
             { label: 'Big Buy', value: `€${biggestPurchase.toFixed(0)}`, trend: 'neutral', icon: ArrowUpRight },
             { label: 'Weekend', value: `${weekendPercent.toFixed(0)}%`, trend: 'neutral', icon: Calendar },
             { label: 'Freq/Day', value: frequency, trend: 'neutral', icon: Activity }
         ];
-    }, [metrics.thisMonthTotal, metrics.thisMonthReceipts, metrics.categoryData, monthlyBudget]);
+    }, [metrics.thisMonthTotal, metrics.thisMonthReceipts, metrics.categoryData, monthlyBudget, suggestions]);
 
     const activePieData = selectedCategory ? drillDownData : metrics.categoryData;
 
@@ -928,80 +993,191 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         }
     }, [healthState]);
 
+    // Ambient Color Helper with Continuous Interpolation
+    const getAmbientStyle = (ratio: number) => {
+        // Helper to interpolate RGB (Hex)
+        const interpolate = (color1: string, color2: string, factor: number) => {
+            const r1 = parseInt(color1.substring(1, 3), 16);
+            const g1 = parseInt(color1.substring(3, 5), 16);
+            const b1 = parseInt(color1.substring(5, 7), 16);
+
+            const r2 = parseInt(color2.substring(1, 3), 16);
+            const g2 = parseInt(color2.substring(3, 5), 16);
+            const b2 = parseInt(color2.substring(5, 7), 16);
+
+            const r = Math.round(r1 + (r2 - r1) * factor);
+            const g = Math.round(g1 + (g2 - g1) * factor);
+            const b = Math.round(b1 + (b2 - b1) * factor);
+
+            return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        };
+
+        const green = '#84cc16'; // Lime-500
+        const yellow = '#eab308'; // Yellow-500
+        const red = '#ef4444'; // Red-500
+        const brightRed = '#ff0000'; // Pure Red
+
+        let color = green;
+        let glowSize = '15px';
+        let duration = 4;
+        let brightColor = '#ffffff';
+
+        if (ratio < 0.5) {
+            color = green;
+            glowSize = '10px';
+            duration = 12;
+            brightColor = '#bef264'; // Light Lime
+        } else if (ratio < 0.8) {
+            // Interpolate Green -> Yellow
+            color = yellow;
+            glowSize = '20px';
+            duration = 8;
+            brightColor = '#facc15'; // Yellow-400 (Vibrant)
+        } else if (ratio < 1.0) {
+            // Interpolate Yellow -> Red
+            color = red;
+            glowSize = '25px';
+            duration = 6;
+            brightColor = '#f87171'; // Red-400 (Vibrant)
+        } else {
+            color = brightRed;
+            glowSize = '30px';
+            duration = 4;
+            brightColor = '#ff2222'; // Neon Red
+        }
+
+        // If NOT in view, return plain style with NO animation to save resources
+        if (!isBudgetInView) {
+            return {
+                '--glow-color': color,
+                '--glow-color-bright': brightColor,
+                '--glow-size': '0px', // No glow
+                borderColor: 'rgba(255,255,255,0.1)', // Dim border
+                boxShadow: 'none',
+                transition: 'all 0.5s ease',
+                background: 'transparent' // Kill gradient
+            } as React.CSSProperties;
+        }
+
+        return {
+            '--glow-color': color,
+            '--glow-color-bright': brightColor,
+            '--glow-size': glowSize,
+            borderColor: color,
+            boxShadow: `0 0 ${glowSize} ${color}`,
+            transition: 'all 1s ease',
+            animation: `pulse-border-v2 ${duration}s infinite ease-in-out`
+        } as React.CSSProperties;
+    };
+
+    const ratio = monthlyBudget > 0 ? metrics.thisMonthTotal / monthlyBudget : 0;
+    const ambientStyle = getAmbientStyle(ratio);
+
     return (
         <motion.div
-            className="flex flex-col h-full px-4 pt-4 pb-32 overflow-y-auto no-scrollbar"
+            className="w-full h-full overflow-y-auto overflow-x-hidden pt-20 px-4 pb-28 scroll-smooth no-scrollbar"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
         >
-            {/* Header */}
-            <motion.div className="flex justify-between items-end mb-6" variants={itemVariants}>
-                <div>
-                    <div className="flex items-center gap-3 mb-1">
-                        <img src="/logo.png" alt="TrueTrack Logo" className="w-8 h-8" />
-                        <h1 className="text-2xl font-heading font-bold text-white tracking-tighter">TrueTrack</h1>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    {ageRestricted && (
-                        <div className="bg-amber-500/10 border border-amber-500/20 px-2 py-1.5 rounded-lg">
-                            <ShieldCheck className="text-amber-500 w-4 h-4" />
-                        </div>
-                    )}
-                    {/* Removed date filter button as per simplification */}
-                    {/* <button
-                        onClick={toggleDateFilter}
-                        className="bg-surface border border-white/5 rounded-full h-9 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:bg-surfaceHighlight hover:border-white/20 hover:shadow-md active:shadow-inner"
-                    >
-                        <Calendar className="text-primary w-3.5 h-3.5" />
-                        <span className="text-[10px] font-bold text-white uppercase tracking-wide">{getDateFilterLabel()}</span>
-                    </button> */}
-                </div>
-            </motion.div>
+            <style>{`
+                @keyframes pulse-border-v2 {
+                    0% { box-shadow: 0 0 5px -2px var(--glow-color); border-color: var(--glow-color); }
+                    50% { box-shadow: 0 0 var(--glow-size) 0px var(--glow-color); border-color: var(--glow-color-bright); }
+                    100% { box-shadow: 0 0 5px -2px var(--glow-color); border-color: var(--glow-color); }
+                }
+            `}</style>
 
-            {/* HERO: Budget Progress */}
-            <motion.div variants={itemVariants}><AnimatedSection key={metrics.thisMonthTotal} delay={100} className="mb-6" variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                {({ isInView }: { isInView?: boolean } = {}) => (
-                    <div className="relative rounded-3xl p-6 transition-all overflow-hidden">
-                        {/* Glow Overlay */}
+            {/* Main Content Wrapper */}
+            <div className="pt-4 pb-32 space-y-4">
+
+                <motion.div
+                    ref={budgetCardRef}
+                    key={metrics.thisMonthTotal}
+                    variants={itemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="mb-0"
+                >
+                    <div
+                        style={ambientStyle}
+                        className="relative rounded-3xl border bg-card p-4 transition-all duration-1000 overflow-hidden group mb-4"
+                    >
                         {ambientMode && (
                             <div className="absolute inset-0 pointer-events-none z-0">
-                                {ambientMode && <AmbientBackground spendRatio={monthlyBudget > 0 ? metrics.thisMonthTotal / monthlyBudget : 0} />}
+                                {/* Background Gradient matching the color */}
+                                <div
+                                    className="absolute inset-0 opacity-15 transition-colors duration-1000"
+                                    style={{
+                                        background: `radial-gradient(circle at 50% 50%, var(--glow-color), transparent 70%)`
+                                    }}
+                                />
                             </div>
                         )}
-                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 ${!ambientMode ? 'border border-slate-800 bg-card shadow-lg' : ''}`} />
 
-                        {ambientMode && <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>}
+                        {/* Original BG Backing if needed */}
+                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 bg-card/80 backdrop-blur-sm -z-10`} />
 
-                        <div className="flex items-center justify-between mb-6 relative z-10">
+                        <div className="flex items-center justify-between mb-4 relative z-10">
                             <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
-                                <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.1)] flex-shrink-0">
-                                    <Wallet className="w-6 h-6 text-indigo-400" />
-                                </div>
                                 <div className="min-w-0 flex-1">
                                     <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide truncate">Monthly Budget</h3>
                                     <div className="flex items-baseline gap-1.5 flex-wrap">
                                         <p className={`${(metrics.thisMonthTotal.toFixed(2).length + (monthlyBudget.toString().length)) > 12 ? 'text-xl' : 'text-3xl'} font-heading font-bold text-white tracking-tight`}>
                                             €{metrics.thisMonthTotal.toFixed(2)}
                                         </p>
+
                                         <span className="text-sm text-slate-500 font-medium whitespace-nowrap">/ €{monthlyBudget}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="text-right flex-shrink-0">
-                                <span className={`text-2xl font-bold ${isOverBudget ? 'text-red-500' : 'text-emerald-400'}`}>
-                                    {Math.round(isInView ? budgetProgress : 0)}%
+                                <span
+                                    className="text-2xl font-bold transition-colors duration-500"
+                                    style={{ color: 'var(--glow-color)' }}
+                                >
+                                    {Math.round((monthlyBudget > 0 ? (metrics.thisMonthTotal / monthlyBudget) * 100 : 0))}%
                                 </span>
-                                <p className="text-xs text-slate-500 font-medium mt-1">{isOverBudget ? 'Over Budget' : 'Used'}</p>
+                                <p className="text-xs text-slate-500 font-medium mt-1">{metrics.thisMonthTotal > monthlyBudget ? 'Over Budget' : 'Used'}</p>
                             </div>
                         </div>
-                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10 mb-6">
+
+                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10 mb-4">
                             <div
-                                className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_currentColor] opacity-90 ${isOverBudget ? 'bg-red-500 text-red-500' : 'bg-emerald-500 text-emerald-500'}`}
-                                style={{ width: `${isInView ? Math.min(budgetProgress, 100) : 0}%` }}
+                                className="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_currentColor] opacity-90"
+                                style={{
+                                    width: `${Math.min((monthlyBudget > 0 ? (metrics.thisMonthTotal / monthlyBudget) * 100 : 0), 100)}%`,
+                                    backgroundColor: 'var(--glow-color)',
+                                    color: 'var(--glow-color)'
+                                }}
                             ></div>
                         </div>
+
+                        {suggestions.length > 0 && (
+                            <div className="relative z-10 mt-3 border-t border-white/10 pt-3">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={currentTipIndex}
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -5 }}
+                                        transition={{ duration: 0.5 }}
+                                        className="flex items-start gap-3"
+                                    >
+                                        <div className={`p-1.5 rounded-lg ${suggestions[currentTipIndex].severity === 'danger' ? 'bg-red-500/10 text-red-400' :
+                                            suggestions[currentTipIndex].severity === 'warning' ? 'bg-amber-500/10 text-amber-400' :
+                                                'bg-emerald-500/10 text-emerald-400'
+                                            }`}>
+                                            {React.createElement(suggestions[currentTipIndex].icon, { size: 14 })}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-300 font-medium leading-tight">{suggestions[currentTipIndex].text}</p>
+                                            {suggestions[currentTipIndex].subtext && <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">{suggestions[currentTipIndex].subtext}</p>}
+                                        </div>
+                                    </motion.div>
+                                </AnimatePresence>
+                            </div>
+                        )}
 
                         {/* Distribution Gauge */}
                         <div className="relative z-10 border-t border-white/5 pt-4">
@@ -1018,128 +1194,142 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     {selectedCategory ? '← Back to Overview' : 'Spending Distribution'}
                                 </h4>
                             </div>
-                            <div className="flex items-center justify-between h-48 w-full">
-                                {/* Pie Chart Container - Left Side */}
-                                <div className="h-full w-1/2 relative">
-                                    <style>{`
+                            {/* Pie Chart & Legend Split Layout */}
+                            {/* Pie Chart & Legend Split Layout */}
+                            {/* Pie Chart & Legend Split Layout */}
+                            <AnimatedSection triggerOnce={false} noSlide className="w-full">
+                                {({ isInView }: { isInView?: boolean } = {}) => (
+                                    <div className="flex flex-col items-center gap-4 h-[350px] max-w-full mx-auto group">
+                                        <style>{`
                                         .recharts-wrapper { outline: none !important; }
                                         .recharts-surface { outline: none !important; }
-                                        *:focus { outline: none !important; }
-                                    `}</style>
-                                    <AnimatePresence mode="wait">
-                                        {isInView && (
-                                            <motion.div
-                                                key={selectedCategory ? 'drilldown' : 'overview'}
-                                                initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                                exit={{ opacity: 0, scale: 1.1, rotate: 10 }}
-                                                transition={{ duration: 0.4, ease: "backOut" }}
-                                                className="h-full w-full outline-none focus:outline-none"
-                                                style={{ outline: 'none' }}
-                                            >
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <PieChart>
-                                                        <Pie
-                                                            data={activePieData}
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            innerRadius={45} // Thicker donut
-                                                            outerRadius={75} // Thicker donut
-                                                            paddingAngle={4}
-                                                            dataKey="value"
-                                                            stroke="none"
-                                                            isAnimationActive={true}
-                                                            animationBegin={0}
-                                                            animationDuration={1000}
-                                                            animationEasing="ease-out"
-                                                            cursor="pointer"
-                                                            onClick={(data) => {
-                                                                if (!selectedCategory) {
-                                                                    HapticsService.selection();
-                                                                    const categoryName = data.name || (data.payload && data.payload.name);
-                                                                    if (categoryName) {
-                                                                        setSelectedCategory(categoryName);
-                                                                    }
-                                                                }
-                                                            }}
-                                                        >
-                                                            {(activePieData || []).map((entry, index) => (
-                                                                <Cell key={`cell-${index}`} fill={selectedCategory ? getItemColor(index) : getCategoryColor(entry.name)} cursor="pointer" />
-                                                            ))}
-                                                        </Pie>
-                                                    </PieChart>
-                                                </ResponsiveContainer>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                    {/* Centered Text Overlay */}
-                                    <div
-                                        onClick={() => {
-                                            if (selectedCategory) {
-                                                HapticsService.selection();
-                                                setSelectedCategory(null);
-                                            }
-                                        }}
-                                        className={`absolute flex flex-col items-center justify-center outline-none focus:outline-none ${selectedCategory ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}`}
-                                        style={{
-                                            left: '50%',
-                                            top: '50%',
-                                            transform: 'translate(-50%, -50%)',
-                                            width: '80px'
-                                        }}
-                                    >
-                                        <span className="text-[9px] text-slate-500 font-medium uppercase mb-0.5">Top</span>
-                                        <span className="text-xs font-heading font-bold text-white tabular-nums text-center leading-tight whitespace-normal break-words w-full line-clamp-2">
-                                            {selectedCategory ? selectedCategory : (metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-')}
-                                        </span>
-                                    </div>
-                                </div>
+                                        `}</style>
 
-                                {/* Legend Container - Right Side */}
-                                <div className="w-1/2 pl-2 flex flex-col justify-center space-y-2">
-                                    {(activePieData || []).slice(0, 5).map((entry, index) => (
-                                        <div key={index} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: selectedCategory ? getItemColor(index) : getCategoryColor(entry.name) }}></div>
-                                                <span className="text-[10px] font-medium text-slate-400 truncate">{entry.name}</span>
-                                            </div>
-                                            <span className="text-[10px] font-bold text-slate-300">
-                                                {selectedCategory ? `€${entry.value.toFixed(0)}` : `${Math.round((entry as any).percentage)}%`}
-                                            </span>
+                                        {/* Top: Pie Chart */}
+                                        <div className="w-full h-2/3 relative flex items-center justify-center">
+                                            {/* Center Hub */}
+                                            <AnimatePresence>
+                                                {isInView && (
+                                                    <motion.div
+                                                        initial={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
+                                                        animate={{ scale: 1, opacity: 1, x: "-50%", y: "-50%" }}
+                                                        exit={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
+                                                        transition={{ type: "spring", bounce: 0.4, duration: 0.6 }}
+                                                        onClick={() => {
+                                                            HapticsService.selection();
+                                                            setSelectedCategory(null);
+                                                        }}
+                                                        className="absolute z-30 top-1/2 left-1/2 w-20 h-20 bg-slate-900 rounded-full border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center cursor-pointer group active:scale-95"
+                                                    >
+                                                        <div className="absolute inset-0 rounded-full border border-white/5 animate-pulse-slow pointer-events-none"></div>
+                                                        <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider mb-0.5">
+                                                            {selectedCategory ? 'Cat.' : 'Total'}
+                                                        </span>
+                                                        <span className={`font-heading font-bold text-white tabular-nums text-center leading-none whitespace-normal break-words w-full px-2 line-clamp-2 ${selectedCategory ? 'text-[9px]' : 'text-xs'}`}>
+                                                            {selectedCategory ? selectedCategory : `€${metrics.thisMonthTotal.toFixed(0)}`}
+                                                        </span>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart key={`pie-${isInView}`} margin={{ top: 0, left: 0, right: 0, bottom: 0 }}>
+                                                    <defs>
+                                                    </defs>
+                                                    <Pie
+                                                        data={activePieData}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={45}
+                                                        outerRadius={110}
+                                                        paddingAngle={4}
+                                                        dataKey="value"
+                                                        stroke="none"
+                                                        isAnimationActive={true}
+                                                        animationDuration={1000}
+                                                        shape={(props: any) => {
+                                                            const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, index } = props;
+                                                            const color = ['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'][index % 5];
+
+                                                            return (
+                                                                <Sector
+                                                                    cx={cx}
+                                                                    cy={cy}
+                                                                    innerRadius={innerRadius}
+                                                                    outerRadius={outerRadius}
+                                                                    startAngle={startAngle}
+                                                                    endAngle={endAngle}
+                                                                    fill={color}
+                                                                    cornerRadius={4}
+                                                                    className="transition-all duration-300 outline-none"
+                                                                />
+                                                            );
+                                                        }}
+                                                    >
+                                                        {activePieData.map((entry: any, index: number) => (
+                                                            <Cell key={`cell-${index}`} fill={['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'][index % 5]} stroke="none" />
+                                                        ))}
+                                                    </Pie>
+                                                </PieChart>
+                                            </ResponsiveContainer>
                                         </div>
-                                    ))}
-                                </div>
 
-                            </div>
+                                        {/* Bottom: Legend */}
+                                        <div className="w-full h-1/3 overflow-y-auto scroller px-2">
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                {(activePieData || []).map((entry, index) => {
+                                                    const color = ['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'][index % 5];
+                                                    const percentage = monthlyBudget > 0 ? ((entry.value / monthlyBudget) * 100) : 0;
+                                                    return (
+                                                        <div key={index} className="group cursor-pointer" onClick={() => setSelectedCategory(entry.name)}>
+                                                            <div className="flex justify-between items-end mb-1">
+                                                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}` }}></div>
+                                                                    <span className="text-[10px] font-medium text-slate-300 capitalize truncate max-w-[80px]">{entry.name}</span>
+                                                                </div>
+                                                                <div className="flex items-baseline gap-1 shrink-0">
+                                                                    <span className="text-[10px] font-bold text-white tabular-nums">€{entry.value.toFixed(0)}</span>
+                                                                    <span className="text-[9px] text-slate-500 font-medium tabular-nums text-right">{percentage.toFixed(0)}%</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="h-1 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
+                                                                <motion.div
+                                                                    initial={{ width: 0 }}
+                                                                    animate={{ width: isInView ? `${Math.min(percentage * 1.5, 100)}%` : 0 }}
+                                                                    transition={{ duration: 1, delay: index * 0.1 }}
+                                                                    className="h-full rounded-full opacity-80"
+                                                                    style={{ backgroundColor: color }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </AnimatedSection>
                         </div>
                     </div>
-
-                )}
-            </AnimatedSection></motion.div>
+                </motion.div>
 
 
-
-
+                {/* BENTO GRID LAYOUT */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
 
 
 
-            {/* BENTO GRID LAYOUT */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-
-
-
-                {/* Monthly Insights (Expanded) */}
-                {/* Monthly Insights (Expanded) */}
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                    {({ isInView }: { isInView?: boolean } = {}) => (
+                    {/* Monthly Insights (Expanded) */}
+                    {/* Monthly Insights (Expanded) */}
+                    <motion.div variants={itemVariants} className="col-span-2">
                         <motion.div
-                            whileTap={childSupportMode ? { scale: 0.98 } : {}}
-                            onClick={childSupportMode ? onProvisionClick : undefined}
-                            className={`rounded-3xl border border-slate-800 bg-card p-6 shadow-lg transition-all ${childSupportMode ? 'cursor-pointer hover:border-slate-700' : ''} `}
+                            whileTap={isCoParentingMode ? { scale: 0.98 } : {}}
+                            onClick={isCoParentingMode ? onProvisionClick : undefined}
+                            className={`rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all ${isCoParentingMode ? 'cursor-pointer hover:border-slate-700' : ''} `}
                         >
-                            <div className="mb-6">
+                            <div className="mb-4">
 
-                                <div className="flex flex-col gap-4 mb-6">
+                                <div className="flex flex-col gap-4 mb-4">
                                     <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                         <Sparkles className="w-4 h-4 text-yellow-500" />
                                         Insights
@@ -1186,7 +1376,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             €{insightView === 'monthly' ? metrics.projectedTotal.toFixed(0) : insightView === 'weekly' ? metrics.thisWeekTotal.toFixed(0) : metrics.yesterdayTotal.toFixed(0)}
                                         </p>
                                     </div>
-                                    {childSupportMode && (
+                                    {isCoParentingMode && (
                                         <>
                                             <div className="h-8 w-px bg-slate-800"></div>
                                             <div className="text-right">
@@ -1198,56 +1388,59 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-4 gap-4">
-                                {/* Helper for Gauges */}
-                                {[
-                                    { label: 'Education', value: insightView === 'monthly' ? metrics.educationRatio : insightView === 'weekly' ? metrics.weeklyRatios.education : metrics.dailyRatios.education, color: '#818cf8' }, // Indigo
-                                    { label: 'Food', value: insightView === 'monthly' ? metrics.foodRatio : insightView === 'weekly' ? metrics.weeklyRatios.food : metrics.dailyRatios.food, color: '#fbbf24' }, // Amber
-                                    { label: 'Activities', value: insightView === 'monthly' ? metrics.luxuryRatio : insightView === 'weekly' ? metrics.weeklyRatios.activities : metrics.dailyRatios.activities, color: '#f472b6' }, // Pink
-                                    { label: 'Health', value: insightView === 'monthly' ? metrics.healthRatio : insightView === 'weekly' ? metrics.weeklyRatios.health : metrics.dailyRatios.health, color: '#34d399' } // Emerald
-                                ].map((gauge, idx) => (
-                                    <div key={idx} className="flex flex-col items-center relative">
-                                        <div className="h-20 w-20 relative">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <RadialBarChart
-                                                    key={`${isInView ? 'visible' : 'hidden'} -${idx} `}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius="65%"
-                                                    outerRadius="100%"
-                                                    barSize={8}
-                                                    data={[{ value: Math.min(gauge.value, 100), fill: gauge.color }]}
-                                                    startAngle={90}
-                                                    endAngle={-270}
-                                                >
-                                                    <PolarAngleAxis
-                                                        type="number"
-                                                        domain={[0, 100]}
-                                                        angleAxisId={0}
-                                                        tick={false}
-                                                    />
-                                                    <RadialBar
-                                                        background={{ fill: '#1e293b' }}
-                                                        dataKey="value"
-                                                        cornerRadius={10}
-                                                        isAnimationActive={true}
-                                                        animationDuration={1500}
-                                                        animationEasing="ease-out"
-                                                    />
-                                                </RadialBarChart>
-                                            </ResponsiveContainer>
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                <span className="text-sm font-bold" style={{ color: gauge.color }}>{gauge.value.toFixed(0)}%</span>
+                            <AnimatedSection noSlide triggerOnce={false} className="grid grid-cols-4 gap-4">
+                                {({ isInView }: { isInView?: boolean } = {}) => (
+                                    <>
+                                        {[
+                                            { label: 'Education', value: insightView === 'monthly' ? metrics.educationRatio : insightView === 'weekly' ? metrics.weeklyRatios.education : metrics.dailyRatios.education, color: '#818cf8' }, // Indigo
+                                            { label: 'Food', value: insightView === 'monthly' ? metrics.foodRatio : insightView === 'weekly' ? metrics.weeklyRatios.food : metrics.dailyRatios.food, color: '#fbbf24' }, // Amber
+                                            { label: 'Activities', value: insightView === 'monthly' ? metrics.luxuryRatio : insightView === 'weekly' ? metrics.weeklyRatios.activities : metrics.dailyRatios.activities, color: '#f472b6' }, // Pink
+                                            { label: 'Health', value: insightView === 'monthly' ? metrics.healthRatio : insightView === 'weekly' ? metrics.weeklyRatios.health : metrics.dailyRatios.health, color: '#34d399' } // Emerald
+                                        ].map((gauge, idx) => (
+                                            <div key={idx} className="flex flex-col items-center relative">
+                                                <div className="h-20 w-20 relative">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <RadialBarChart
+                                                            key={`${isInView}-${idx}`}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius="65%"
+                                                            outerRadius="100%"
+                                                            barSize={8}
+                                                            data={[{ value: Math.min(isInView ? gauge.value : 0, 100), fill: gauge.color }]}
+                                                            startAngle={90}
+                                                            endAngle={-270}
+                                                        >
+                                                            <PolarAngleAxis
+                                                                type="number"
+                                                                domain={[0, 100]}
+                                                                angleAxisId={0}
+                                                                tick={false}
+                                                            />
+                                                            <RadialBar
+                                                                background={{ fill: '#1e293b' }}
+                                                                dataKey="value"
+                                                                cornerRadius={10}
+                                                                isAnimationActive={true}
+                                                                animationDuration={1500}
+                                                                animationEasing="ease-out"
+                                                            />
+                                                        </RadialBarChart>
+                                                    </ResponsiveContainer>
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                        <span className="text-sm font-bold" style={{ color: gauge.color }}>{gauge.value.toFixed(0)}%</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] text-slate-400 uppercase tracking-wide mt-1 font-bold text-center">{gauge.label}</span>
                                             </div>
-                                        </div>
-                                        <span className="text-[10px] text-slate-400 uppercase tracking-wide mt-1 font-bold text-center">{gauge.label}</span>
-                                    </div>
-                                ))}
-                            </div>
+                                        ))}
+                                    </>
+                                )}
+                            </AnimatedSection>
 
                             {/* Smart Suggestions */}
                             {metrics.smartInsights.length > 0 && (
-                                <div className="mt-6 pt-6 border-t border-white/5 space-y-3">
+                                <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                                         <Sparkles className="w-3 h-3 text-purple-400" />
                                         Smart Suggestions
@@ -1266,127 +1459,353 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 </div>
                             )}
                         </motion.div>
-                    )}
-                </AnimatedSection></motion.div>
+                    </motion.div>
 
-                {/* Co-Parenting Cards */}
-                {childSupportMode && (
-                    <div className="col-span-2 grid grid-cols-2 gap-3">
-                        {/* Settlement Card Removed */}
+                    {/* Co-Parenting Cards */}
+                    {
+                        childSupportMode && (
+                            <div className="col-span-2 grid grid-cols-2 gap-3">
+                                <div className="col-span-2">
+                                    {(() => {
+                                        // Calculate Custody Data
+                                        const today = new Date();
+                                        const currentDay = today.getDay(); // 0 = Sunday
+                                        const startOfWeek = new Date(today);
+                                        startOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1)); // Mon start
 
-                        <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                            {({ isInView }: { isInView?: boolean } = {}) => {
-                                // Calculate Custody Data
-                                const today = new Date();
-                                const currentDay = today.getDay(); // 0 = Sunday
-                                const startOfWeek = new Date(today);
-                                startOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1)); // Mon start
+                                        const weekDays = Array.from({ length: 7 }, (_, i) => {
+                                            const d = new Date(startOfWeek);
+                                            d.setDate(startOfWeek.getDate() + i);
+                                            return d;
+                                        });
 
-                                const weekDays = Array.from({ length: 7 }, (_, i) => {
-                                    const d = new Date(startOfWeek);
-                                    d.setDate(startOfWeek.getDate() + i);
-                                    return d;
-                                });
+                                        const getDayStatus = (date: Date) => {
+                                            const dateStr = date.toISOString().split('T')[0];
+                                            const custody = (custodyDays || []).find(d => d.date === dateStr);
+                                            return custody ? custody.status : null;
+                                        };
 
-                                const getDayStatus = (date: Date) => {
-                                    const dateStr = date.toISOString().split('T')[0];
-                                    const custody = (custodyDays || []).find(d => d.date === dateStr);
-                                    return custody ? custody.status : null;
-                                };
+                                        const monthDaysCount = (custodyDays || []).filter(d => {
+                                            const dDate = new Date(d.date);
+                                            return dDate.getMonth() === today.getMonth() && dDate.getFullYear() === today.getFullYear() && d.status === 'me';
+                                        }).length;
 
-                                const monthDaysCount = (custodyDays || []).filter(d => {
-                                    const dDate = new Date(d.date);
-                                    return dDate.getMonth() === today.getMonth() && dDate.getFullYear() === today.getFullYear() && d.status === 'me';
-                                }).length;
-
-                                return (
-                                    <motion.div
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => {
-                                            HapticsService.selection();
-                                            onCustodyClick();
-                                        }}
-                                        className="w-full h-full relative rounded-3xl p-4 flex flex-col justify-between group transition-all cursor-pointer overflow-hidden"
-                                    >
-                                        {/* Glow Overlay Removed */}
-
-                                        <div className="relative z-10 flex flex-col justify-between h-full">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div className="bg-purple-500/10 p-2 rounded-xl text-purple-400">
-                                                    <CalendarDays size={18} />
-                                                </div>
-                                                <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5" onClick={(e) => e.stopPropagation()}>
-                                                    <motion.button
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={() => { HapticsService.selection(); setCustodyView('weekly'); }}
-                                                        className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'weekly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                                    >
-                                                        Week
-                                                    </motion.button>
-                                                    <motion.button
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={() => { HapticsService.selection(); setCustodyView('monthly'); }}
-                                                        className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'monthly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                                    >
-                                                        Month
-                                                    </motion.button>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex-1 flex flex-col justify-end">
-                                                {custodyView === 'weekly' ? (
-                                                    <div className="flex justify-between items-center mt-2">
-                                                        {weekDays.map((d, i) => {
-                                                            const status = getDayStatus(d);
-                                                            const isToday = d.toDateString() === today.toDateString();
-                                                            const dayLabel = d.toLocaleDateString('en-US', { weekday: 'narrow' });
-
-                                                            return (
-                                                                <div key={i} className="flex flex-col items-center gap-1">
-                                                                    <div
-                                                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${status === 'me' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_8px_rgba(168,85,247,0.4)]' :
-                                                                            (status === 'partner' || status === 'split') ? 'bg-blue-500 border-blue-500 text-white' :
-                                                                                'bg-slate-800/50 border-slate-700 text-slate-500'
-                                                                            } ${isToday ? 'ring-2 ring-white/20' : ''}`}
-                                                                    >
-                                                                        {status === 'me' ? <Check size={12} strokeWidth={4} /> : status ? <div className="w-1.5 h-1.5 rounded-full bg-white" /> : dayLabel}
-                                                                    </div>
+                                        return (
+                                            <motion.div
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => {
+                                                    HapticsService.selection();
+                                                    onCustodyClick();
+                                                }}
+                                                className="w-full h-full relative rounded-3xl p-4 flex flex-col justify-between group transition-all cursor-pointer overflow-hidden border border-slate-800 bg-card shadow-lg"
+                                            >
+                                                <div className="relative z-10 flex flex-col justify-start gap-4 h-full">
+                                                    {/* Header */}
+                                                    <div className="flex justify-between items-start shrink-0">
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <div className="bg-purple-500/10 p-1.5 rounded-lg text-purple-400">
+                                                                    <CalendarDays size={16} />
                                                                 </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-end justify-between">
-                                                        <div>
-                                                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">My Days</p>
-                                                            <p className="text-2xl font-heading font-bold text-white">{monthDaysCount} <span className="text-sm text-slate-500 font-normal">days</span></p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Next</p>
-                                                            <p className="text-xs font-bold text-purple-400">
-                                                                {(custodyDays || [])
-                                                                    .filter(d => d.status === 'me' && new Date(d.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
-                                                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
-                                                                    ? new Date((custodyDays || []).filter(d => d.status === 'me' && new Date(d.date) >= new Date(new Date().setHours(0, 0, 0, 0))).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                                                    : '-'
+                                                                <h3 className="text-sm font-bold text-slate-200">Custody</h3>
+                                                            </div>
+                                                            {(() => {
+                                                                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                                                const todaysEvents = custodyDays.find(d => d.date === todayStr)?.activities || [];
+
+                                                                if (todaysEvents.length > 0) {
+                                                                    return (
+                                                                        <div className="mt-1 animate-in fade-in slide-in-from-left-2">
+                                                                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wide">Happening Today</span>
+                                                                            <p className="text-sm font-bold text-white leading-tight">{todaysEvents[0].title}</p>
+                                                                            {todaysEvents.length > 1 && <p className="text-[10px] text-slate-500">+{todaysEvents.length - 1} more</p>}
+                                                                        </div>
+                                                                    );
                                                                 }
-                                                            </p>
+                                                                return null;
+                                                            })()}
+                                                        </div>
+                                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5" onClick={(e) => e.stopPropagation()}>
+                                                            <motion.button
+                                                                whileTap={{ scale: 0.95 }}
+                                                                onClick={() => { HapticsService.selection(); setCustodyView('weekly'); }}
+                                                                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'weekly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                            >
+                                                                Week
+                                                            </motion.button>
+                                                            <motion.button
+                                                                whileTap={{ scale: 0.95 }}
+                                                                onClick={() => { HapticsService.selection(); setCustodyView('monthly'); }}
+                                                                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'monthly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                            >
+                                                                Month
+                                                            </motion.button>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            }}
-                        </AnimatedSection></motion.div>
-                    </div>
-                )}
 
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={300} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }} className="h-full">
-                    {({ isInView }: { isInView?: boolean } = {}) => (
-                        <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-3 flex flex-col min-h-[280px] overflow-hidden shadow-lg">
+                                                    {/* Toggleable Body */}
+                                                    <AnimatePresence mode="wait">
+                                                        {custodyView === 'weekly' ? (
+                                                            <motion.div
+                                                                key="weekly"
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                exit={{ opacity: 0, y: -10 }}
+                                                                transition={{ duration: 0.2 }}
+                                                                className="w-full"
+                                                            >
+                                                                <div className="flex justify-between items-center bg-slate-800/20 p-2 rounded-xl border border-white/5">
+                                                                    {weekDays.map((d, i) => {
+                                                                        const status = getDayStatus(d);
+                                                                        const isToday = d.toDateString() === today.toDateString();
+                                                                        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'narrow' });
 
+                                                                        return (
+                                                                            <div key={i} className="flex flex-col items-center gap-1.5">
+                                                                                <span className="text-[9px] font-medium text-slate-500 uppercase">{dayLabel}</span>
+                                                                                <div
+                                                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${status === 'me' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)] scale-110' :
+                                                                                        (status === 'partner' || status === 'split') ? 'bg-blue-500/20 border-blue-500/50 text-blue-300' :
+                                                                                            'bg-slate-800/50 border-slate-700 text-slate-500'
+                                                                                        } ${isToday ? 'ring-2 ring-white/20' : ''}`}
+                                                                                >
+                                                                                    {status === 'me' ? <Check size={14} strokeWidth={4} /> : status ? d.getDate() : d.getDate()}
+                                                                                </div>
+                                                                                {(() => {
+                                                                                    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                                                                    const hasEvent = (custodyDays.find(day => day.date === dStr)?.activities || []).length > 0;
+                                                                                    return <div className={`w-1 h-1 rounded-full transition-colors ${hasEvent ? 'bg-purple-400' : 'bg-transparent'}`}></div>;
+                                                                                })()}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </motion.div>
+                                                        ) : (
+                                                            <AnimatedSection triggerOnce={false} noSlide className="w-full">
+                                                                {({ isInView }: { isInView?: boolean } = {}) => (
+                                                                    <div className="flex flex-col gap-3">
+                                                                        <div className="flex bg-slate-800/50 p-0.5 rounded-lg w-fit self-center">
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setMonthViewMode('share'); }}
+                                                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${monthViewMode === 'share' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                            >
+                                                                                Share
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setMonthViewMode('insights'); }}
+                                                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${monthViewMode === 'insights' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                            >
+                                                                                Insights
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {monthViewMode === 'share' ? (
+                                                                            <div className="flex items-center justify-between gap-4 bg-slate-800/20 p-3 rounded-xl border border-white/5 animate-in fade-in slide-in-from-right-2">
+                                                                                <div className="flex flex-col gap-2 flex-1">
+                                                                                    <div>
+                                                                                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">My Share</p>
+                                                                                        <div className="flex items-baseline gap-1">
+                                                                                            <p className="text-2xl font-heading font-bold text-white">{monthDaysCount}</p>
+                                                                                            <span className="text-xs text-slate-500">days</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="space-y-1">
+                                                                                        <div className="flex justify-between text-[10px] font-medium">
+                                                                                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-slate-300">Me</span></div>
+                                                                                            <span className="text-white tabular-nums">{monthDaysCount}d</span>
+                                                                                        </div>
+                                                                                        <div className="flex justify-between text-[10px] font-medium">
+                                                                                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-slate-300">Partner</span></div>
+                                                                                            <span className="text-white tabular-nums">{new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount}d</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="h-20 w-20 relative shrink-0">
+                                                                                    <ResponsiveContainer width="100%" height="100%">
+                                                                                        <PieChart key={`custody-pie-${isInView}`}>
+                                                                                            <Pie
+                                                                                                data={[
+                                                                                                    { name: 'Me', value: monthDaysCount },
+                                                                                                    { name: 'Partner', value: new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount }
+                                                                                                ]}
+                                                                                                cx="50%"
+                                                                                                cy="50%"
+                                                                                                innerRadius={22}
+                                                                                                outerRadius={35}
+                                                                                                paddingAngle={3}
+                                                                                                dataKey="value"
+                                                                                                startAngle={90}
+                                                                                                endAngle={-270}
+                                                                                                stroke="none"
+                                                                                                isAnimationActive={isInView}
+                                                                                                animationDuration={1500}
+                                                                                            >
+                                                                                                <Cell key="me" fill="#10b981" />
+                                                                                                <Cell key="partner" fill="#3b82f6" />
+                                                                                            </Pie>
+                                                                                        </PieChart>
+                                                                                    </ResponsiveContainer>
+                                                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                                                        <span className="text-[10px] font-bold text-slate-300">
+                                                                                            {Math.round((monthDaysCount / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) * 100)}%
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-right-2">
+                                                                                <div className="p-2.5 rounded-xl bg-slate-800/30 border border-white/5 flex flex-col justify-center">
+                                                                                    <p className="text-[9px] text-slate-500 font-bold uppercase mb-1 tracking-wider">Pattern</p>
+                                                                                    <p className="text-xs font-medium text-slate-200 leading-tight">2-2-3 Rotation</p>
+                                                                                </div>
+                                                                                <div className="p-2.5 rounded-xl bg-slate-800/30 border border-white/5 flex flex-col justify-center">
+                                                                                    <p className="text-[9px] text-slate-500 font-bold uppercase mb-1 tracking-wider">Next</p>
+                                                                                    <p className="text-xs font-medium text-purple-300 leading-tight">Fri 5:00 PM</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </AnimatedSection>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {custodyView === 'monthly' && (
+                                                        <>
+                                                            {/* Weekend Split */}
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mb-2">Weekend Split</p>
+                                                                {(() => {
+                                                                    const weekendDays = custodyDays.filter(d => {
+                                                                        const date = new Date(d.date);
+                                                                        const day = date.getDay();
+                                                                        return day === 0 || day === 6; // Sun or Sat
+                                                                    });
+                                                                    const totalWeekends = weekendDays.length || 1;
+                                                                    const myWeekends = weekendDays.filter(d => d.status === 'me').length;
+                                                                    const partnerWeekends = weekendDays.filter(d => d.status === 'partner').length;
+
+                                                                    return (
+                                                                        <div className="flex h-2 rounded-full overflow-hidden w-full bg-slate-800">
+                                                                            <div style={{ width: `${(myWeekends / totalWeekends) * 100}%` }} className="bg-emerald-500 h-full" />
+                                                                            <div style={{ width: `${(partnerWeekends / totalWeekends) * 100}%` }} className="bg-blue-500 h-full" />
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                                <div className="flex justify-between text-[9px] text-slate-400 mt-1">
+                                                                    <span>You</span>
+                                                                    <span>Partner</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Parenting Pulse */}
+                                                            {(() => {
+                                                                // Metrics Calculation
+                                                                const totalDays = custodyDays.length;
+                                                                const myDays = custodyDays.filter(d => d.status === 'me').length;
+                                                                const balance = totalDays > 0 ? myDays / totalDays : 0.5;
+
+                                                                const weekendDays = custodyDays.filter(d => {
+                                                                    const date = new Date(d.date);
+                                                                    return date.getDay() === 0 || date.getDay() === 6;
+                                                                });
+                                                                const myWeekends = weekendDays.filter(d => d.status === 'me').length;
+                                                                const totalWeekends = weekendDays.length;
+                                                                const weekendShare = totalWeekends > 0 ? myWeekends / totalWeekends : 0.5;
+
+                                                                let status: 'healthy' | 'warning' | 'alert' = 'healthy';
+                                                                let title = 'Steady Pulse';
+                                                                let message = 'Great consistency! Stable routines are the foundation of security.';
+                                                                let color = 'text-emerald-400';
+                                                                let bgColor = 'bg-emerald-500/10';
+                                                                let borderColor = 'border-emerald-500/20';
+
+                                                                // Logic (Simplified for brevity as per original)
+                                                                if (balance > 0.9) {
+                                                                    status = 'alert';
+                                                                    title = 'High Load';
+                                                                    message = "You're carrying a heavy load. Remember, self-care isn't selfish—it's essential.";
+                                                                    color = 'text-orange-400';
+                                                                    bgColor = 'bg-orange-500/10';
+                                                                    borderColor = 'border-orange-500/20';
+                                                                }
+
+                                                                return (
+                                                                    <div className={`rounded-xl p-4 border ${bgColor} ${borderColor} relative overflow-hidden group mt-4`}>
+                                                                        <div className="flex items-start gap-4 z-10 relative">
+                                                                            <div className={`p-2.5 rounded-full ${bgColor} border ${borderColor} shrink-0`}>
+                                                                                <Activity className={`w-5 h-5 ${color}`} />
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="flex justify-between items-center mb-1">
+                                                                                    <p className={`text-xs font-bold uppercase tracking-wider ${color}`}>{title}</p>
+                                                                                    <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${bgColor} ${color} border ${borderColor} uppercase tracking-wide`}>{status}</span>
+                                                                                </div>
+                                                                                <p className="text-xs text-slate-300 leading-relaxed font-medium">{message}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </>
+                                                    )}
+
+                                                    {/* Upcoming Activities */}
+                                                    <div className="mt-3 pt-3 border-t border-white/5">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Upcoming</p>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onCustodyClick?.(); }}
+                                                                className="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                                            >
+                                                                <Plus size={10} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            {(() => {
+                                                                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                                                const upcoming = custodyDays
+                                                                    .filter(d => d.date > todayStr)
+                                                                    .flatMap(d => (d.activities || []).map(a => ({ ...a, date: d.date })))
+                                                                    .sort((a, b) => a.date.localeCompare(b.date))
+                                                                    .slice(0, 3);
+
+                                                                if (upcoming.length === 0) {
+                                                                    return <p className="text-[10px] text-slate-600 italic">No upcoming activities.</p>;
+                                                                }
+
+                                                                return upcoming.map((acc, idx) => (
+                                                                    <div key={`${acc.id}-${idx}`} className="flex items-center gap-2">
+                                                                        <div className={`w-1.5 h-1.5 rounded-full ${acc.type === 'birthday' ? 'bg-pink-400' :
+                                                                            acc.type === 'sport' ? 'bg-orange-400' :
+                                                                                acc.type === 'school' ? 'bg-blue-400' : 'bg-slate-400'
+                                                                            }`}></div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex justify-between items-baseline">
+                                                                                <span className="text-[10px] text-slate-300 font-medium truncate">{acc.title}</span>
+                                                                                <span className="text-[9px] text-slate-500 font-mono ml-2 shrink-0">
+                                                                                    {new Date(acc.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ));
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        )
+                    }
+
+
+                    <div className="col-span-2">
+                        <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-4 flex flex-col min-h-[280px] overflow-hidden shadow-lg">
                             <div className="relative z-10 flex flex-col h-full">
                                 <div className="flex flex-col gap-4 mb-2">
                                     <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
@@ -1420,593 +1839,458 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     </div>
                                 </div>
                                 <div className="flex-1 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart
-                                            data={chartView === 'week' ? metrics.weekData : chartView === 'month' ? metrics.monthData : metrics.yearData}
-                                            key={`${chartView}-${isInView}`}
-                                            margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
-                                        >
-                                            <defs>
-                                                {categories.map((cat) => (
-                                                    <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
-                                                    </linearGradient>
-                                                ))}
-                                            </defs>
-                                            <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                                            <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
-                                            <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                            {categories.map((cat) => (
-                                                <Area
-                                                    key={cat.id}
-                                                    type="monotone"
-                                                    dataKey={cat.name}
-                                                    stackId="1"
-                                                    stroke={cat.color}
-                                                    fill={`url(#gradient-trend-${cat.name})`}
-                                                    strokeWidth={2}
-                                                />
-                                            ))}
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div >
+                                    <VisibilitySensor threshold={0.4}>
+                                        {({ isVisible }: { isVisible: boolean }) => {
+                                            const activeData = chartView === 'week' ? metrics.weekData : chartView === 'month' ? metrics.monthData : metrics.yearData;
+
+                                            // Data Transition Strategy:
+                                            // If visible (trigger hit), use real data.
+                                            // If not visible (reset hit), use Zeroed data.
+                                            // This forces Recharts to "morph" (grow/shrink) the lines via update animation.
+                                            const displayData = useMemo(() => {
+                                                if (isVisible) return activeData;
+                                                return activeData.map(d => {
+                                                    const zeroed: any = { ...d };
+                                                    categories.forEach(c => zeroed[c.name] = 0);
+                                                    return zeroed;
+                                                });
+                                            }, [activeData, isVisible, categories]);
+
+                                            // Calculate max value for stable axis
+                                            const chartMax = useMemo(() => {
+                                                if (!activeData.length) return 100;
+                                                // Find the text max sum of stacked values
+                                                const maxVal = Math.max(...activeData.map(d => {
+                                                    return categories.reduce((sum, cat) => sum + (d[cat.name] || 0), 0);
+                                                }));
+                                                // Add 10% headroom
+                                                return Math.ceil(maxVal * 1.1);
+                                            }, [activeData, categories]);
+
+                                            return (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <AreaChart
+                                                        data={displayData}
+                                                        key={chartView}
+                                                        margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                                                    >
+                                                        <defs>
+                                                            {categories.map((cat) => (
+                                                                <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
+                                                                    <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
+                                                                </linearGradient>
+                                                            ))}
+                                                        </defs>
+                                                        <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                                                        <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} domain={[0, chartMax]} />
+                                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
+                                                        <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                                        {categories.map((cat) => (
+                                                            <Area
+                                                                key={cat.id}
+                                                                type="monotone"
+                                                                dataKey={cat.name}
+                                                                stackId="1"
+                                                                stroke={cat.color}
+                                                                fill={`url(#gradient-trend-${cat.name})`}
+                                                                strokeWidth={2}
+                                                                isAnimationActive={true}
+                                                                animationBegin={0}
+                                                                animationDuration={1000}
+                                                            />
+                                                        ))}
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            );
+                                        }}
+                                    </VisibilitySensor>
+                                </div>
                             </div>
-                        </div >
-                    )}
-                </AnimatedSection ></motion.div>
+                        </div>
+                    </div>
 
 
 
-                {/* Goal Breakdown (500ms) */}
-                {goals && goals.some(g => g.isEnabled) ? (
-                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                        {({ isInView }: { isInView?: boolean } = {}) => {
-                            // Filter receipts based on goalView
-                            const filteredGoalReceipts = useMemo(() => {
-                                const now = new Date();
-                                return receipts.filter(r => {
-                                    const rDate = new Date(r.date);
-                                    if (goalView === 'daily') {
-                                        return rDate.toDateString() === now.toDateString();
-                                    } else if (goalView === 'weekly') {
-                                        const oneWeekAgo = new Date();
-                                        oneWeekAgo.setDate(now.getDate() - 7);
-                                        return rDate >= oneWeekAgo;
-                                    } else {
-                                        return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
-                                    }
-                                });
-                            }, [receipts, goalView]);
+                    {/* Goal Breakdown (500ms) */}
+                    {
+                        goals && goals.some(g => g.isEnabled) ? (
+                            <div className="col-span-2"><AnimatedSection delay={0} triggerOnce={false} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
+                                {({ isInView }: { isInView?: boolean } = {}) => {
+                                    // Filter receipts based on goalView
+                                    const filteredGoalReceipts = useMemo(() => {
+                                        const now = new Date();
+                                        return receipts.filter(r => {
+                                            const rDate = new Date(r.date);
+                                            if (goalView === 'daily') {
+                                                return rDate.toDateString() === now.toDateString();
+                                            } else if (goalView === 'weekly') {
+                                                const oneWeekAgo = new Date();
+                                                oneWeekAgo.setDate(now.getDate() - 7);
+                                                return rDate >= oneWeekAgo;
+                                            } else {
+                                                return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+                                            }
+                                        });
+                                    }, [receipts, goalView]);
 
-                            // Calculate Previous Period Data for Trends
-                            const previousGoalReceipts = useMemo(() => {
-                                const now = new Date();
-                                return receipts.filter(r => {
-                                    const rDate = new Date(r.date);
-                                    if (goalView === 'daily') {
-                                        const yesterday = new Date();
-                                        yesterday.setDate(now.getDate() - 1);
-                                        return rDate.toDateString() === yesterday.toDateString();
-                                    } else if (goalView === 'weekly') {
-                                        const oneWeekAgo = new Date();
-                                        oneWeekAgo.setDate(now.getDate() - 7);
-                                        const twoWeeksAgo = new Date();
-                                        twoWeeksAgo.setDate(now.getDate() - 14);
-                                        return rDate >= twoWeeksAgo && rDate < oneWeekAgo;
-                                    } else {
-                                        const lastMonth = new Date();
-                                        lastMonth.setMonth(now.getMonth() - 1);
-                                        return rDate.getMonth() === lastMonth.getMonth() && rDate.getFullYear() === lastMonth.getFullYear();
-                                    }
-                                });
-                            }, [receipts, goalView]);
+                                    // Calculate Previous Period Data for Trends
+                                    const previousGoalReceipts = useMemo(() => {
+                                        const now = new Date();
+                                        return receipts.filter(r => {
+                                            const rDate = new Date(r.date);
+                                            if (goalView === 'daily') {
+                                                const yesterday = new Date();
+                                                yesterday.setDate(now.getDate() - 1);
+                                                return rDate.toDateString() === yesterday.toDateString();
+                                            } else if (goalView === 'weekly') {
+                                                const oneWeekAgo = new Date();
+                                                oneWeekAgo.setDate(now.getDate() - 7);
+                                                const twoWeeksAgo = new Date();
+                                                twoWeeksAgo.setDate(now.getDate() - 14);
+                                                return rDate >= twoWeeksAgo && rDate < oneWeekAgo;
+                                            } else {
+                                                const lastMonth = new Date();
+                                                lastMonth.setMonth(now.getMonth() - 1);
+                                                return rDate.getMonth() === lastMonth.getMonth() && rDate.getFullYear() === lastMonth.getFullYear();
+                                            }
+                                        });
+                                    }, [receipts, goalView]);
 
-                            // Calculate Achievements (Moved inside Goal Breakdown)
-                            const achievements = useMemo(() => {
-                                const badges = [
-                                    {
-                                        id: 'goal_setter',
-                                        label: 'Goal Setter',
-                                        icon: <Target className="w-5 h-5" />,
-                                        unlocked: goals && goals.some(g => g.isEnabled),
-                                        color: 'text-purple-400',
-                                        bgColor: 'bg-purple-500/10',
-                                        borderColor: 'border-purple-500/20'
-                                    },
-                                    {
-                                        id: 'budget_master',
-                                        label: 'Budget Master',
-                                        icon: <Shield className="w-5 h-5" />,
-                                        unlocked: metrics.thisMonthTotal < monthlyBudget * 0.9,
-                                        color: 'text-emerald-400',
-                                        bgColor: 'bg-emerald-500/10',
-                                        borderColor: 'border-emerald-500/20'
-                                    },
-                                    {
-                                        id: 'trend_setter',
-                                        label: 'Trend Setter',
-                                        icon: <TrendingDown className="w-5 h-5" />,
-                                        unlocked: metrics.thisWeekTotal < metrics.lastWeekTotal,
-                                        color: 'text-blue-400',
-                                        bgColor: 'bg-blue-500/10',
-                                        borderColor: 'border-blue-500/20'
-                                    },
-                                    {
-                                        id: 'consistent_tracker',
-                                        label: 'Consistent',
-                                        icon: <FileText className="w-5 h-5" />,
-                                        unlocked: receipts.some(r => {
-                                            const diff = new Date().getTime() - new Date(r.date).getTime();
-                                            return diff < 48 * 60 * 60 * 1000; // 48 hours
-                                        }),
-                                        color: 'text-yellow-400',
-                                        bgColor: 'bg-yellow-500/10',
-                                        borderColor: 'border-yellow-500/20'
-                                    },
-                                    {
-                                        id: 'clean_sheet',
-                                        label: 'Clean Sheet',
-                                        icon: <Sparkles className="w-5 h-5" />,
-                                        unlocked: goals && goals.some(g => g.isEnabled) && !goals.some(g => {
-                                            let total = 0;
-                                            const currentMonth = new Date().getMonth();
-                                            receipts.forEach(r => {
-                                                if (new Date(r.date).getMonth() === currentMonth) {
-                                                    r.items.forEach(i => {
-                                                        if (i.goalType === g.type) total += i.price * (i.quantity || 1);
+                                    // Calculate Achievements (Moved inside Goal Breakdown)
+                                    const achievements = useMemo(() => {
+                                        const badges = [
+                                            {
+                                                id: 'goal_setter',
+                                                label: 'Goal Setter',
+                                                icon: <Target className="w-5 h-5" />,
+                                                unlocked: goals && goals.some(g => g.isEnabled),
+                                                color: 'text-purple-400',
+                                                bgColor: 'bg-purple-500/10',
+                                                borderColor: 'border-purple-500/20'
+                                            },
+                                            {
+                                                id: 'budget_master',
+                                                label: 'Budget Master',
+                                                icon: <Shield className="w-5 h-5" />,
+                                                unlocked: metrics.thisMonthTotal < monthlyBudget * 0.9,
+                                                color: 'text-emerald-400',
+                                                bgColor: 'bg-emerald-500/10',
+                                                borderColor: 'border-emerald-500/20'
+                                            },
+                                            {
+                                                id: 'trend_setter',
+                                                label: 'Trend Setter',
+                                                icon: <TrendingDown className="w-5 h-5" />,
+                                                unlocked: metrics.thisWeekTotal < metrics.lastWeekTotal,
+                                                color: 'text-blue-400',
+                                                bgColor: 'bg-blue-500/10',
+                                                borderColor: 'border-blue-500/20'
+                                            },
+                                            {
+                                                id: 'consistent_tracker',
+                                                label: 'Consistent',
+                                                icon: <FileText className="w-5 h-5" />,
+                                                unlocked: receipts.some(r => {
+                                                    const diff = new Date().getTime() - new Date(r.date).getTime();
+                                                    return diff < 48 * 60 * 60 * 1000; // 48 hours
+                                                }),
+                                                color: 'text-yellow-400',
+                                                bgColor: 'bg-yellow-500/10',
+                                                borderColor: 'border-yellow-500/20'
+                                            },
+                                            {
+                                                id: 'clean_sheet',
+                                                label: 'Clean Sheet',
+                                                icon: <Sparkles className="w-5 h-5" />,
+                                                unlocked: goals && goals.some(g => g.isEnabled) && !goals.some(g => {
+                                                    let total = 0;
+                                                    const currentMonth = new Date().getMonth();
+                                                    receipts.forEach(r => {
+                                                        if (new Date(r.date).getMonth() === currentMonth) {
+                                                            r.items.forEach(i => {
+                                                                if (i.goalType === g.type) total += i.price * (i.quantity || 1);
+                                                            });
+                                                        }
                                                     });
-                                                }
-                                            });
-                                            return total > 80;
-                                        }),
-                                        color: 'text-pink-400',
-                                        bgColor: 'bg-pink-500/10',
-                                        borderColor: 'border-pink-500/20'
-                                    },
-                                    {
-                                        id: 'early_bird',
-                                        label: 'Early Bird',
-                                        icon: <Coffee className="w-5 h-5" />,
-                                        unlocked: receipts.some(r => {
-                                            const h = new Date(r.date).getHours();
-                                            return h < 9 && h >= 5;
-                                        }),
-                                        color: 'text-orange-400',
-                                        bgColor: 'bg-orange-500/10',
-                                        borderColor: 'border-orange-500/20'
-                                    },
-                                    {
-                                        id: 'night_owl',
-                                        label: 'Night Owl',
-                                        icon: <Tv className="w-5 h-5" />,
-                                        unlocked: receipts.some(r => {
-                                            const h = new Date(r.date).getHours();
-                                            return h >= 21 || h < 4;
-                                        }),
-                                        color: 'text-indigo-400',
-                                        bgColor: 'bg-indigo-500/10',
-                                        borderColor: 'border-indigo-500/20'
-                                    },
-                                    {
-                                        id: 'high_roller',
-                                        label: 'High Roller',
-                                        icon: <Car className="w-5 h-5" />,
-                                        unlocked: receipts.some(r => r.total > 100),
-                                        color: 'text-cyan-400',
-                                        bgColor: 'bg-cyan-500/10',
-                                        borderColor: 'border-cyan-500/20'
-                                    },
-                                    {
-                                        id: 'penny_pincher',
-                                        label: 'Penny Pincher',
-                                        icon: <PiggyBank className="w-5 h-5" />,
-                                        unlocked: receipts.some(r => r.total < 5 && r.total > 0),
-                                        color: 'text-lime-400',
-                                        bgColor: 'bg-lime-500/10',
-                                        borderColor: 'border-lime-500/20'
-                                    },
-                                    {
-                                        id: 'weekend_warrior',
-                                        label: 'Weekender',
-                                        icon: <Beer className="w-5 h-5" />,
-                                        unlocked: receipts.some(r => {
-                                            const d = new Date(r.date).getDay();
-                                            return d === 0 || d === 6;
-                                        }),
-                                        color: 'text-red-400',
-                                        bgColor: 'bg-red-500/10',
-                                        borderColor: 'border-red-500/20'
-                                    }
-                                ];
-                                return badges;
-                            }, [goals, metrics, monthlyBudget, receipts]);
+                                                    return total > 80;
+                                                }),
+                                                color: 'text-pink-400',
+                                                bgColor: 'bg-pink-500/10',
+                                                borderColor: 'border-pink-500/20'
+                                            },
+                                            {
+                                                id: 'early_bird',
+                                                label: 'Early Bird',
+                                                icon: <Coffee className="w-5 h-5" />,
+                                                unlocked: receipts.some(r => {
+                                                    const h = new Date(r.date).getHours();
+                                                    return h < 9 && h >= 5;
+                                                }),
+                                                color: 'text-orange-400',
+                                                bgColor: 'bg-orange-500/10',
+                                                borderColor: 'border-orange-500/20'
+                                            },
+                                            {
+                                                id: 'night_owl',
+                                                label: 'Night Owl',
+                                                icon: <Tv className="w-5 h-5" />,
+                                                unlocked: receipts.some(r => {
+                                                    const h = new Date(r.date).getHours();
+                                                    return h >= 21 || h < 4;
+                                                }),
+                                                color: 'text-indigo-400',
+                                                bgColor: 'bg-indigo-500/10',
+                                                borderColor: 'border-indigo-500/20'
+                                            },
+                                            {
+                                                id: 'high_roller',
+                                                label: 'High Roller',
+                                                icon: <Car className="w-5 h-5" />,
+                                                unlocked: receipts.some(r => r.total > 100),
+                                                color: 'text-cyan-400',
+                                                bgColor: 'bg-cyan-500/10',
+                                                borderColor: 'border-cyan-500/20'
+                                            },
+                                            {
+                                                id: 'penny_pincher',
+                                                label: 'Penny Pincher',
+                                                icon: <PiggyBank className="w-5 h-5" />,
+                                                unlocked: receipts.some(r => r.total < 5 && r.total > 0),
+                                                color: 'text-lime-400',
+                                                bgColor: 'bg-lime-500/10',
+                                                borderColor: 'border-lime-500/20'
+                                            },
+                                            {
+                                                id: 'weekend_warrior',
+                                                label: 'Weekender',
+                                                icon: <Beer className="w-5 h-5" />,
+                                                unlocked: receipts.some(r => {
+                                                    const d = new Date(r.date).getDay();
+                                                    return d === 0 || d === 6;
+                                                }),
+                                                color: 'text-red-400',
+                                                bgColor: 'bg-red-500/10',
+                                                borderColor: 'border-red-500/20'
+                                            }
+                                        ];
+                                        return badges;
+                                    }, [goals, metrics, monthlyBudget, receipts]);
 
-                            const unlockedCount = achievements.filter(a => a.unlocked).length;
-                            const totalAchievements = achievements.length;
-                            const discountThreshold = 5;
-                            const discountUnlocked = unlockedCount >= discountThreshold;
-                            const discountProgress = Math.min((unlockedCount / discountThreshold) * 100, 100);
+                                    const unlockedCount = achievements.filter(a => a.unlocked).length;
+                                    const totalAchievements = achievements.length;
+                                    const discountThreshold = 5;
+                                    const discountUnlocked = unlockedCount >= discountThreshold;
+                                    const discountProgress = Math.min((unlockedCount / discountThreshold) * 100, 100);
 
-                            return (
-                                <div className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg transition-all">
-                                    <div className="mb-6">
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                                    <Target className="w-4 h-4 text-purple-400" />
-                                                    Goal Breakdown
-                                                </h3>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setShowIndicators(!showIndicators); }}
-                                                    className={`p-1.5 rounded-lg transition-all ${showIndicators ? 'bg-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'}`}
-                                                    title="Toggle Impact Mode"
-                                                >
-                                                    <Zap size={14} fill={showIndicators ? "currentColor" : "none"} />
-                                                </button>
-                                            </div>
-                                            <div className="w-full flex justify-end">
-                                                <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                                    {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                    return (
+                                        <div className="rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all">
+                                            <div className="mb-4">
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                                            <Target className="w-4 h-4 text-purple-400" />
+                                                            Goal Breakdown
+                                                        </h3>
                                                         <button
-                                                            key={view}
-                                                            onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
-                                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                            onClick={(e) => { e.stopPropagation(); setShowIndicators(!showIndicators); }}
+                                                            className={`p-1.5 rounded-lg transition-all ${showIndicators ? 'bg-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'}`}
+                                                            title="Toggle Impact Mode"
                                                         >
-                                                            {view.charAt(0).toUpperCase() + view.slice(1)}
+                                                            <Zap size={14} fill={showIndicators ? "currentColor" : "none"} />
                                                         </button>
+                                                    </div>
+                                                    <div className="w-full flex justify-end">                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                                        {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                                            <button
+                                                                key={view}
+                                                                onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
+                                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                            >
+                                                                {view.charAt(0).toUpperCase() + view.slice(1)}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className={`relative z-10 w-full ${goals.filter(g => g.isEnabled).length === 1 ? 'flex justify-center py-8' : 'grid grid-cols-4 gap-4'}`}>
+                                                {goals.filter(g => g.isEnabled).map(goal => {
+                                                    let total = 0;
+                                                    filteredGoalReceipts.forEach(r => {
+                                                        r.items.forEach(i => {
+                                                            const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
+                                                            if (i.goalType === goal.type || matchesKeyword) {
+                                                                total += i.price * (i.quantity || 1);
+                                                            }
+                                                        });
+                                                    });
+
+                                                    let prevTotal = 0;
+                                                    previousGoalReceipts.forEach(r => {
+                                                        r.items.forEach(i => {
+                                                            const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
+                                                            if (i.goalType === goal.type || matchesKeyword) {
+                                                                prevTotal += i.price * (i.quantity || 1);
+                                                            }
+                                                        });
+                                                    });
+
+                                                    // Determine Trend
+                                                    let trend: 'up' | 'down' | 'flat' = 'flat';
+                                                    if (total > prevTotal * 1.1) trend = 'up';
+                                                    else if (total < prevTotal * 0.9) trend = 'down';
+
+                                                    // Determine Intensity (Mock Limit 100)
+                                                    let intensity: 'low' | 'medium' | 'high' = 'low';
+                                                    if (total > 80) intensity = 'high';
+                                                    else if (total > 50) intensity = 'medium';
+
+                                                    return (
+                                                        <div key={goal.id} className="flex justify-center w-full">
+                                                            <GoalGauge
+                                                                goal={goal}
+                                                                total={total}
+                                                                isInView={isInView}
+                                                                trend={trend}
+                                                                intensity={intensity}
+                                                                showIndicators={showIndicators}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {
+                                                goals.filter(g => g.isEnabled).every(g => {
+                                                    let total = 0;
+                                                    filteredGoalReceipts.forEach(r => {
+                                                        r.items.forEach(i => {
+                                                            const matchesKeyword = g.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
+                                                            if (i.goalType === g.type || matchesKeyword) {
+                                                                total += i.price * (i.quantity || 1);
+                                                            }
+                                                        });
+                                                    });
+                                                    return total === 0;
+                                                }) && (
+                                                    <div className="flex items-center justify-center py-8">
+                                                        <div className="bg-slate-800/50 px-6 py-3 rounded-full border border-white/5 text-slate-400 text-xs font-medium">
+                                                            No goal spending detected for this period! 🎉
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+
+                                            {/* Merged Achievements Section */}
+                                            <div className="mt-8 pt-8 border-t border-white/5">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                                        <Trophy className="w-4 h-4 text-yellow-500" />
+                                                        Achievements
+                                                    </h3>
+                                                    <span className="text-xs text-slate-500 font-medium">{unlockedCount}/{totalAchievements} Unlocked</span>
+                                                </div>
+
+                                                {/* Incentive Progress */}
+                                                <div className="mb-6 bg-slate-800/30 rounded-xl p-4 border border-white/5 relative overflow-hidden">
+                                                    {discountUnlocked && (
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 z-0"></div>
+                                                    )}
+                                                    <div className="relative z-10 flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`p-1.5 rounded-lg ${discountUnlocked ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-400'}`}>
+                                                                <Gift size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <p className={`text-xs font-bold ${discountUnlocked ? 'text-yellow-400' : 'text-slate-300'}`}>
+                                                                    {discountUnlocked ? '50% OFF Subscription Unlocked!' : 'Unlock 50% OFF Subscription'}
+                                                                </p>
+                                                                {!discountUnlocked && (
+                                                                    <p className="text-[10px] text-slate-500">Collect {discountThreshold} badges to claim reward</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-xs font-bold tabular-nums text-white">{unlockedCount}/{discountThreshold}</span>
+                                                    </div>
+                                                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-1000 ease-out ${discountUnlocked ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'bg-slate-600'}`}
+                                                            style={{ width: `${discountProgress}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-5 gap-2">
+                                                    {achievements.map((badge) => (
+                                                        <div key={badge.id} className="flex flex-col items-center gap-2 group cursor-default">
+                                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-500 ${badge.unlocked
+                                                                ? `${badge.bgColor} ${badge.borderColor} ${badge.color} shadow-[0_0_15px_rgba(0,0,0,0.3)] group-hover:scale-110`
+                                                                : 'bg-slate-800/50 border-white/5 text-slate-600 grayscale opacity-50'
+                                                                }`}>
+                                                                {badge.icon}
+                                                            </div>
+                                                            <span className={`text-[9px] font-bold uppercase tracking-wide text-center transition-colors ${badge.unlocked ? 'text-slate-300' : 'text-slate-600'
+                                                                }`}>
+                                                                {badge.label}
+                                                            </span>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             </div>
                                         </div>
+                                    );
+                                }}
+                            </AnimatedSection></div>
+                        ) : (
+                            <div className="col-span-2">
+                                <motion.div
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => {
+                                        HapticsService.selection();
+                                        onHabitsClick();
+                                    }}
+                                    className="rounded-3xl border border-slate-800 bg-card p-4 shadow-lg relative overflow-hidden flex items-center justify-between cursor-pointer hover:border-slate-700 transition-all"
+                                >
+                                    <div>
+                                        <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
+                                            <Target className="w-4 h-4 text-purple-400" />
+                                            Track Your Habits
+                                        </h3>
+                                        <p className="text-xs text-slate-500">Enable goals in settings to track spending.</p>
                                     </div>
-
-                                    <div className={`relative z-10 w-full ${goals.filter(g => g.isEnabled).length === 1 ? 'flex justify-center py-8' : 'grid grid-cols-4 gap-4'}`}>
-                                        {goals.filter(g => g.isEnabled).map(goal => {
-                                            let total = 0;
-                                            filteredGoalReceipts.forEach(r => {
-                                                r.items.forEach(i => {
-                                                    const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                    if (i.goalType === goal.type || matchesKeyword) {
-                                                        total += i.price * (i.quantity || 1);
-                                                    }
-                                                });
-                                            });
-
-                                            let prevTotal = 0;
-                                            previousGoalReceipts.forEach(r => {
-                                                r.items.forEach(i => {
-                                                    const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                    if (i.goalType === goal.type || matchesKeyword) {
-                                                        prevTotal += i.price * (i.quantity || 1);
-                                                    }
-                                                });
-                                            });
-
-                                            // Determine Trend
-                                            let trend: 'up' | 'down' | 'flat' = 'flat';
-                                            if (total > prevTotal * 1.1) trend = 'up';
-                                            else if (total < prevTotal * 0.9) trend = 'down';
-
-                                            // Determine Intensity (Mock Limit 100)
-                                            let intensity: 'low' | 'medium' | 'high' = 'low';
-                                            if (total > 80) intensity = 'high';
-                                            else if (total > 50) intensity = 'medium';
-
-                                            return (
-                                                <div key={goal.id} className="flex justify-center w-full">
-                                                    <GoalGauge
-                                                        goal={goal}
-                                                        total={total}
-                                                        isInView={isInView}
-                                                        trend={trend}
-                                                        intensity={intensity}
-                                                        showIndicators={showIndicators}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                                        <ArrowRight size={16} className="text-purple-400" />
                                     </div>
-
-                                    {goals.filter(g => g.isEnabled).every(g => {
-                                        let total = 0;
-                                        filteredGoalReceipts.forEach(r => {
-                                            r.items.forEach(i => {
-                                                const matchesKeyword = g.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                if (i.goalType === g.type || matchesKeyword) {
-                                                    total += i.price * (i.quantity || 1);
-                                                }
-                                            });
-                                        });
-                                        return total === 0;
-                                    }) && (
-                                            <div className="flex items-center justify-center py-8">
-                                                <div className="bg-slate-800/50 px-6 py-3 rounded-full border border-white/5 text-slate-400 text-xs font-medium">
-                                                    No goal spending detected for this period! 🎉
-                                                </div>
-                                            </div>
-                                        )}
-
-                                    {/* Merged Achievements Section */}
-                                    <div className="mt-8 pt-8 border-t border-white/5">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                                <Trophy className="w-4 h-4 text-yellow-500" />
-                                                Achievements
-                                            </h3>
-                                            <span className="text-xs text-slate-500 font-medium">{unlockedCount}/{totalAchievements} Unlocked</span>
-                                        </div>
-
-                                        {/* Incentive Progress */}
-                                        <div className="mb-6 bg-slate-800/30 rounded-xl p-4 border border-white/5 relative overflow-hidden">
-                                            {discountUnlocked && (
-                                                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 z-0"></div>
-                                            )}
-                                            <div className="relative z-10 flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`p-1.5 rounded-lg ${discountUnlocked ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-400'}`}>
-                                                        <Gift size={14} />
-                                                    </div>
-                                                    <div>
-                                                        <p className={`text-xs font-bold ${discountUnlocked ? 'text-yellow-400' : 'text-slate-300'}`}>
-                                                            {discountUnlocked ? '50% OFF Subscription Unlocked!' : 'Unlock 50% OFF Subscription'}
-                                                        </p>
-                                                        {!discountUnlocked && (
-                                                            <p className="text-[10px] text-slate-500">Collect {discountThreshold} badges to claim reward</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <span className="text-xs font-bold tabular-nums text-white">{unlockedCount}/{discountThreshold}</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-1000 ease-out ${discountUnlocked ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'bg-slate-600'}`}
-                                                    style={{ width: `${discountProgress}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-5 gap-2">
-                                            {achievements.map((badge) => (
-                                                <div key={badge.id} className="flex flex-col items-center gap-2 group cursor-default">
-                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-500 ${badge.unlocked
-                                                        ? `${badge.bgColor} ${badge.borderColor} ${badge.color} shadow-[0_0_15px_rgba(0,0,0,0.3)] group-hover:scale-110`
-                                                        : 'bg-slate-800/50 border-white/5 text-slate-600 grayscale opacity-50'
-                                                        }`}>
-                                                        {badge.icon}
-                                                    </div>
-                                                    <span className={`text-[9px] font-bold uppercase tracking-wide text-center transition-colors ${badge.unlocked ? 'text-slate-300' : 'text-slate-600'
-                                                        }`}>
-                                                        {badge.label}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        }}
-                    </AnimatedSection></motion.div>
-                ) : (
-                    <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={500} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                        <motion.div
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                                HapticsService.selection();
-                                onHabitsClick();
-                            }}
-                            className="rounded-3xl border border-slate-800 bg-card p-6 shadow-lg relative overflow-hidden flex items-center justify-between cursor-pointer hover:border-slate-700 transition-all"
-                        >
-                            <div>
-                                <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
-                                    <Target className="w-4 h-4 text-purple-400" />
-                                    Track Your Habits
-                                </h3>
-                                <p className="text-xs text-slate-500">Enable goals in settings to track spending.</p>
+                                </motion.div>
                             </div>
-                            <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                                <ArrowRight size={16} className="text-purple-400" />
-                            </div>
-                        </motion.div>
-                    </AnimatedSection></motion.div>
-                )}
+                        )
+                    }
 
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                    {({ isInView }: { isInView?: boolean } = {}) => (
-                        <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-5 overflow-hidden shadow-lg">
+                    {/* 4. Financial Snapshot (Grid of 3) */}
+                    <div className="col-span-2">
+                        <div className="relative rounded-3xl border border-slate-800 bg-card p-4 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
 
                             <div className="relative z-10">
-                                <h3 className="text-sm font-medium text-slate-400 mb-4">Top Vendors</h3>
-                                <div className="space-y-3">
-                                    {metrics.topStores.length > 0 ? (
-                                        (metrics.topStores || []).map((store, idx) => (
-                                            <div key={idx} className="space-y-1">
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-300 truncate max-w-[200px]">{store.name}</span>
-                                                    <span className="text-slate-400 tabular-nums">€{store.value.toFixed(0)}</span>
-                                                </div>
-                                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${isInView ? store.percentage : 0}%` }}></div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-xs text-slate-500 text-center py-4">No data</div>
-                                    )}
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Wallet className="text-emerald-400 w-4 h-4" />
+                                    <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                </AnimatedSection></motion.div>
-
-                {/* 4. Financial Snapshot (Grid of 3) */}
-                <motion.div variants={itemVariants} className="col-span-2"><AnimatedSection delay={600} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                    <div className="relative rounded-3xl border border-slate-800 bg-card p-5 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
-
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Wallet className="text-emerald-400 w-4 h-4" />
-                                <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3">
-                                {aiMetrics.map((metric, i) => (
-                                    <div key={i} className="bg-surfaceHighlight/50 p-3 rounded-2xl border border-white/5 hover:bg-surfaceHighlight hover:border-white/10 transition-all duration-300">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <p className="text-[10px] text-slate-500 font-medium">{metric.label}</p>
-                                            <metric.icon size={10} className="text-slate-600" />
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <p className={`text-sm font-bold tabular-nums tracking-tight ${metric.trend === 'down' ? 'text-red-400' : metric.trend === 'up' ? 'text-emerald-400' : 'text-white'}`}>
-                                                {metric.value}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </AnimatedSection ></motion.div>
-
-                {/* 6. Category Breakdown (Linear Bars) */}
-                <div className="col-span-2 relative rounded-3xl border border-slate-800 bg-card p-5 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
-
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xs font-heading font-semibold text-slate-400 uppercase tracking-wide">Spending Breakdown</h3>
-                            <ShoppingBag className="text-slate-600 w-4 h-4" />
-                        </div>
-                        <div className="space-y-4">
-                            {(metrics.categoryData || []).slice(0, 4).map((d, i) => (
-                                <AnimatedSection key={i} delay={700 + (i * 100)} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
-                                    {({ isInView }: { isInView?: boolean } = {}) => (
-                                        <motion.div
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => {
-                                                const items = metrics.categoryItems[d.name] || [];
-                                                if (items.length > 0) setDrillDown({ category: d.name, items });
-                                            }} className="cursor-pointer group">
-                                            <div className="flex justify-between items-center text-xs mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}></div>
-                                                    <span className="text-slate-200 font-medium group-hover:text-white transition-colors duration-300">{d.name}</span>
-                                                </div>
-                                                <span className="text-slate-400 font-mono tabular-nums group-hover:text-white transition-colors duration-300">€{d.value.toFixed(0)}</span>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {aiMetrics.map((metric, i) => (
+                                        <div key={i} className={`p-3 rounded-2xl border transition-all duration-300 ${metric.label === 'Alert' ? 'bg-red-500/10 border-red-500/30' : 'bg-surfaceHighlight/50 border-white/5 hover:bg-surfaceHighlight hover:border-white/10'}`}>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <p className={`text-[10px] font-medium ${metric.label === 'Alert' ? 'text-red-400' : 'text-slate-500'}`}>{metric.label}</p>
+                                                <metric.icon size={10} className={metric.label === 'Alert' ? 'text-red-400' : 'text-slate-600'} />
                                             </div>
-                                            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-125 group-hover:shadow-[0_0_15px_currentColor]"
-                                                    style={{ width: `${isInView ? d.percentage : 0}%`, backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}
-                                                ></div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatedSection>
-                            ))}
-                            {metrics.categoryData.length === 0 && (
-                                <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
-                            )}
-                        </div>
-                    </div>
-                </div >
-
-                {/* 7. Recent Log (Compact List) */}
-                < div className="col-span-2" >
-                    <h3 className="text-xs font-heading font-semibold text-slate-500 uppercase tracking-wide mb-3 ml-1 mt-2">Recent Logs</h3>
-                    <div className="space-y-2">
-                        {(receipts || []).slice(0, 3).map(r => (
-                            <motion.button
-                                whileTap={{ scale: 0.98 }}
-                                key={r.id}
-                                onClick={() => onViewReceipt?.(r)}
-                                className="w-full bg-surface border border-white/5 rounded-2xl p-3 flex justify-between items-center shadow-sm hover:border-white/15 hover:bg-surfaceHighlight transition-all duration-300 text-left group"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 ${r.type === 'bill'
-                                        ? 'bg-indigo-900/30 text-indigo-300 border border-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
-                                        : 'bg-surfaceHighlight text-slate-400 border border-white/5'
-                                        }`}>
-                                        {r.type === 'bill' ? <FileText size={16} /> : r.storeName.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-200 text-sm font-semibold tracking-tight group-hover:text-white transition-colors">{r.storeName}</p>
-                                        <p className="text-[10px] text-slate-500 font-medium">{new Date(r.date).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {ageRestricted && r.items.some(i => i.isRestricted) && (
-                                        <AlertTriangle className="text-amber-500 w-3 h-3" />
-                                    )}
-                                    <span className={`font-mono text-sm font-bold tracking-tight tabular-nums ${r.type === 'bill' ? 'text-indigo-400' : 'text-white'}`}>
-                                        €{r.items.reduce((acc, i) => (!ageRestricted || !i.isRestricted ? acc + i.price : acc), 0).toFixed(2)}
-                                    </span>
-                                </div>
-                            </motion.button>
-                        ))}
-                    </div>
-                </div >
-
-            </div >
-
-
-
-            {/* Drill Down Modal */}
-            {
-                drillDown && (
-                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <div className="bg-surface w-full max-w-md rounded-3xl border border-slate-700 shadow-2xl overflow-hidden max-h-[80vh] flex flex-col animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-white/10">
-                            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-surface/90 sticky top-0 z-10 backdrop-blur-xl">
-                                <div>
-                                    <h2 className="text-xl font-heading font-bold text-white tracking-tight">{drillDown.category}</h2>
-                                    <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                                        {drillDown.items.length} items • Total: <span className="text-emerald-400 font-mono font-bold tabular-nums">€{drillDown.items.reduce((acc, i) => acc + i.price, 0).toFixed(2)}</span>
-                                    </p>
-                                </div>
-                                <button onClick={() => setDrillDown(null)} className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors duration-300">
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="p-4 overflow-y-auto custom-scrollbar">
-                                <div className="space-y-4 mb-6">
-                                    {(drillDown.items || []).slice(0, 5).map((item, idx) => {
-                                        const maxPrice = Math.max(...(drillDown.items || []).map(i => i.price));
-                                        const width = maxPrice > 0 ? (item.price / maxPrice) * 100 : 0;
-
-                                        return (
-                                            <div key={idx} className="space-y-1.5">
-                                                <div className="flex justify-between text-xs text-slate-400 font-medium">
-                                                    <span>{item.name.substring(0, 20)}{item.name.length > 20 ? '...' : ''}</span>
-                                                    <span className="tabular-nums">€{item.price.toFixed(2)}</span>
-                                                </div>
-                                                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full rounded-full opacity-90 shadow-[0_0_5px_currentColor]"
-                                                        style={{ width: `${width}%`, backgroundColor: getCategoryColor(drillDown.category) || '#818cf8', color: getCategoryColor(drillDown.category) || '#818cf8' }}
-                                                    ></div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-
-                                <div className="space-y-1 pt-4 border-t border-white/5">
-                                    <div className="flex justify-between items-center px-2 pb-2 text-[10px] font-heading font-bold text-slate-500 uppercase tracking-wider">
-                                        <span>Item / Date</span>
-                                        <span>Price</span>
-                                    </div>
-                                    {(drillDown.items || []).map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-surfaceHighlight/30 hover:bg-surfaceHighlight transition-colors duration-200 border border-white/5 hover:border-white/15">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm" style={{ backgroundColor: getCategoryColor(item.category) }}>
-                                                {item.category.charAt(0)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-white truncate">{item.store}</p>
-                                                <p className="text-xs text-slate-400 truncate">{item.category}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm font-bold text-white tabular-nums">€{item.total.toFixed(2)}</p>
-                                                <p className="text-[10px] text-slate-500">{new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                                            <div className="flex flex-col">
+                                                <p className={`text-sm font-bold tabular-nums tracking-tight ${metric.trend === 'down' ? 'text-red-400' : metric.trend === 'up' ? 'text-emerald-400' : 'text-white'}`}>
+                                                    {metric.value}
+                                                </p>
+                                                {(metric as any).detail && (
+                                                    <p className="text-[8px] text-slate-400 leading-tight mt-1 line-clamp-2">{(metric as any).detail}</p>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -2014,36 +2298,211 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                             </div>
                         </div>
                     </div>
-                )
-            }
-            {/* DEBUG SECTION */}
-            <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
-                <p className="text-white font-bold mb-2">DEBUG CALCULATION:</p>
-                <p>Age Restricted: {ageRestricted ? 'ON' : 'OFF'}</p>
-                <p>Calculated Total: €{metrics.thisMonthTotal.toFixed(2)}</p>
-                <p className="mt-2 mb-1 text-white">Receipts included in this month:</p>
-                <div className="space-y-1">
-                    {(metrics.thisMonthReceipts || []).map((r, i) => (
-                        <div key={i} className="flex justify-between border-b border-white/5 pb-1">
-                            <span>{r.date} - {r.storeName}</span>
-                            <span>€{r.total.toFixed(2)}</span>
+
+                    <div className="col-span-2"><AnimatedSection delay={0} triggerOnce={false} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
+                        {({ isInView }: { isInView?: boolean } = {}) => (
+                            <div className="h-full relative rounded-3xl border border-slate-800 bg-card p-4 overflow-hidden shadow-lg">
+
+                                <div className="relative z-10">
+                                    <h3 className="text-sm font-medium text-slate-400 mb-4">Top Vendors</h3>
+                                    <div className="space-y-3">
+                                        {metrics.topStores.length > 0 ? (
+                                            (metrics.topStores || []).map((store, idx) => (
+                                                <div key={idx} className="space-y-1">
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="text-slate-300 truncate max-w-[200px]">{store.name}</span>
+                                                        <span className="text-slate-400 tabular-nums">€{store.value.toFixed(0)}</span>
+                                                    </div>
+                                                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${isInView ? store.percentage : 0}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-xs text-slate-500 text-center py-4">No data</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </AnimatedSection></div>
+
+                    {/* 6. Category Breakdown (Linear Bars) */}
+                    <div className="col-span-2 relative rounded-3xl border border-slate-800 bg-card p-4 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
+
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xs font-heading font-semibold text-slate-400 uppercase tracking-wide">Spending Breakdown</h3>
+                                <ShoppingBag className="text-slate-600 w-4 h-4" />
+                            </div>
+                            <div className="space-y-4">
+                                {(metrics.categoryData || []).slice(0, 4).map((d, i) => (
+                                    <AnimatedSection key={i} delay={0} triggerOnce={false} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
+                                        {({ isInView }: { isInView?: boolean } = {}) => (
+                                            <motion.div
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => {
+                                                    const items = metrics.categoryItems[d.name] || [];
+                                                    if (items.length > 0) setDrillDown({ category: d.name, items });
+                                                }} className="cursor-pointer group">
+                                                <div className="flex justify-between items-center text-xs mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}></div>
+                                                        <span className="text-slate-200 font-medium group-hover:text-white transition-colors duration-300">{d.name}</span>
+                                                    </div>
+                                                    <span className="text-slate-400 font-mono tabular-nums group-hover:text-white transition-colors duration-300">€{d.value.toFixed(0)}</span>
+                                                </div>
+                                                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-125 group-hover:shadow-[0_0_15px_currentColor]"
+                                                        style={{ width: `${isInView ? d.percentage : 0}%`, backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}
+                                                    ></div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatedSection>
+                                ))}
+                                {metrics.categoryData.length === 0 && (
+                                    <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
+                                )}
+                            </div>
                         </div>
-                    ))}
-                    {metrics.thisMonthReceipts.length === 0 && <p>No receipts found for this month.</p>}
+                    </div >
+
+                    {/* 7. Recent Log (Compact List) */}
+                    < div className="col-span-2" >
+                        <h3 className="text-xs font-heading font-semibold text-slate-500 uppercase tracking-wide mb-3 ml-1 mt-2">Recent Logs</h3>
+                        <div className="space-y-2">
+                            {(receipts || []).slice(0, 3).map(r => (
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    key={r.id}
+                                    onClick={() => onViewReceipt?.(r)}
+                                    className="w-full bg-surface border border-white/5 rounded-2xl p-3 flex justify-between items-center shadow-sm hover:border-white/15 hover:bg-surfaceHighlight transition-all duration-300 text-left group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 ${r.type === 'bill'
+                                            ? 'bg-indigo-900/30 text-indigo-300 border border-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                                            : 'bg-surfaceHighlight text-slate-400 border border-white/5'
+                                            }`}>
+                                            {r.type === 'bill' ? <FileText size={16} /> : r.storeName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="text-slate-200 text-sm font-semibold tracking-tight group-hover:text-white transition-colors">{r.storeName}</p>
+                                            <p className="text-[10px] text-slate-500 font-medium">{new Date(r.date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {ageRestricted && r.items.some(i => i.isRestricted) && (
+                                            <AlertTriangle className="text-amber-500 w-3 h-3" />
+                                        )}
+                                        <span className={`font-mono text-sm font-bold tracking-tight tabular-nums ${r.type === 'bill' ? 'text-indigo-400' : 'text-white'}`}>
+                                            €{r.items.reduce((acc, i) => (!ageRestricted || !i.isRestricted ? acc + i.price : acc), 0).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </motion.button>
+                            ))}
+                        </div>
+                    </div >
+
+                </div >
+
+
+
+                {/* Drill Down Modal */}
+                {
+                    drillDown && (
+                        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                            <div className="bg-surface w-full max-w-md rounded-3xl border border-slate-700 shadow-2xl overflow-hidden max-h-[80vh] flex flex-col animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-white/10">
+                                <div className="p-5 border-b border-white/5 flex justify-between items-center bg-surface/90 sticky top-0 z-10 backdrop-blur-xl">
+                                    <div>
+                                        <h2 className="text-xl font-heading font-bold text-white tracking-tight">{drillDown.category}</h2>
+                                        <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                                            {drillDown.items.length} items • Total: <span className="text-emerald-400 font-mono font-bold tabular-nums">€{drillDown.items.reduce((acc, i) => acc + i.price, 0).toFixed(2)}</span>
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setDrillDown(null)} className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors duration-300">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="p-4 overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-4 mb-6">
+                                        {(drillDown.items || []).slice(0, 5).map((item, idx) => {
+                                            const maxPrice = Math.max(...(drillDown.items || []).map(i => i.price));
+                                            const width = maxPrice > 0 ? (item.price / maxPrice) * 100 : 0;
+
+                                            return (
+                                                <div key={idx} className="space-y-1.5">
+                                                    <div className="flex justify-between text-xs text-slate-400 font-medium">
+                                                        <span>{item.name.substring(0, 20)}{item.name.length > 20 ? '...' : ''}</span>
+                                                        <span className="tabular-nums">€{item.price.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full rounded-full opacity-90 shadow-[0_0_5px_currentColor]"
+                                                            style={{ width: `${width}%`, backgroundColor: getCategoryColor(drillDown.category) || '#818cf8', color: getCategoryColor(drillDown.category) || '#818cf8' }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <div className="space-y-1 pt-4 border-t border-white/5">
+                                        <div className="flex justify-between items-center px-2 pb-2 text-[10px] font-heading font-bold text-slate-500 uppercase tracking-wider">
+                                            <span>Item / Date</span>
+                                            <span>Price</span>
+                                        </div>
+                                        {(drillDown.items || []).map((item, idx) => (
+                                            <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-surfaceHighlight/30 hover:bg-surfaceHighlight transition-colors duration-200 border border-white/5 hover:border-white/15">
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm" style={{ backgroundColor: getCategoryColor(item.category) }}>
+                                                    {item.category.charAt(0)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white truncate">{item.store}</p>
+                                                    <p className="text-xs text-slate-400 truncate">{item.category}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-bold text-white tabular-nums">€{item.total.toFixed(2)}</p>
+                                                    <p className="text-[10px] text-slate-500">{new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+                {/* DEBUG SECTION */}
+                <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
+                    <p className="text-white font-bold mb-2">DEBUG CALCULATION:</p>
+                    <p>Age Restricted: {ageRestricted ? 'ON' : 'OFF'}</p>
+                    <p>Calculated Total: €{metrics.thisMonthTotal.toFixed(2)}</p>
+                    <p className="mt-2 mb-1 text-white">Receipts included in this month:</p>
+                    <div className="space-y-1">
+                        {(metrics.thisMonthReceipts || []).map((r, i) => (
+                            <div key={i} className="flex justify-between border-b border-white/5 pb-1">
+                                <span>{r.date} - {r.storeName}</span>
+                                <span>€{r.total.toFixed(2)}</span>
+                            </div>
+                        ))}
+                        {metrics.thisMonthReceipts.length === 0 && <p>No receipts found for this month.</p>}
+                    </div>
+
+                    <p className="mt-4 mb-1 text-white border-t border-white/10 pt-2">Last 5 Receipts (All Time):</p>
+                    <div className="space-y-1">
+                        {(receipts || []).slice(0, 5).map((r, i) => (
+                            <div key={i} className="flex justify-between border-b border-white/5 pb-1">
+                                <span>{r.date} - {r.storeName}</span>
+                                <span>€{r.total.toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                <p className="mt-4 mb-1 text-white border-t border-white/10 pt-2">Last 5 Receipts (All Time):</p>
-                <div className="space-y-1">
-                    {(receipts || []).slice(0, 5).map((r, i) => (
-                        <div key={i} className="flex justify-between border-b border-white/5 pb-1">
-                            <span>{r.date} - {r.storeName}</span>
-                            <span>€{r.total.toFixed(2)}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="h-20"></div>
+            </div >
         </motion.div >
     );
 };

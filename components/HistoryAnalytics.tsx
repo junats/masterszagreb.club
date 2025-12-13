@@ -14,16 +14,9 @@ interface HistoryAnalyticsProps {
     childSupportMode: boolean;
 }
 
-const COLORS = {
-    [Category.NECESSITY]: '#38bdf8', // Sky
-    [Category.FOOD]: '#4ade80',      // Green
-    [Category.LUXURY]: '#f472b6',    // Pink
-    [Category.HOUSEHOLD]: '#818cf8', // Indigo
-    [Category.HEALTH]: '#fb7185',    // Rose
-    [Category.TRANSPORT]: '#facc15', // Yellow
-    [Category.EDUCATION]: '#6366f1', // Indigo
-    [Category.OTHER]: '#94a3b8',     // Slate
-};
+import { CATEGORY_COLORS } from '../constants/colors';
+
+const COLORS = CATEGORY_COLORS;
 
 const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestricted, categoryBudgets, childSupportMode }) => {
     const [activeTab, setActiveTab] = useState<'trend' | 'child' | 'dist' | 'sources' | 'budgets'>('trend');

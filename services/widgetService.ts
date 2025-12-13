@@ -2,13 +2,13 @@ import { registerPlugin, Capacitor } from '@capacitor/core';
 import { Receipt } from '../types';
 
 // Define the custom plugin interface
-interface TrueTrackWidgetPlugin {
-    testEcho(options: { value: string }): Promise<{ value: string }>;
+export interface TrueTrackWidgetPlugin {
+    echo123(options: { value: string }): Promise<{ value: string }>;
     ping(options: {}): Promise<{ value: string }>;
     setWidgetData(options: { key: string; value: string }): Promise<{ success: boolean; error?: string; filePath?: string }>;
 }
 
-const TrueTrackWidget = registerPlugin<TrueTrackWidgetPlugin>('TrueTrackWidget');
+const TrueTrackWidget = registerPlugin<TrueTrackWidgetPlugin>('TrueTrackWidgetPlugin');
 
 // DEBUG: Log available plugins
 console.log('--- AVAILABLE PLUGINS ---');
@@ -26,14 +26,19 @@ interface WidgetData {
 
 export const WidgetService = {
     async ping() {
-        return TrueTrackWidget.ping({});
+        return await TrueTrackWidget.ping({});
+    },
+
+    async echo123(options: { value: string }) {
+        return await TrueTrackWidget.echo123(options);
     },
 
     async echo(value: string) {
-        return TrueTrackWidget.testEcho({ value });
+        return TrueTrackWidget.echo123({ value });
     },
 
     async updateWidgetData(receipts: Receipt[], monthlyBudget: number) {
+        console.log('Available Plugins:', Object.keys(Capacitor.Plugins));
         try {
             const now = new Date();
             const currentMonth = now.getMonth();

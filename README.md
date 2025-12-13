@@ -1,9 +1,24 @@
-
 # 🛡️ TrueTrack
 
-> **Protecting Fathers. Verifying Provision.**
+> **Financial Discipline. Verified Provision. Peace of Mind.**
 
-TrueTrack is a specialized expense tracking and document verification application designed specifically for single fathers. It serves as a digital "Safe Harbor," allowing users to scan receipts, automatically categorize expenses (distinguishing between Child Necessity and Luxury), and build a verifiable log of financial provision.
+TrueTrack is a precision financial tracking and discipline tool designed for parents who demand control over their finances. While it serves as a powerful "evidence generator" for co-parenting situations, its core mission is to help you master your budget, track discipline habits, and maintain a verifiable log of your financial life.
+
+---
+
+## 💎 Coparent Pro Support
+
+Elevate your tracking experience with **Coparent Pro**, a suite of quality-of-life features designed to turn financial discipline into a premium experience.
+
+### 🌟 Quality of Life Features
+*   **Ambient Mode:** Dynamic, mood-based lighting effects that react to your spending health.
+*   **Goals & Habits:** Track daily disciplines (e.g., "No Junk Food," "Gym," "Savings") alongside your finances.
+*   **Category Budgets:** Set precise monthly limits for specific spending categories (e.g., Dining, Entertainment).
+
+### 🛡️ Advanced Protection
+*   **Provision Analysis:** Automated reports proving your financial contribution to your child's well-being.
+*   **Parental Controls:** specialized filtering to omit 18+ items (alcohol, tobacco) from shared reports.
+*   **Evidence Export:** One-click CSV/PDF generation for legal counsel or mediation.
 
 ---
 
@@ -37,13 +52,13 @@ npx cap open android
 
 ## 💡 The Vision
 
-Single fathers often face the burden of proof when demonstrating financial support for their children during custody agreements or legal disputes. TrueTrack shifts the paradigm from "tracking spending" to **"verifying provision."**
+TrueTrack combines rigorous financial tracking with the "soft power" of wellness and discipline. Whether you are navigating a complex custody arrangement or simply striving for financial independence, TrueTrack provides the data you need.
 
 ### Key Problem Solvers:
-1.  **Legal Evidence Generation:** Automatically calculates an "Evidence Score" based on the consistency and ratio of essential spending.
-2.  **AI-Powered Classification:** Uses Google Gemini AI to read receipts and bills, detecting store names, dates, and line items, and categorizing them (e.g., distinguishing "School Supplies" from "Alcohol").
-3.  **Parental Control Mode:** A specialized feature that filters out age-restricted items (18+) from reports and charts to ensure shared financial logs remain appropriate for family courts or ex-partners.
-4.  **Local Support Network:** Geolocation-based resource finder for legal aid, mental health support, and social services.
+1.  **Precision Budgeting:** Go beyond simple tracking. Set hard limits, visualize categories, and get haptic feedback on your spending health.
+2.  **Habit Stacking:** Monitor lifestyle choices (smoking, fast food, gaming) that impact both your wallet and your well-being.
+3.  **AI-Powered Classification:** Uses Google Gemini AI to read receipts and bills, detecting store names, dates, and line items with near-perfect accuracy.
+4.  **Legal Readiness:** Automatically calculates an "Evidence Score" based on consistency, ensuring you are always prepared if legal need arises.
 
 ---
 
@@ -82,13 +97,14 @@ Single fathers often face the burden of proof when demonstrating financial suppo
 │   │   └── supabaseClient.ts # Database Connection (Crash-proof implementation)
 │   ├── services/
 │   │   ├── authService.ts    # Authentication Logic (Mock + Real)
+│   │   ├── widgetService.ts  # iOS Native Widget Integration
 │   │   └── geminiService.ts  # AI Integration for Receipt Analysis
 │   └── components/
 │       ├── AuthScreen.tsx      # Login/Signup UI
 │       ├── Dashboard.tsx       # Main Bento Grid, Analytics & Charts
 │       ├── ReceiptScanner.tsx  # Camera/Gallery Interface & Image Optimization
 │       ├── HistoryView.tsx     # List, Search, Detail View & Manual Editing
-│       ├── Settings.tsx        # User Preferences, Budget, Data Export
+│       ├── Settings.tsx        # Pro Controls, Budgeting, Habits
 │       ├── SupportView.tsx     # Geolocation-based Help Resources
 │       ├── Navigation.tsx      # Bottom Tab Bar
 │       └── SubscriptionModal.tsx # Paywall UI
@@ -96,7 +112,7 @@ Single fathers often face the burden of proof when demonstrating financial suppo
 
 ---
 
-## ✨ Key Features
+## ✨ Core Features
 
 ### 1. Smart Scan & Deduplication
 *   **Unified Scanner:** Auto-detects if a document is a "Shopping Receipt" or "Utility/Tuition Bill".

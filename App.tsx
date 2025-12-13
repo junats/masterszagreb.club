@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
 import Navigation from './components/Navigation';
+import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import ReceiptScanner from './components/ReceiptScanner';
@@ -14,7 +15,7 @@ import ProvisionAnalysis from './components/ProvisionAnalysis';
 import SettlementView from './components/SettlementView';
 import CustodyCalendar from './components/CustodyCalendar';
 import IntroTour from './components/IntroTour';
-import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType } from './types';
+import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType, CustodyStatus } from './types';
 import { authService, isMockMode } from './services/authService';
 import { Database, X, Shield } from 'lucide-react';
 import { AmbientBackground } from './components/AmbientBackground';
@@ -76,11 +77,13 @@ const App: React.FC = () => {
   const [custodyDays, setCustodyDays] = useState<CustodyDay[]>([]);
   const [goals, setGoals] = useState<Goal[]>(DEFAULT_GOALS);
   const [showTour, setShowTour] = useState(false);
-  const [ambientMode, setAmbientMode] = useState(true); // Master switch
+  const [ambientMode, setAmbientMode] = useState(false); // Master switch
   const [showGlobalAmbient, setShowGlobalAmbient] = useState(true); // App background specific
   const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
   const [direction, setDirection] = useState(0);
   const [dataVersion, setDataVersion] = useState(0);
+  const [helpEnabled, setHelpEnabled] = useState(false);
+
 
   const handleViewReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
@@ -90,7 +93,7 @@ const App: React.FC = () => {
   // Helper to handle view changes with direction
   const handleSetView = (newView: ViewState) => {
     HapticService.impact(ImpactStyle.Light);
-    const navOrder = ['dashboard', 'scan', 'history', ...(childSupportMode ? ['support'] : []), 'settings'];
+    const navOrder = ['dashboard', 'scan', 'history', ...(helpEnabled ? ['support'] : []), 'settings'];
     const currentIndex = navOrder.indexOf(currentView);
     const newIndex = navOrder.indexOf(newView);
 
@@ -245,6 +248,18 @@ const App: React.FC = () => {
     };
     loadData();
   }, []);
+
+  // Sync Widget Data
+  useEffect(() => {
+    const syncWidget = async () => {
+      try {
+        await WidgetService.updateWidgetData(receipts, monthlyBudget);
+      } catch (e) {
+        console.error("Widget sync failed:", e);
+      }
+    };
+    syncWidget();
+  }, [receipts, monthlyBudget]);
 
   useEffect(() => {
     const saveReceipts = async () => {
@@ -602,7 +617,49 @@ const App: React.FC = () => {
     });
     setCategoryBudgets(newCategoryBudgets);
 
-    alert("Added comprehensive dummy data for the last 30 days!");
+    // Generate Custody Data (Past 30 days + Future 60 days)
+    const newCustodyDays: CustodyDay[] = [];
+    const today = new Date();
+
+    // Generate data for range -30 to +60
+    for (let d = -30; d < 60; d++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + d);
+      const dateStr = date.toISOString().split('T')[0];
+
+      // Simple 3-day rotation for variety
+      // Using timestamp ensures consistent pattern
+      const rotationIndex = Math.floor(date.getTime() / (1000 * 60 * 60 * 24));
+      const status: CustodyStatus = (Math.floor(rotationIndex / 3) % 2 === 0) ? 'me' : 'partner';
+
+      // Partial chance for 'split' on transition days? Keep simple for now.
+
+      const activities: any[] = [];
+      const dayOfWeek = date.getDay();
+
+      // Add random activities
+      if (dayOfWeek === 6 && Math.random() > 0.3) { // Saturday
+        activities.push({ id: `act_${dateStr}_1`, title: 'Soccer Match', type: 'sport', startTime: '10:00' });
+      }
+      if (dayOfWeek === 2 && Math.random() > 0.5) { // Tuesday
+        activities.push({ id: `act_${dateStr}_2`, title: 'Piano Lesson', type: 'school', startTime: '16:00' });
+      }
+      if (Math.random() > 0.9) {
+        activities.push({ id: `act_${dateStr}_3`, title: 'Doctor Visit', type: 'other', startTime: '14:00' });
+      }
+
+      newCustodyDays.push({
+        date: dateStr,
+        status: status,
+        activities: activities
+      });
+    }
+
+    setCustodyDays(newCustodyDays);
+    setChildSupportMode(true); // Enable Co-Parenting features so user sees the calendar
+    // setAmbientMode(true); // Ensure ambient is on for "Good" demo - DISABLED per user request
+
+    alert("Added comprehensive dummy data (Receipts & Custody)!");
   };
 
   const handleUpdateCustodyDay = (day: CustodyDay) => {
@@ -663,6 +720,39 @@ const App: React.FC = () => {
   if (!user) {
     return <AuthScreen onLogin={handleLogin} />;
   }
+
+
+  const handleUpdateUser = async (updates: Partial<User>) => {
+    console.log('App: handleUpdateUser called', { updatesKeys: Object.keys(updates) });
+    if (!user) {
+      console.error('App: handleUpdateUser failed - No user logged in');
+      return;
+    }
+    const updatedUser = { ...user, ...updates };
+    console.log('App: Setting new user state', { id: updatedUser.id, name: updatedUser.name, nickname: updatedUser.nickname });
+    setUser(updatedUser);
+
+    // Persist to storage (matches authService logic)
+    try {
+      // 1. Update Session
+      await Preferences.set({ key: 'truetrack_session', value: JSON.stringify(updatedUser) });
+
+      // 2. Update Mock User List (if in mock mode)
+      const { value: storedUsersStr } = await Preferences.get({ key: 'truetrack_mock_users' });
+      if (storedUsersStr) {
+        let storedUsers = JSON.parse(storedUsersStr);
+        if (Array.isArray(storedUsers)) {
+          const userIndex = storedUsers.findIndex((u: User) => u.id === user.id);
+          if (userIndex >= 0) {
+            storedUsers[userIndex] = { ...storedUsers[userIndex], ...updates };
+            await Preferences.set({ key: 'truetrack_mock_users', value: JSON.stringify(storedUsers) });
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to persist user update", e);
+    }
+  };
 
   const renderView = () => {
     switch (currentView) {
@@ -734,7 +824,7 @@ const App: React.FC = () => {
               </button>
             </div> */}
             <Dashboard
-              key={`dashboard-${dataVersion}-${receipts.length}-${monthlyBudget}-${ageRestricted}`}
+              key={`dashboard-${dataVersion}-${receipts.length}-${monthlyBudget}-${ageRestricted}-${childSupportMode}`}
               receipts={receipts}
               monthlyBudget={monthlyBudget}
               ageRestricted={ageRestricted}
@@ -809,8 +899,14 @@ const App: React.FC = () => {
       case 'settings':
         return (
           <Settings
+            helpEnabled={helpEnabled}
+            setHelpEnabled={setHelpEnabled}
             monthlyBudget={monthlyBudget}
             setMonthlyBudget={setMonthlyBudget}
+            user={user!}
+            onSignOut={handleSignOut}
+            onUpgrade={handleUpgrade}
+            onDeleteAll={handleDeleteAllReceipts}
             categoryBudgets={categoryBudgets}
             setCategoryBudgets={setCategoryBudgets}
             ageRestricted={ageRestricted}
@@ -819,26 +915,43 @@ const App: React.FC = () => {
             setChildSupportMode={setChildSupportMode}
             categories={categories}
             setCategories={setCategories}
-            user={user}
-            onSignOut={handleSignOut}
-            onUpgrade={handleUpgrade}
-            onDeleteAll={handleDeleteAllReceipts}
+            recurringExpenses={recurringExpenses}
+            setRecurringExpenses={setRecurringExpenses}
             goals={goals}
             setGoals={setGoals}
             setReceipts={setReceipts}
             onSeedData={generateDummyData}
             ambientMode={ambientMode}
-            setAmbientMode={(value) => {
-              console.log('App: setAmbientMode called', value);
-              setAmbientMode(value);
-            }}
+            setAmbientMode={setAmbientMode}
             showGlobalAmbient={showGlobalAmbient}
             setShowGlobalAmbient={setShowGlobalAmbient}
+            onUpdateUser={handleUpdateUser}
+            setCustodyDays={setCustodyDays}
           />
         );
       default:
         // Force re-render when switching back to dashboard to trigger animations
-        return <Dashboard receipts={receipts} monthlyBudget={monthlyBudget} ageRestricted={ageRestricted} onViewReceipt={handleViewReceipt} onProvisionClick={() => setCurrentView('provision')} goals={goals} ambientMode={ambientMode} />;
+        return (
+          <Dashboard
+            receipts={receipts}
+            monthlyBudget={monthlyBudget}
+            ageRestricted={ageRestricted}
+            childSupportMode={childSupportMode}
+            categories={categories}
+            categoryBudgets={categoryBudgets}
+            recurringExpenses={recurringExpenses}
+            setRecurringExpenses={setRecurringExpenses}
+            onViewReceipt={handleViewReceipt}
+            onProvisionClick={() => setCurrentView('provision')}
+            onCustodyClick={() => setCurrentView('custody')}
+            onSettlementClick={() => setCurrentView('settlement')}
+            onHabitsClick={() => setCurrentView('settings')} // Placeholder
+            goals={goals}
+            custodyDays={custodyDays}
+            ambientMode={ambientMode}
+            user={user!}
+          />
+        );
     }
   };
 
@@ -850,6 +963,16 @@ const App: React.FC = () => {
     >
       {ambientMode && showGlobalAmbient && <AmbientBackground spendRatio={spendRatio} />}
 
+
+      {/* Global Header */}
+      {user && (
+        <Header
+          user={user}
+          currentView={currentView}
+          onAvatarClick={() => setCurrentView('settings')}
+          ageRestricted={ageRestricted}
+        />
+      )}
 
       {isMockMode && showDevBanner && (
         <div className="bg-indigo-900/90 text-indigo-100 text-[10px] py-1 px-3 text-center border-b border-indigo-500/30 flex items-center justify-between relative z-50 backdrop-blur-sm">
@@ -889,7 +1012,7 @@ const App: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      <Navigation currentView={currentView} setView={handleSetView} isVisible={!!user} childSupportMode={childSupportMode} />
+      <Navigation currentView={currentView} setView={handleSetView} isVisible={true} childSupportMode={childSupportMode} helpEnabled={helpEnabled} />
       {/* Intro Tour Overlay */}
       {showTour && <IntroTour onComplete={handleTourComplete} />}
     </div>

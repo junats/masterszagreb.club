@@ -81,10 +81,48 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
         }
     };
 
+    // Navigation State
+    const [viewMode, setViewMode] = useState<'day' | 'month' | 'year' | 'all'>('all');
+    const [currentDate, setCurrentDate] = useState(new Date());
+
     // Filter States
-    const [dateFilter, setDateFilter] = useState<'all' | 'thisMonth' | 'lastMonth' | 'thisYear'>('all');
     const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
     const [childFilter, setChildFilter] = useState(false);
+
+    // Date Navigation Helpers
+    const navigateTime = (direction: -1 | 1) => {
+        const newDate = new Date(currentDate);
+        if (viewMode === 'day') {
+            newDate.setDate(newDate.getDate() + direction);
+        } else if (viewMode === 'month') {
+            newDate.setMonth(newDate.getMonth() + direction);
+        } else if (viewMode === 'year') {
+            newDate.setFullYear(newDate.getFullYear() + direction);
+        }
+        setCurrentDate(newDate);
+    };
+
+    const isToday = (date: Date) => {
+        const today = new Date();
+        return date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
+    };
+
+    const getFormattedDateRange = () => {
+        if (viewMode === 'all') return 'All Time';
+        if (viewMode === 'day') {
+            if (isToday(currentDate)) return 'Today';
+            return currentDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+        if (viewMode === 'month') {
+            return currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        }
+        if (viewMode === 'year') {
+            return currentDate.getFullYear().toString();
+        }
+        return '';
+    };
 
     const filteredReceipts = useMemo(() => {
         return receipts.filter(r => {
@@ -94,24 +132,24 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
             if (!matchesSearch) return false;
 
             // 2. Date Filter
-            const d = new Date(r.date);
-            const now = new Date();
-            if (dateFilter === 'thisMonth') {
-                if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
-            } else if (dateFilter === 'lastMonth') {
-                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                if (d.getMonth() !== lastMonth.getMonth() || d.getFullYear() !== lastMonth.getFullYear()) return false;
-            } else if (dateFilter === 'thisYear') {
-                if (d.getFullYear() !== now.getFullYear()) return false;
+            if (viewMode !== 'all') {
+                const rDate = new Date(r.date);
+                if (viewMode === 'day') {
+                    if (rDate.toDateString() !== currentDate.toDateString()) return false;
+                } else if (viewMode === 'month') {
+                    if (rDate.getMonth() !== currentDate.getMonth() || rDate.getFullYear() !== currentDate.getFullYear()) return false;
+                } else if (viewMode === 'year') {
+                    if (rDate.getFullYear() !== currentDate.getFullYear()) return false;
+                }
             }
 
-            // 3. Category Filter (Check if ANY item matches)
+            // 3. Category Filter
             if (categoryFilter !== 'all') {
                 const hasCategory = r.items.some(i => i.category === categoryFilter && (!ageRestricted || !i.isRestricted));
                 if (!hasCategory) return false;
             }
 
-            // 4. Child Filter (Check if ANY item is child related)
+            // 4. Child Filter
             if (childFilter) {
                 const hasChildItem = r.items.some(i => i.isChildRelated && (!ageRestricted || !i.isRestricted));
                 if (!hasChildItem) return false;
@@ -119,7 +157,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
 
             return true;
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [receipts, searchTerm, dateFilter, categoryFilter, childFilter, ageRestricted]);
+    }, [receipts, searchTerm, viewMode, currentDate, categoryFilter, childFilter, ageRestricted]);
 
     const stats = useMemo(() => {
         let childTotal = 0;
@@ -219,7 +257,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
         return (
 
             <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out">
-                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-4 pb-24">
+                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-20 pb-24">
                     <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
                         &larr; Back to History
                     </button>
@@ -486,11 +524,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
     }
 
     return (
-        <div className="flex flex-col h-full px-4 pt-4 pb-32 bg-background">
-            <div className="mb-6">
-                <h1 className="text-3xl font-heading font-extrabold text-white tracking-tight mb-2">History</h1>
-                <p className="text-slate-300 text-sm font-medium mb-4">Review receipts and bills {ageRestricted && <span className="text-amber-500">(Filtered)</span>}</p>
-            </div>
+        <div className="flex flex-col h-full px-4 pt-20 pb-32 bg-background">
+
 
             {/* Filters */}
             <div className="mb-4 space-y-3">
@@ -517,16 +552,33 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                 {/* Filter Chips */}
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                     {/* Date Filter */}
-                    <select
-                        value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value as any)}
-                        className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-primary/50"
-                    >
-                        <option value="all">All Time</option>
-                        <option value="thisMonth">This Month</option>
-                        <option value="lastMonth">Last Month</option>
-                        <option value="thisYear">This Year</option>
-                    </select>
+                    {/* Time View Mode */}
+                    <div className="flex bg-surface border border-white/10 rounded-lg p-1 gap-1">
+                        {(['all', 'year', 'month', 'day'] as const).map(mode => (
+                            <button
+                                key={mode}
+                                onClick={() => setViewMode(mode)}
+                                className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors duration-200 ${viewMode === mode ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                {mode}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Navigation Controls (Only if not All) */}
+                    {viewMode !== 'all' && (
+                        <div className="flex items-center gap-2 bg-surface border border-white/10 rounded-lg p-1">
+                            <button onClick={() => navigateTime(-1)} className="p-1 hover:bg-white/5 rounded text-slate-400 hover:text-white transition-colors">
+                                <ChevronRight size={14} className="rotate-180" />
+                            </button>
+                            <span className="text-xs font-bold text-white min-w-[80px] text-center tabular-nums">
+                                {getFormattedDateRange()}
+                            </span>
+                            <button onClick={() => navigateTime(1)} className="p-1 hover:bg-white/5 rounded text-slate-400 hover:text-white transition-colors">
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Category Filter */}
                     <select
@@ -552,7 +604,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+            <div className="flex-1 overflow-y-auto no-scrollbar pt-2 pb-24 relative z-10">
                 {showStats && filteredReceipts.length > 0 && (
                     <HistoryAnalytics receipts={filteredReceipts} ageRestricted={ageRestricted} categoryBudgets={categoryBudgets} childSupportMode={childSupportMode} />
                 )}

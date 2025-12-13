@@ -99,30 +99,25 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
   const processImage = async (blob: Blob, fileName: string = 'camera_capture.jpg') => {
     try {
-      console.log(`📸 Processing image, size: ${blob.size} bytes`);
+      // console.log(`📸 Processing image, size: ${blob.size} bytes`);
 
       // 1. Optimize Image (Resize & Compress) -> Blob
-      console.log('🔄 Step 1: Optimizing image...');
+
+
       const processedBlob = await optimizeImage(blob);
-      console.log('✅ Step 1 complete, blob size:', processedBlob.size);
 
       // 2. Convert to Base64 for Gemini Analysis
-      console.log('🔄 Step 2: Converting to base64...');
+
       const base64ForAI = await blobToBase64(processedBlob);
-      console.log('✅ Step 2 complete, base64 length:', base64ForAI.length);
 
       // 3. Analyze with Unified Smart Service
-      console.log('🔄 Step 3: Calling analyzeReceiptImage...');
       const result: AnalysisResult = await analyzeReceiptImage(base64ForAI, categories);
-      console.log('✅ Step 3 complete, result:', result);
 
       // 4. Upload Image via Storage Service (Cloud or Mock)
-      console.log('🔄 Step 4: Uploading to storage...');
       let storagePath = '';
       let imageUrl = '';
       try {
         storagePath = await storageService.uploadReceiptImage(processedBlob, userId);
-        console.log('✅ Step 4 complete, path:', storagePath);
         // Store base64 representation as fallback and for duplicate detection
         imageUrl = `data:image/jpeg;base64,${base64ForAI}`;
       } catch (uploadError) {
@@ -302,7 +297,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   }
 
   return (
-    <div className="flex flex-col h-full px-4 pt-4 pb-40 bg-background">
+    <div className="flex flex-col h-full px-4 pt-32 pb-40 bg-background">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -313,9 +308,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           <div className="w-16 h-16 bg-surfaceHighlight rounded-2xl mx-auto flex items-center justify-center mb-4 ring-1 ring-white/10 shadow-lg shadow-black/50">
             <ScanLine size={32} className="text-primary" />
           </div>
-          <h2 className="text-2xl font-heading font-bold text-white tracking-tight">Scan Document</h2>
           <p className="text-slate-400 text-sm font-medium mt-1">Upload a Receipt or Bill.</p>
-          <p className="text-slate-500 text-xs mt-1">AI will automatically classify it for you.</p>
 
           {ageRestricted && (
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.1)]">

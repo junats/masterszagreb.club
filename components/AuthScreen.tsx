@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ArrowRight, Shield, FileText, User as UserIcon, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User as UserIcon, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { User } from '../types';
 import { authService, isMockMode } from '../services/authService';
 import { Preferences } from '@capacitor/preferences';
@@ -73,18 +73,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             <div className="w-full max-w-sm z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="text-center mb-10">
                     {/* Logo Composition */}
-                    <div className="relative w-24 h-24 mx-auto mb-6">
-                        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse"></div>
-                        <div className="relative w-full h-full flex items-center justify-center">
-                            <Shield className="w-24 h-24 text-[#020617] fill-white" strokeWidth={1.5} />
-                            <FileText className="w-9 h-9 text-[#020617] absolute" strokeWidth={2.5} />
+                    <div className="flex justify-center mb-6">
+                        <div className="w-24 h-24 bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(56,189,248,0.3)] ring-1 ring-white/20">
+                            <img src="/logo.png" alt="TrueTrack Logo" className="w-16 h-16 drop-shadow-md" />
                         </div>
                     </div>
 
                     <h1 className="text-4xl font-heading font-bold text-white mb-2 tracking-tighter">TrueTrack</h1>
-                    <p className="text-slate-400 font-medium tracking-tight">Protecting single parents. Verifying provision.</p>
+                    <p className="text-emerald-400 font-medium tracking-wide uppercase text-xs mb-4">Financial Neutrality For Modern Families</p>
+                    <p className="text-slate-400 font-medium tracking-tight">Co-parenting with confidence and clarity.</p>
                     <p className="text-xs text-slate-500 mt-3 max-w-[280px] mx-auto leading-relaxed">
-                        Secure your legal standing with AI-powered record keeping and restricted item filtering.
+                        Secure your legal standing with unbiased record keeping and verified shared expenses.
                     </p>
                 </div>
 

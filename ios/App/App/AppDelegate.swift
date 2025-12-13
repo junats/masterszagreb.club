@@ -7,19 +7,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        print("AppDelegate: didFinishLaunchingWithOptions STARTED - VERSION 5")
         // Override point for customization after application launch.
         
-        // FORCE LINKER TO INCLUDE TrueTrackWidgetImplementation
-        let _ = TrueTrackWidgetImplementation()
-        print("AppDelegate: Forced instantiation of TrueTrackWidgetImplementation")
+        // FORCE LINKER TO INCLUDE WidgetNative (Swift + ObjC)
+        ForceLoadWidgetNative()
         
-        if let protocolType = NSProtocolFromString("CAPBridgedPlugin") {
-            let conforms = TrueTrackWidgetImplementation.self.conforms(to: protocolType)
-            print("AppDelegate: TrueTrackWidgetPlugin conforms to CAPBridgedPlugin: \(conforms)")
-        } else {
-            print("AppDelegate: CAPBridgedPlugin protocol not found!")
+        let searchNames = ["EchoPlugin", "App.EchoPlugin", "TrueTrackWidgetPlugin", "App.TrueTrackWidgetPlugin"]
+        for name in searchNames {
+            if let cls = NSClassFromString(name) {
+                print("AppDelegate: SUCCESS - Found class: '\(name)'")
+            } else {
+                print("AppDelegate: Failed to find class: '\(name)'")
+            }
         }
-        
+
         return true
     }
 
