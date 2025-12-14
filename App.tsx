@@ -42,16 +42,16 @@ const DEFAULT_CATEGORIES: CategoryDefinition[] = [
 const DEFAULT_GOALS: Goal[] = [
   { id: 'junk_food', type: GoalType.JUNK_FOOD, name: 'Stop Junk Food', isEnabled: false, keywords: ['mcdonalds', 'kfc', 'burger king', 'pizza', 'chips', 'candy', 'chocolate', 'takeaway', 'fast food'], streak: 0, emoji: '🍔' },
   { id: 'alcohol', type: GoalType.ALCOHOL, name: 'Reduce Alcohol', isEnabled: false, keywords: ['beer', 'wine', 'vodka', 'whiskey', 'liquor', 'alcohol', 'pub', 'bar', 'off license'], streak: 0, emoji: '🍺' },
-  { id: 'smoking', type: GoalType.SMOKING, name: 'Quit Smoking', isEnabled: false, keywords: ['cigarettes', 'tobacco', 'vape', 'smoke', 'nicotine', 'cigar'], streak: 0, emoji: '🚬' },
-  { id: 'gaming', type: GoalType.GAMING, name: 'Limit Gaming', isEnabled: false, keywords: ['steam', 'playstation', 'xbox', 'nintendo', 'game', 'twitch', 'fortnite', 'roblox'], streak: 0, emoji: '🎮' },
+  { id: 'impulse_buy', type: GoalType.ONLINE_SHOPPING, name: 'Impulse Control', isEnabled: true, keywords: ['amazon', 'temu', 'shein', 'wish', 'aliexpress'], streak: 7, emoji: '🧠' }, // AI Based
+  { id: 'subscriptions', type: GoalType.STREAMING, name: 'Sub Fatigue', isEnabled: true, keywords: ['netflix', 'spotify', 'apple', 'adobe', 'prime', 'hulu', 'disney'], streak: 30, emoji: '📉' }, // AI Based
+  { id: 'late_night', type: GoalType.JUNK_FOOD, name: 'Late Night Eats', isEnabled: true, keywords: ['uber eats', 'deliveroo', 'just eat', 'dominos', 'mcdonalds'], streak: 3, emoji: '🌙' }, // AI Based
   { id: 'gambling', type: GoalType.GAMBLING, name: 'Stop Gambling', isEnabled: false, keywords: ['bet', 'casino', 'lottery', 'lotto', 'poker', 'bookmakers', 'ladbrokes', 'paddy power'], streak: 0, emoji: '🎰' },
   { id: 'caffeine', type: GoalType.CAFFEINE, name: 'Cut Caffeine', isEnabled: false, keywords: ['coffee', 'starbucks', 'costa', 'espresso', 'latte', 'caffeine', 'energy drink', 'red bull', 'monster'], streak: 0, emoji: '☕' },
   { id: 'sugar', type: GoalType.SUGAR, name: 'Reduce Sugar', isEnabled: false, keywords: ['sugar', 'cake', 'cookies', 'donuts', 'sweets', 'soda', 'coke', 'pepsi', 'ice cream'], streak: 0, emoji: '🍩' },
-  { id: 'online_shopping', type: GoalType.ONLINE_SHOPPING, name: 'Limit Online Shopping', isEnabled: false, keywords: ['amazon', 'ebay', 'temu', 'shein', 'asos', 'online order'], streak: 0, emoji: '🛍️' },
+  { id: 'tech_spend', type: GoalType.ONLINE_SHOPPING, name: 'Tech Detox', isEnabled: false, keywords: ['apple', 'currys', 'pc world', 'steam', 'game', 'amazon'], streak: 0, emoji: '🔌' },
   { id: 'fast_fashion', type: GoalType.FAST_FASHION, name: 'Avoid Fast Fashion', isEnabled: false, keywords: ['zara', 'h&m', 'primark', 'shein', 'boohoo', 'forever 21'], streak: 0, emoji: '👗' },
-  { id: 'ride_sharing', type: GoalType.RIDE_SHARING, name: 'Less Ride Sharing', isEnabled: false, keywords: ['uber', 'lyft', 'taxi', 'bolt', 'freenow'], streak: 0, emoji: '🚕' },
-  { id: 'streaming', type: GoalType.STREAMING, name: 'Control Subscriptions', isEnabled: false, keywords: ['netflix', 'spotify', 'disney', 'hulu', 'prime video', 'apple tv', 'youtube premium'], streak: 0, emoji: '📺' },
-  { id: 'savings', type: GoalType.SAVINGS, name: 'Boost Savings', isEnabled: false, keywords: [], streak: 0, emoji: '💰' },
+  { id: 'ride_sharing', type: GoalType.RIDE_SHARING, name: 'Walk More', isEnabled: false, keywords: ['uber', 'lyft', 'taxi', 'bolt', 'freenow'], streak: 0, emoji: '🚶' },
+  { id: 'savings', type: GoalType.SAVINGS, name: 'Boost Savings', isEnabled: true, keywords: [], streak: 15, emoji: '💰' },
 ];
 
 const getReceiptSignature = (r: Receipt) => {
@@ -444,224 +444,30 @@ const App: React.FC = () => {
     }
   };
 
+
   // --- DEV TOOLS ---
-  const generateDummyData = () => {
-    const dummyProducts = [
-      // --- NECESSITY ---
-      { name: 'Rent Payment', price: 1200.00, store: 'Landlord', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Electricity Bill', price: 145.50, store: 'Electric Ireland', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Gas Bill', price: 85.20, store: 'Bord Gais', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Internet Bill', price: 60.00, store: 'Virgin Media', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Mobile Phone Bill', price: 45.00, store: 'Vodafone', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Car Insurance', price: 80.00, store: 'AXA', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Work Boots', price: 110.00, store: 'Workwear Store', category: Category.NECESSITY, goalType: undefined },
+  const generateDummyData = (scenario: 'good' | 'average' | 'bad' = 'average') => {
+    import('./utils/seedData').then(({ generateScenarioData }) => {
+      // Clear existing data first
+      setReceipts([]);
+      setGoals([]);
+      setCustodyDays([]);
 
-      // --- FOOD (Groceries) ---
-      { name: 'Weekly Groceries', price: 154.32, store: 'Tesco', category: Category.FOOD, goalType: undefined },
-      { name: 'Milk & Bread', price: 5.50, store: 'Spar', category: Category.FOOD, goalType: undefined },
-      { name: 'Chicken Fillets', price: 12.00, store: 'Lidl', category: Category.FOOD, goalType: undefined },
-      { name: 'Fresh Vegetables', price: 8.45, store: 'Aldi', category: Category.FOOD, goalType: undefined },
-      { name: 'Cereal & Milk', price: 6.75, store: 'Dunnes Stores', category: Category.FOOD, goalType: undefined },
-      { name: 'Butcher Meat Pack', price: 45.00, store: 'Local Butcher', category: Category.FOOD, goalType: undefined },
-      { name: 'Fruit Basket', price: 15.00, store: 'SuperValu', category: Category.FOOD, goalType: undefined },
+      // Generate new data
+      const { receipts: newReceipts, custodyDays: newCustodyDays, goals: newGoals, monthlyBudget: newBudget } = generateScenarioData(scenario, 3); // 3 Months
 
-      // --- DINING (Restaurants/Takeaway/Cafe) ---
-      { name: 'Big Mac Meal', price: 9.50, store: 'McDonalds', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
-      { name: 'Pepperoni Pizza', price: 18.00, store: 'Dominos', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
-      { name: 'Chicken Bucket', price: 24.00, store: 'KFC', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
-      { name: 'Whopper Meal', price: 10.20, store: 'Burger King', category: Category.DINING, goalType: GoalType.JUNK_FOOD },
-      { name: 'Cappuccino & Muffin', price: 8.50, store: 'Starbucks', category: Category.DINING, goalType: GoalType.CAFFEINE },
-      { name: 'Latte', price: 4.20, store: 'Costa Coffee', category: Category.DINING, goalType: GoalType.CAFFEINE },
-      { name: 'Sushi Platter', price: 32.00, store: 'Sushi Bar', category: Category.DINING, goalType: undefined },
-      { name: 'Indian Takeaway', price: 45.50, store: 'Spice of India', category: Category.DINING, goalType: undefined },
-      { name: 'Thai Curry', price: 16.50, store: 'Camile Thai', category: Category.DINING, goalType: undefined },
-      { name: 'Burrito Bowl', price: 11.50, store: 'Boojum', category: Category.DINING, goalType: undefined },
-      { name: 'Brunch with Friends', price: 28.00, store: 'Local Cafe', category: Category.DINING, goalType: undefined },
+      // Small timeout to ensure state flush logic (optional but safer for "delete then add" perception)
+      setTimeout(() => {
+        setReceipts(newReceipts);
+        setCustodyDays(newCustodyDays);
+        setGoals(newGoals);
+        setMonthlyBudget(newBudget);
 
-      // --- ALCOHOL ---
-      { name: 'Heineken Slab (24)', price: 45.00, store: 'Tesco', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Guinness 8 Pack', price: 16.00, store: 'SuperValu', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Bottle of Vodka', price: 28.00, store: 'Off License', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Gin & Tonic Mix', price: 35.00, store: 'Off License', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Craft Beer Flight', price: 18.00, store: 'Brewery Bar', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Bottle of Red Wine', price: 14.00, store: 'Lidl', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Prosecco', price: 12.00, store: 'Aldi', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-      { name: 'Whiskey Bottle', price: 45.00, store: 'Jameson Distillery', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL },
-
-      // --- LUXURY ---
-      { name: 'Cinema Tickets', price: 24.00, store: 'Odeon', category: Category.LUXURY, goalType: undefined },
-      { name: 'Netflix Subscription', price: 15.99, store: 'Netflix', category: Category.LUXURY, goalType: GoalType.STREAMING },
-      { name: 'Spotify Premium', price: 10.99, store: 'Spotify', category: Category.LUXURY, goalType: GoalType.STREAMING },
-      { name: 'Video Game', price: 69.99, store: 'GameStop', category: Category.LUXURY, goalType: GoalType.GAMING },
-      { name: 'Steam Wallet', price: 20.00, store: 'Steam', category: Category.LUXURY, goalType: GoalType.GAMING },
-      { name: 'Designer T-Shirt', price: 85.00, store: 'Brown Thomas', category: Category.LUXURY, goalType: GoalType.FAST_FASHION },
-      { name: 'New Headphones', price: 150.00, store: 'Currys', category: Category.LUXURY, goalType: undefined },
-      { name: 'Concert Tickets', price: 220.00, store: 'Ticketmaster', category: Category.LUXURY, goalType: undefined },
-      { name: 'Lego Set', price: 120.00, store: 'Smyths Toys', category: Category.LUXURY, goalType: undefined },
-      { name: 'Perfume', price: 90.00, store: 'Boots', category: Category.LUXURY, goalType: undefined },
-      { name: 'Online Bet', price: 50.00, store: 'Paddy Power', category: Category.LUXURY, goalType: GoalType.GAMBLING },
-      { name: 'Lottery Ticket', price: 10.00, store: 'Newsagent', category: Category.LUXURY, goalType: GoalType.GAMBLING },
-
-      // --- HOUSEHOLD ---
-      { name: 'Cleaning Supplies', price: 25.00, store: 'Tesco', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Toilet Paper Bulk', price: 12.00, store: 'Lidl', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Laundry Detergent', price: 14.00, store: 'Dunnes', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'New Pillows', price: 30.00, store: 'IKEA', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Kitchen Utensils', price: 45.00, store: 'Homestore', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Batteries', price: 8.00, store: 'Dealz', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Light Bulbs', price: 12.00, store: 'Woodies', category: Category.HOUSEHOLD, goalType: undefined },
-
-      // --- HEALTH ---
-      { name: 'Prescription Meds', price: 25.00, store: 'Boots Pharmacy', category: Category.HEALTH, goalType: undefined },
-      { name: 'Vitamins', price: 18.00, store: 'Holland & Barrett', category: Category.HEALTH, goalType: undefined },
-      { name: 'GP Visit', price: 60.00, store: 'Medical Centre', category: Category.HEALTH, goalType: undefined },
-      { name: 'Dentist Checkup', price: 80.00, store: 'Dental Practice', category: Category.HEALTH, goalType: undefined },
-      { name: 'Gym Membership', price: 45.00, store: 'Flyefit', category: Category.HEALTH, goalType: undefined },
-      { name: 'Protein Powder', price: 55.00, store: 'Supplement Store', category: Category.HEALTH, goalType: undefined },
-
-      // --- TRANSPORT ---
-      { name: 'Petrol Refill', price: 75.00, store: 'Circle K', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Diesel Refill', price: 80.00, store: 'Applegreen', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Bus Leap Card', price: 20.00, store: 'Dublin Bus', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Train Ticket', price: 35.00, store: 'Irish Rail', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Uber Ride', price: 18.50, store: 'Uber', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
-      { name: 'Taxi Fare', price: 22.00, store: 'FreeNow', category: Category.TRANSPORT, goalType: GoalType.RIDE_SHARING },
-      { name: 'Car Wash', price: 12.00, store: 'Maxol', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Parking Fee', price: 15.00, store: 'Q-Park', category: Category.TRANSPORT, goalType: undefined },
-
-      // --- EDUCATION ---
-      { name: 'School Books', price: 120.00, store: 'Easons', category: Category.EDUCATION, goalType: undefined },
-      { name: 'School Uniform', price: 85.00, store: 'Marks & Spencer', category: Category.EDUCATION, goalType: undefined },
-      { name: 'Stationery', price: 15.00, store: 'Reads', category: Category.EDUCATION, goalType: undefined },
-      { name: 'Music Lessons', price: 40.00, store: 'Music School', category: Category.EDUCATION, goalType: undefined },
-      { name: 'Online Course', price: 29.99, store: 'Udemy', category: Category.EDUCATION, goalType: undefined },
-
-      // --- OTHER ---
-      { name: 'Birthday Gift', price: 50.00, store: 'Amazon', category: Category.OTHER, goalType: GoalType.ONLINE_SHOPPING },
-      { name: 'Charity Donation', price: 20.00, store: 'Concern', category: Category.OTHER, goalType: undefined },
-      { name: 'Bank Fees', price: 6.00, store: 'AIB', category: Category.OTHER, goalType: undefined },
-      { name: 'Post Office', price: 12.00, store: 'An Post', category: Category.OTHER, goalType: undefined },
-
-      // --- PETS ---
-      { name: 'Dog Food', price: 45.00, store: 'PetMania', category: Category.HOUSEHOLD, goalType: undefined },
-      { name: 'Vet Visit', price: 85.00, store: 'Local Vet', category: Category.HEALTH, goalType: undefined },
-      { name: 'Cat Litter', price: 12.00, store: 'Maxi Zoo', category: Category.HOUSEHOLD, goalType: undefined },
-
-      // --- BEAUTY & GROOMING ---
-      { name: 'Haircut', price: 25.00, store: 'Barber Shop', category: Category.NECESSITY, goalType: undefined },
-      { name: 'Salon Visit', price: 120.00, store: 'Hair Salon', category: Category.LUXURY, goalType: undefined },
-      { name: 'Skincare', price: 45.00, store: 'Space NK', category: Category.LUXURY, goalType: undefined },
-
-      // --- TRAVEL ---
-      { name: 'Flight Booking', price: 150.00, store: 'Ryanair', category: Category.LUXURY, goalType: undefined },
-      { name: 'Hotel Stay', price: 200.00, store: 'Booking.com', category: Category.LUXURY, goalType: undefined },
-      { name: 'Airbnb', price: 180.00, store: 'Airbnb', category: Category.LUXURY, goalType: undefined },
-
-      // --- CAR MAINTENANCE ---
-      { name: 'NCT Booking', price: 55.00, store: 'NCT', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Car Service', price: 250.00, store: 'Mechanic', category: Category.TRANSPORT, goalType: undefined },
-      { name: 'Tyres', price: 180.00, store: 'Tyre Centre', category: Category.TRANSPORT, goalType: undefined },
-    ];
-
-    const newReceipts: Receipt[] = [];
-    const now = new Date();
-
-    // Generate receipts for the last 30 days (Broad Spectrum)
-    for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - dayOffset);
-      const dateStr = date.toISOString().split('T')[0];
-
-      // Random number of receipts per day (0 to 5)
-      // More receipts on weekends (Fri/Sat/Sun)
-      const dayOfWeek = date.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-      const dailyCount = isWeekend ? Math.floor(Math.random() * 4) + 2 : Math.floor(Math.random() * 3) + 1;
-
-      for (let i = 0; i < dailyCount; i++) {
-        const product = dummyProducts[Math.floor(Math.random() * dummyProducts.length)];
-
-        // Add some variance to price (±20%)
-        const variance = 1 + (Math.random() * 0.4 - 0.2);
-        const finalPrice = parseFloat((product.price * variance).toFixed(2));
-
-        // Add some child related items occasionally (20% chance)
-        const isChild = Math.random() < 0.2;
-
-        newReceipts.push({
-          id: `dummy_${Date.now()}_${dayOffset}_${i} `,
-          storeName: product.store,
-          date: dateStr,
-          total: finalPrice,
-          items: [{
-            name: product.name,
-            price: finalPrice,
-            quantity: 1,
-            category: product.category,
-            isChildRelated: isChild,
-            goalType: product.goalType
-          }],
-          scannedAt: new Date().toISOString(),
-          type: 'receipt'
-        });
-      }
-    }
-
-    setReceipts(prev => [...newReceipts, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-
-    // Generate Random Category Budgets
-    const newCategoryBudgets: Record<string, number> = {};
-    categories.forEach(cat => {
-      // Random budget between 100 and 600
-      newCategoryBudgets[cat.id] = Math.floor(Math.random() * 500) + 100;
+        alert(`Generated ${scenario} data: ${newReceipts.length} receipts.`);
+        setDataVersion(v => v + 1);
+      }, 50);
     });
-    setCategoryBudgets(newCategoryBudgets);
-
-    // Generate Custody Data (Past 30 days + Future 60 days)
-    const newCustodyDays: CustodyDay[] = [];
-    const today = new Date();
-
-    // Generate data for range -30 to +60
-    for (let d = -30; d < 60; d++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() + d);
-      const dateStr = date.toISOString().split('T')[0];
-
-      // Simple 3-day rotation for variety
-      // Using timestamp ensures consistent pattern
-      const rotationIndex = Math.floor(date.getTime() / (1000 * 60 * 60 * 24));
-      const status: CustodyStatus = (Math.floor(rotationIndex / 3) % 2 === 0) ? 'me' : 'partner';
-
-      // Partial chance for 'split' on transition days? Keep simple for now.
-
-      const activities: any[] = [];
-      const dayOfWeek = date.getDay();
-
-      // Add random activities
-      if (dayOfWeek === 6 && Math.random() > 0.3) { // Saturday
-        activities.push({ id: `act_${dateStr}_1`, title: 'Soccer Match', type: 'sport', startTime: '10:00' });
-      }
-      if (dayOfWeek === 2 && Math.random() > 0.5) { // Tuesday
-        activities.push({ id: `act_${dateStr}_2`, title: 'Piano Lesson', type: 'school', startTime: '16:00' });
-      }
-      if (Math.random() > 0.9) {
-        activities.push({ id: `act_${dateStr}_3`, title: 'Doctor Visit', type: 'other', startTime: '14:00' });
-      }
-
-      newCustodyDays.push({
-        date: dateStr,
-        status: status,
-        activities: activities
-      });
-    }
-
-    setCustodyDays(newCustodyDays);
-    setChildSupportMode(true); // Enable Co-Parenting features so user sees the calendar
-    // setAmbientMode(true); // Ensure ambient is on for "Good" demo - DISABLED per user request
-
-    alert("Added comprehensive dummy data (Receipts & Custody)!");
   };
-
   const handleUpdateCustodyDay = (day: CustodyDay) => {
     setCustodyDays(prev => {
       const existing = prev.find(d => d.date === day.date);

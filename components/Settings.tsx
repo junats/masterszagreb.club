@@ -34,7 +34,7 @@ interface SettingsProps {
     onUpdateUser?: (updates: Partial<User>) => void;
     setReceipts: (receipts: Receipt[]) => void;
     setCustodyDays: (days: CustodyDay[]) => void;
-    onSeedData?: () => void;
+    onSeedData?: (scenario?: 'good' | 'average' | 'bad') => void;
     ambientMode?: boolean;
     setAmbientMode?: (enabled: boolean) => void;
     showGlobalAmbient?: boolean;
@@ -717,26 +717,50 @@ const Settings: React.FC<SettingsProps> = ({
                             </button>
 
                             {/* Comprehensive Seed Data (Dev) */}
+                            {/* Comprehensive Seed Data (Dev) */}
                             {onSeedData && (
-                                <button
-                                    onClick={() => {
-                                        if (confirm("This will generate a comprehensive set of dummy data (30 days). Continue?")) {
-                                            onSeedData();
-                                        }
-                                    }}
-                                    className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-indigo-500/20 p-2 rounded-xl text-indigo-400">
-                                            <Database size={18} />
+                                <div className="border-b border-white/5">
+                                    <button
+                                        onClick={() => {
+                                            const el = document.getElementById('seed-options');
+                                            if (el) el.classList.toggle('hidden');
+                                        }}
+                                        className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-indigo-500/20 p-2 rounded-xl text-indigo-400">
+                                                <Database size={18} />
+                                            </div>
+                                            <div className="text-left">
+                                                <span className="text-slate-200 text-sm font-bold block">Seed Data (Dev)</span>
+                                                <span className="text-xs text-slate-500 font-medium">Generate scenario data</span>
+                                            </div>
                                         </div>
-                                        <div className="text-left">
-                                            <span className="text-slate-200 text-sm font-bold block">Seed Comprehensive Data</span>
-                                            <span className="text-xs text-slate-500 font-medium">Generate 30-day history (Dev)</span>
-                                        </div>
+                                        <ChevronRight className="text-slate-600" size={16} />
+                                    </button>
+
+                                    <div id="seed-options" className="hidden bg-black/20 p-2 space-y-1">
+                                        {[
+                                            { label: 'Good Scenario', type: 'good', color: 'text-emerald-400' },
+                                            { label: 'Average Scenario', type: 'average', color: 'text-blue-400' },
+                                            { label: 'Bad Scenario', type: 'bad', color: 'text-red-400' }
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.type}
+                                                onClick={() => {
+                                                    if (confirm(`Overwrite data with "${opt.label}"?`)) {
+                                                        // Pass the scenario type to the callback
+                                                        // Note: We need to update the prop type in SettingsProps first, or cast it for now
+                                                        (onSeedData as any)(opt.type);
+                                                    }
+                                                }}
+                                                className={`w-full text-left p-3 rounded-lg hover:bg-white/5 text-xs font-bold uppercase tracking-wider ${opt.color}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <ChevronRight className="text-slate-600" size={16} />
-                                </button>
+                                </div>
                             )}
 
                             <button

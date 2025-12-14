@@ -8,6 +8,13 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Ra
 
 import AnimatedSection from './AnimatedSection';
 import { AmbientBackground } from './AmbientBackground';
+import { CountUp } from './CountUp';
+import { SpotlightCard } from './SpotlightCard';
+import { TrendsChart } from './TrendsChart';
+import { InsightsGauges } from './InsightsGauges';
+import { GoalDetailsModal } from './GoalDetailsModal';
+import { AchievementDetailsModal } from './AchievementDetailsModal';
+import { CoParentingDetailsModal } from './CoParentingDetailsModal';
 import { CATEGORY_COLORS } from '../constants/colors';
 import { generateInsights, InsightMessage } from '../services/insightService';
 
@@ -22,9 +29,13 @@ const containerVariants = {
 };
 
 const itemVariants = {
-    hidden: { opacity: 1 },
+    hidden: { opacity: 0, y: 20 },
     visible: {
-        opacity: 1
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.5
+        }
     }
 };
 
@@ -77,7 +88,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     const [showMoney, setShowMoney] = useState(true); // Toggle for privacy mode
     const [isCoParentingMode, setIsCoParentingMode] = useState(false); // Toggle for Co-parenting view
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+    const [selectedAchievement, setSelectedAchievement] = useState<any | null>(null);
+    const [showCoParentingDetails, setShowCoParentingDetails] = useState(false);
     const [viewMode, setViewMode] = useState<'chart' | 'legend'>('chart');
+    const [budgetView, setBudgetView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+    const [pieView, setPieView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
     // Optimization: Only animate heavy ambient effects when in view
@@ -189,8 +205,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                    <span className={`text - [10px] font - bold uppercase tracking - wide text - center ${showIndicators && intensity === 'high' ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-400'} `}>
-                        €{total.toFixed(0)}
+                    <span className={`text-[10px] font-bold uppercase tracking-wide text-center ${showIndicators && intensity === 'high' ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-400'} `}>
+                        <CountUp value={total} prefix="€" decimals={0} />
                     </span>
                     {showIndicators && trend && (
                         <span className={`${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500'} `}>
@@ -202,23 +218,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         );
     };
 
-    // Custom Tooltip Component
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            // payload[0].payload contains the full data object for this X-axis point
-            // We want the 'total' property which we pre-calculated
-            const data = payload[0].payload;
-            return (
-                <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-xl">
-                    <p className="text-slate-400 text-[10px] font-medium mb-1 uppercase tracking-wider">{label}</p>
-                    <p className="text-white text-sm font-bold font-mono">
-                        €{(data.total || 0).toFixed(2)}
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
 
     // Calculate Metrics
     const metrics = useMemo(() => {
@@ -731,21 +730,37 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             // Daily Metrics
             todayTotal: weeklyActivity[weeklyActivity.length - 1]?.total || 0,
             yesterdayTotal: weeklyActivity[weeklyActivity.length - 2]?.total || 0,
-            dailyRatios: (() => {
+            todayCategoryData: (() => {
                 const today = weeklyActivity[weeklyActivity.length - 1];
-                if (!today || today.total === 0) return { education: 0, food: 0, activities: 0, health: 0 };
-                return {
-                    education: (today[Category.EDUCATION] / today.total) * 100,
-                    food: (today[Category.FOOD] / today.total) * 100,
-                    activities: (today[Category.LUXURY] / today.total) * 100,
-                    health: (today[Category.HEALTH] / today.total) * 100
-                };
+                if (!today) return [];
+                return Object.entries(today)
+                    .filter(([key]) => Object.values(Category).includes(key as any))
+                    .map(([name, value]) => ({
+                        name,
+                        value: value as number,
+                        percentage: today.total > 0 ? ((value as number) / today.total) * 100 : 0
+                    }))
+                    .filter(i => i.value > 0)
+                    .sort((a, b) => b.value - a.value);
             })(),
 
             // Weekly Metrics
             weeklyAverage: weeklyData.length > 0 ? weeklyData.reduce((acc, w) => acc + w.total, 0) / weeklyData.length : 0,
             thisWeekTotal: weeklyData[weeklyData.length - 1]?.total || 0,
             lastWeekTotal: weeklyData[weeklyData.length - 2]?.total || 0,
+            thisWeekCategoryData: (() => {
+                const thisWeek = weeklyData[weeklyData.length - 1];
+                if (!thisWeek) return [];
+                return Object.entries(thisWeek)
+                    .filter(([key]) => Object.values(Category).includes(key as any))
+                    .map(([name, value]) => ({
+                        name,
+                        value: value as number,
+                        percentage: thisWeek.total > 0 ? ((value as number) / thisWeek.total) * 100 : 0
+                    }))
+                    .filter(i => i.value > 0)
+                    .sort((a, b) => b.value - a.value);
+            })(),
             weeklyRatios: (() => {
                 const thisWeek = weeklyData[weeklyData.length - 1];
                 if (!thisWeek || thisWeek.total === 0) return { education: 0, food: 0, activities: 0, health: 0 };
@@ -903,12 +918,27 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     };
 
     // Ambient Health State Logic
+    // Ambient Health State Logic (Dynamic based on Budget View)
     const healthState = useMemo(() => {
-        const ratio = monthlyBudget > 0 ? metrics.thisMonthTotal / monthlyBudget : 0;
-        if (ratio >= 0.9) return 'critical';
-        if (ratio >= 0.75) return 'warning';
-        return 'healthy';
-    }, [metrics.thisMonthTotal, monthlyBudget]);
+        let current = 0;
+        let target = 1;
+
+        if (budgetView === 'daily') {
+            current = metrics.todayTotal;
+            target = monthlyBudget / 30; // Approx
+        } else if (budgetView === 'weekly') {
+            current = metrics.thisWeekTotal;
+            target = monthlyBudget / 4; // Approx
+        } else {
+            current = metrics.thisMonthTotal;
+            target = monthlyBudget;
+        }
+
+        const ratio = target > 0 ? current / target : 0;
+        if (ratio >= 1.0) return 'critical'; // Red
+        if (ratio >= 0.85) return 'warning'; // Amber
+        return 'healthy'; // Green
+    }, [metrics.thisMonthTotal, metrics.thisWeekTotal, metrics.todayTotal, monthlyBudget, budgetView]);
 
     // Drill Down Data
     const drillDownData = useMemo(() => {
@@ -931,9 +961,10 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             monthlyBudget,
             receipts,
             custodyDays,
-            metrics.lastMonthTotal // Assuming this exists or pass 0 if not calculated yet in metrics
+            metrics.lastMonthTotal,
+            goals
         );
-    }, [metrics.thisMonthTotal, monthlyBudget, receipts, custodyDays]);
+    }, [metrics.thisMonthTotal, monthlyBudget, receipts, custodyDays, goals]);
 
     // AI Smart Metrics
     const aiMetrics = useMemo(() => {
@@ -980,7 +1011,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         ];
     }, [metrics.thisMonthTotal, metrics.thisMonthReceipts, metrics.categoryData, monthlyBudget, suggestions]);
 
-    const activePieData = selectedCategory ? drillDownData : metrics.categoryData;
+    const activePieData = useMemo(() => {
+        if (selectedCategory) return drillDownData;
+        switch (pieView) {
+            case 'daily': return metrics.todayCategoryData;
+            case 'weekly': return metrics.thisWeekCategoryData;
+            default: return metrics.categoryData;
+        }
+    }, [pieView, selectedCategory, drillDownData, metrics.categoryData, metrics.todayCategoryData, metrics.thisWeekCategoryData]);
 
     const cardGlowStyles = useMemo(() => {
         switch (healthState) {
@@ -1070,8 +1108,37 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         } as React.CSSProperties;
     };
 
-    const ratio = monthlyBudget > 0 ? metrics.thisMonthTotal / monthlyBudget : 0;
-    const ambientStyle = getAmbientStyle(ratio);
+    // Unified Ambient Style
+    const ambientStyle = useMemo(() => {
+        const colorMap = {
+            healthy: { color: '#84cc16', bright: '#bef264', glow: '15px' }, // Lime
+            warning: { color: '#eab308', bright: '#facc15', glow: '20px' }, // Yellow
+            critical: { color: '#ef4444', bright: '#ff2222', glow: '30px' } // Red
+        };
+        const active = colorMap[healthState];
+
+        if (!isBudgetInView) {
+            return {
+                '--glow-color': active.color,
+                '--glow-color-bright': active.bright,
+                '--glow-size': '0px',
+                borderColor: 'rgba(255,255,255,0.1)',
+                boxShadow: 'none',
+                transition: 'all 0.5s ease',
+                background: 'transparent'
+            } as React.CSSProperties;
+        }
+
+        return {
+            '--glow-color': active.color,
+            '--glow-color-bright': active.bright,
+            '--glow-size': active.glow,
+            borderColor: active.color,
+            boxShadow: `0 0 ${active.glow} ${active.color}`,
+            transition: 'all 1s ease',
+            animation: healthState === 'critical' ? 'pulse-border-v2 3s infinite ease-in-out' : undefined
+        } as React.CSSProperties;
+    }, [healthState, isBudgetInView]);
 
     return (
         <motion.div
@@ -1100,8 +1167,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     className="mb-0"
                 >
                     <div
-                        style={ambientStyle}
-                        className="relative rounded-3xl border bg-card p-4 transition-all duration-1000 overflow-hidden group mb-4"
+                        style={ambientMode ? ambientStyle : {}}
+                        className={`relative rounded-3xl border p-4 transition-all duration-1000 overflow-hidden group mb-4 ${ambientMode ? 'bg-card' : 'bg-card border-slate-800 shadow-lg'}`}
                     >
                         {ambientMode && (
                             <div className="absolute inset-0 pointer-events-none z-0">
@@ -1118,39 +1185,64 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         {/* Original BG Backing if needed */}
                         <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 bg-card/80 backdrop-blur-sm -z-10`} />
 
-                        <div className="flex items-center justify-between mb-4 relative z-10">
-                            <div className="flex items-center gap-4 flex-1 min-w-0 mr-4">
-                                <div className="min-w-0 flex-1">
-                                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide truncate">Monthly Budget</h3>
-                                    <div className="flex items-baseline gap-1.5 flex-wrap">
-                                        <p className={`${(metrics.thisMonthTotal.toFixed(2).length + (monthlyBudget.toString().length)) > 12 ? 'text-xl' : 'text-3xl'} font-heading font-bold text-white tracking-tight`}>
-                                            €{metrics.thisMonthTotal.toFixed(2)}
-                                        </p>
+                        <div className="flex items-start justify-between mb-4 relative z-10">
+                            <div className="flex-1 min-w-0 mr-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide truncate flex items-center gap-2">
+                                        <Wallet className="w-4 h-4 text-emerald-400" />
+                                        {budgetView} Budget
+                                    </h3>
+                                </div>
 
-                                        <span className="text-sm text-slate-500 font-medium whitespace-nowrap">/ €{monthlyBudget}</span>
-                                    </div>
+
+                                <div className="flex items-baseline gap-1.5 flex-wrap">
+                                    <p className={`${(metrics.thisMonthTotal.toFixed(2).length + (monthlyBudget.toString().length)) > 12 ? 'text-xl' : 'text-3xl'} font-heading font-bold text-white tracking-tight`}>
+                                        <CountUp
+                                            value={budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal}
+                                            prefix="€"
+                                            decimals={2}
+                                        />
+                                    </p>
+
+                                    <span className="text-sm text-slate-500 font-medium whitespace-nowrap">
+                                        / €{Math.round(budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30)}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="text-right flex-shrink-0">
+                            <div className="text-right flex-shrink-0 pt-1">
                                 <span
                                     className="text-2xl font-bold transition-colors duration-500"
-                                    style={{ color: 'var(--glow-color)' }}
+                                    style={{ color: ambientMode ? 'var(--glow-color)' : '#10b981' }}
                                 >
-                                    {Math.round((monthlyBudget > 0 ? (metrics.thisMonthTotal / monthlyBudget) * 100 : 0))}%
+                                    <CountUp
+                                        value={monthlyBudget > 0 ? (
+                                            (budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal) /
+                                            (budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30)
+                                        ) * 100 : 0}
+                                        suffix="%"
+                                        decimals={0}
+                                    />
                                 </span>
-                                <p className="text-xs text-slate-500 font-medium mt-1">{metrics.thisMonthTotal > monthlyBudget ? 'Over Budget' : 'Used'}</p>
+                                <p className="text-xs text-slate-500 font-medium mt-1">Used</p>
                             </div>
                         </div>
 
                         <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10 mb-4">
-                            <div
-                                className="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_currentColor] opacity-90"
-                                style={{
-                                    width: `${Math.min((monthlyBudget > 0 ? (metrics.thisMonthTotal / monthlyBudget) * 100 : 0), 100)}%`,
-                                    backgroundColor: 'var(--glow-color)',
-                                    color: 'var(--glow-color)'
+                            <motion.div
+                                className="h-full rounded-full shadow-[0_0_15px_currentColor] opacity-90"
+                                initial={{ width: 0 }}
+                                animate={{
+                                    width: `${Math.min((monthlyBudget > 0 ? (
+                                        (budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal) /
+                                        (budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30)
+                                    ) * 100 : 0), 100)}%`
                                 }}
-                            ></div>
+                                transition={{ duration: 1.5, ease: "easeOut" }}
+                                style={{
+                                    backgroundColor: ambientMode ? 'var(--glow-color)' : '#10b981',
+                                    color: ambientMode ? 'var(--glow-color)' : '#10b981'
+                                }}
+                            />
                         </div>
 
                         {suggestions.length > 0 && (
@@ -1179,7 +1271,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                             </div>
                         )}
 
-                        {/* Distribution Gauge */}
                         <div className="relative z-10 border-t border-white/5 pt-4">
                             <div className="flex items-center justify-between mb-2">
                                 <h4
@@ -1193,6 +1284,23 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 >
                                     {selectedCategory ? '← Back to Overview' : 'Spending Distribution'}
                                 </h4>
+                                <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                    {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                        <button
+                                            key={view}
+                                            onClick={() => {
+                                                HapticsService.selection();
+                                                setPieView(view);
+                                            }}
+                                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${pieView === view
+                                                ? 'bg-emerald-500/20 text-emerald-400 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                                                }`}
+                                        >
+                                            {view === 'daily' ? 'D' : view === 'weekly' ? 'W' : 'M'}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             {/* Pie Chart & Legend Split Layout */}
                             {/* Pie Chart & Legend Split Layout */}
@@ -1288,8 +1396,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                     <span className="text-[10px] font-medium text-slate-300 capitalize truncate max-w-[80px]">{entry.name}</span>
                                                                 </div>
                                                                 <div className="flex items-baseline gap-1 shrink-0">
-                                                                    <span className="text-[10px] font-bold text-white tabular-nums">€{entry.value.toFixed(0)}</span>
-                                                                    <span className="text-[9px] text-slate-500 font-medium tabular-nums text-right">{percentage.toFixed(0)}%</span>
+                                                                    <span className="text-[10px] font-bold text-white tabular-nums">
+                                                                        <CountUp value={entry.value} prefix="€" decimals={0} />
+                                                                    </span>
+                                                                    <span className="text-[9px] text-slate-500 font-medium tabular-nums text-right">
+                                                                        <CountUp value={percentage} suffix="%" decimals={0} />
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                             <div className="h-1 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
@@ -1322,12 +1434,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     {/* Monthly Insights (Expanded) */}
                     {/* Monthly Insights (Expanded) */}
                     <motion.div variants={itemVariants} className="col-span-2">
-                        <motion.div
-                            whileTap={isCoParentingMode ? { scale: 0.98 } : {}}
+                        <SpotlightCard
                             onClick={isCoParentingMode ? onProvisionClick : undefined}
                             className={`rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all ${isCoParentingMode ? 'cursor-pointer hover:border-slate-700' : ''} `}
+                            spotlightColor="rgba(59, 130, 246, 0.1)" // Blue tint
                         >
-                            <div className="mb-4">
+                            <div className="mb-4 relative z-10">
 
                                 <div className="flex flex-col gap-4 mb-4">
                                     <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
@@ -1364,7 +1476,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {insightView === 'monthly' ? 'Daily Avg' : insightView === 'weekly' ? 'Weekly Avg' : 'Today'}
                                         </p>
                                         <p className="text-xl font-bold text-white tabular-nums">
-                                            €{insightView === 'monthly' ? metrics.dailyAverage.toFixed(0) : insightView === 'weekly' ? metrics.weeklyAverage.toFixed(0) : metrics.todayTotal.toFixed(0)}
+                                            <CountUp value={insightView === 'monthly' ? metrics.dailyAverage : insightView === 'weekly' ? metrics.weeklyAverage : metrics.todayTotal} prefix="€" decimals={0} />
                                         </p>
                                     </div>
                                     <div className="h-8 w-px bg-slate-800"></div>
@@ -1373,7 +1485,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {insightView === 'monthly' ? 'Forecast' : insightView === 'weekly' ? 'This Week' : 'Yesterday'}
                                         </p>
                                         <p className="text-xl font-bold text-blue-400 tabular-nums">
-                                            €{insightView === 'monthly' ? metrics.projectedTotal.toFixed(0) : insightView === 'weekly' ? metrics.thisWeekTotal.toFixed(0) : metrics.yesterdayTotal.toFixed(0)}
+                                            <CountUp value={insightView === 'monthly' ? metrics.projectedTotal : insightView === 'weekly' ? metrics.thisWeekTotal : metrics.yesterdayTotal} prefix="€" decimals={0} />
                                         </p>
                                     </div>
                                     {isCoParentingMode && (
@@ -1388,55 +1500,15 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 </div>
                             </div>
 
-                            <AnimatedSection noSlide triggerOnce={false} className="grid grid-cols-4 gap-4">
-                                {({ isInView }: { isInView?: boolean } = {}) => (
-                                    <>
-                                        {[
-                                            { label: 'Education', value: insightView === 'monthly' ? metrics.educationRatio : insightView === 'weekly' ? metrics.weeklyRatios.education : metrics.dailyRatios.education, color: '#818cf8' }, // Indigo
-                                            { label: 'Food', value: insightView === 'monthly' ? metrics.foodRatio : insightView === 'weekly' ? metrics.weeklyRatios.food : metrics.dailyRatios.food, color: '#fbbf24' }, // Amber
-                                            { label: 'Activities', value: insightView === 'monthly' ? metrics.luxuryRatio : insightView === 'weekly' ? metrics.weeklyRatios.activities : metrics.dailyRatios.activities, color: '#f472b6' }, // Pink
-                                            { label: 'Health', value: insightView === 'monthly' ? metrics.healthRatio : insightView === 'weekly' ? metrics.weeklyRatios.health : metrics.dailyRatios.health, color: '#34d399' } // Emerald
-                                        ].map((gauge, idx) => (
-                                            <div key={idx} className="flex flex-col items-center relative">
-                                                <div className="h-20 w-20 relative">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <RadialBarChart
-                                                            key={`${isInView}-${idx}`}
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            innerRadius="65%"
-                                                            outerRadius="100%"
-                                                            barSize={8}
-                                                            data={[{ value: Math.min(isInView ? gauge.value : 0, 100), fill: gauge.color }]}
-                                                            startAngle={90}
-                                                            endAngle={-270}
-                                                        >
-                                                            <PolarAngleAxis
-                                                                type="number"
-                                                                domain={[0, 100]}
-                                                                angleAxisId={0}
-                                                                tick={false}
-                                                            />
-                                                            <RadialBar
-                                                                background={{ fill: '#1e293b' }}
-                                                                dataKey="value"
-                                                                cornerRadius={10}
-                                                                isAnimationActive={true}
-                                                                animationDuration={1500}
-                                                                animationEasing="ease-out"
-                                                            />
-                                                        </RadialBarChart>
-                                                    </ResponsiveContainer>
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                        <span className="text-sm font-bold" style={{ color: gauge.color }}>{gauge.value.toFixed(0)}%</span>
-                                                    </div>
-                                                </div>
-                                                <span className="text-[10px] text-slate-400 uppercase tracking-wide mt-1 font-bold text-center">{gauge.label}</span>
-                                            </div>
-                                        ))}
-                                    </>
+                            <VisibilitySensor threshold={0.2}>
+                                {({ isVisible }: { isVisible: boolean }) => (
+                                    <InsightsGauges
+                                        insightView={insightView}
+                                        metrics={metrics}
+                                        isVisible={isVisible}
+                                    />
                                 )}
-                            </AnimatedSection>
+                            </VisibilitySensor>
 
                             {/* Smart Suggestions */}
                             {metrics.smartInsights.length > 0 && (
@@ -1458,7 +1530,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     ))}
                                 </div>
                             )}
-                        </motion.div>
+                        </SpotlightCard>
                     </motion.div>
 
                     {/* Co-Parenting Cards */}
@@ -1613,11 +1685,15 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                                     <div className="space-y-1">
                                                                                         <div className="flex justify-between text-[10px] font-medium">
                                                                                             <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-slate-300">Me</span></div>
-                                                                                            <span className="text-white tabular-nums">{monthDaysCount}d</span>
+                                                                                            <span className="text-white tabular-nums">
+                                                                                                <CountUp value={monthDaysCount} suffix="d" decimals={0} />
+                                                                                            </span>
                                                                                         </div>
                                                                                         <div className="flex justify-between text-[10px] font-medium">
                                                                                             <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-slate-300">Partner</span></div>
-                                                                                            <span className="text-white tabular-nums">{new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount}d</span>
+                                                                                            <span className="text-white tabular-nums">
+                                                                                                <CountUp value={new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount} suffix="d" decimals={0} />
+                                                                                            </span>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
@@ -1648,7 +1724,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                                     </ResponsiveContainer>
                                                                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                                                         <span className="text-[10px] font-bold text-slate-300">
-                                                                                            {Math.round((monthDaysCount / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) * 100)}%
+                                                                                            <CountUp value={(monthDaysCount / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) * 100} suffix="%" decimals={0} />
                                                                                         </span>
                                                                                     </div>
                                                                                 </div>
@@ -1712,40 +1788,112 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                 });
                                                                 const myWeekends = weekendDays.filter(d => d.status === 'me').length;
                                                                 const totalWeekends = weekendDays.length;
-                                                                const weekendShare = totalWeekends > 0 ? myWeekends / totalWeekends : 0.5;
 
-                                                                let status: 'healthy' | 'warning' | 'alert' = 'healthy';
+                                                                // 1. Equity Score (Target 50/50)
+                                                                // If balance is 0.5, score is 100. If 0.0 or 1.0, score is 0.
+                                                                const equityRaw = 1 - (Math.abs(balance - 0.5) * 2);
+                                                                const equityScore = Math.round(equityRaw * 100);
+
+                                                                // 2. Stability Score (Weekend Consistency)
+                                                                // Check if weekends are alternating or random. 
+                                                                // Simple proxy: if we have "streaks" of me/partner too long, stability drops.
+                                                                // For now, let's just use a high base for good/avg scenarios.
+                                                                let stabilityScore = 85;
+                                                                if (balance > 0.8 || balance < 0.2) stabilityScore = 40; // Highly unstable/lopsided
+
+                                                                // 3. Harmony Score (Mocked based on scenario implicitly via balance)
+                                                                // Good balance = High Harmony.
+                                                                const harmonyScore = Math.round((equityScore + stabilityScore) / 2);
+
+
+                                                                let status: 'optimum' | 'good' | 'attention' | 'critical' = 'good';
                                                                 let title = 'Steady Pulse';
-                                                                let message = 'Great consistency! Stable routines are the foundation of security.';
+                                                                let message = 'Your co-parenting rhythm is stable. Consistency builds security for everyone.';
                                                                 let color = 'text-emerald-400';
                                                                 let bgColor = 'bg-emerald-500/10';
                                                                 let borderColor = 'border-emerald-500/20';
 
-                                                                // Logic (Simplified for brevity as per original)
-                                                                if (balance > 0.9) {
-                                                                    status = 'alert';
-                                                                    title = 'High Load';
-                                                                    message = "You're carrying a heavy load. Remember, self-care isn't selfish—it's essential.";
+                                                                if (harmonyScore < 50) {
+                                                                    status = 'critical';
+                                                                    title = 'Action Needed';
+                                                                    message = 'Recent patterns show significant imbalance. Consider a schedule review.';
+                                                                    color = 'text-red-400';
+                                                                    bgColor = 'bg-red-500/10';
+                                                                    borderColor = 'border-red-500/20';
+                                                                } else if (harmonyScore < 75) {
+                                                                    status = 'attention';
+                                                                    title = 'Uneven Rhythm';
+                                                                    message = 'Minor friction detected in the schedule. A small adjustment could help.';
                                                                     color = 'text-orange-400';
                                                                     bgColor = 'bg-orange-500/10';
                                                                     borderColor = 'border-orange-500/20';
+                                                                } else if (harmonyScore > 90) {
+                                                                    status = 'optimum';
+                                                                    title = 'In Sync';
+                                                                    message = 'Outstanding cooperation! You are modeling a healthy partnership.';
+                                                                    color = 'text-cyan-400';
+                                                                    bgColor = 'bg-cyan-500/10';
+                                                                    borderColor = 'border-cyan-500/20';
                                                                 }
 
+                                                                const metrics = [
+                                                                    { label: 'Equity', score: equityScore, color: 'bg-blue-500' },
+                                                                    { label: 'Stability', score: stabilityScore, color: 'bg-purple-500' },
+                                                                    { label: 'Harmony', score: harmonyScore, color: 'bg-pink-500' },
+                                                                ];
+
                                                                 return (
-                                                                    <div className={`rounded-xl p-4 border ${bgColor} ${borderColor} relative overflow-hidden group mt-4`}>
-                                                                        <div className="flex items-start gap-4 z-10 relative">
-                                                                            <div className={`p-2.5 rounded-full ${bgColor} border ${borderColor} shrink-0`}>
-                                                                                <Activity className={`w-5 h-5 ${color}`} />
-                                                                            </div>
-                                                                            <div className="flex-1">
-                                                                                <div className="flex justify-between items-center mb-1">
-                                                                                    <p className={`text-xs font-bold uppercase tracking-wider ${color}`}>{title}</p>
-                                                                                    <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${bgColor} ${color} border ${borderColor} uppercase tracking-wide`}>{status}</span>
+                                                                    <>
+                                                                        <motion.button
+                                                                            whileTap={{ scale: 0.98 }}
+                                                                            onClick={(e) => { e.stopPropagation(); setShowCoParentingDetails(true); }}
+                                                                            className={`w-full rounded-2xl p-4 border ${bgColor} ${borderColor} relative overflow-hidden group mt-4 transition-all hover:bg-opacity-20 text-left`}
+                                                                        >
+                                                                            {/* Header */}
+                                                                            <div className="flex items-start gap-3 mb-4">
+                                                                                <div className={`p-2 rounded-lg ${bgColor} border ${borderColor}`}>
+                                                                                    <Activity className={`w-4 h-4 ${color}`} />
                                                                                 </div>
-                                                                                <p className="text-xs text-slate-300 leading-relaxed font-medium">{message}</p>
+                                                                                <div>
+                                                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                                                        <h4 className={`text-sm font-bold ${color}`}>{title}</h4>
+                                                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${bgColor} ${borderColor} ${color}`}>{status}</span>
+                                                                                    </div>
+                                                                                    <p className="text-[10px] text-slate-400 leading-tight max-w-[200px]">{message}</p>
+                                                                                </div>
+                                                                                <div className="absolute top-4 right-4 opacity-50">
+                                                                                    <div className={`w-2 h-2 rounded-full ${color.replace('text-', 'bg-')} animate-pulse`} />
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    </div>
+
+                                                                            {/* Metrics Bars */}
+                                                                            <div className="space-y-3">
+                                                                                {metrics.map((m) => (
+                                                                                    <div key={m.label} className="group/bar">
+                                                                                        <div className="flex justify-between items-end mb-1">
+                                                                                            <span className="text-[10px] font-medium text-slate-500 group-hover/bar:text-slate-300 transition-colors uppercase tracking-wide">{m.label}</span>
+                                                                                            <span className="text-[10px] font-bold text-slate-300 tabular-nums">{m.score}/100</span>
+                                                                                        </div>
+                                                                                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                                                                                            <motion.div
+                                                                                                initial={{ width: 0 }}
+                                                                                                whileInView={{ width: `${m.score}%` }}
+                                                                                                transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                                                                                                className={`h-full rounded-full ${m.color}`}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </motion.button>
+
+                                                                        <CoParentingDetailsModal
+                                                                            isOpen={showCoParentingDetails}
+                                                                            onClose={() => setShowCoParentingDetails(false)}
+                                                                            metrics={{ equity: equityScore, stability: stabilityScore, harmony: harmonyScore }}
+                                                                            custodyDays={custodyDays}
+                                                                        />
+                                                                    </>
                                                                 );
                                                             })()}
                                                         </>
@@ -1840,70 +1988,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 </div>
                                 <div className="flex-1 w-full">
                                     <VisibilitySensor threshold={0.4}>
-                                        {({ isVisible }: { isVisible: boolean }) => {
-                                            const activeData = chartView === 'week' ? metrics.weekData : chartView === 'month' ? metrics.monthData : metrics.yearData;
-
-                                            // Data Transition Strategy:
-                                            // If visible (trigger hit), use real data.
-                                            // If not visible (reset hit), use Zeroed data.
-                                            // This forces Recharts to "morph" (grow/shrink) the lines via update animation.
-                                            const displayData = useMemo(() => {
-                                                if (isVisible) return activeData;
-                                                return activeData.map(d => {
-                                                    const zeroed: any = { ...d };
-                                                    categories.forEach(c => zeroed[c.name] = 0);
-                                                    return zeroed;
-                                                });
-                                            }, [activeData, isVisible, categories]);
-
-                                            // Calculate max value for stable axis
-                                            const chartMax = useMemo(() => {
-                                                if (!activeData.length) return 100;
-                                                // Find the text max sum of stacked values
-                                                const maxVal = Math.max(...activeData.map(d => {
-                                                    return categories.reduce((sum, cat) => sum + (d[cat.name] || 0), 0);
-                                                }));
-                                                // Add 10% headroom
-                                                return Math.ceil(maxVal * 1.1);
-                                            }, [activeData, categories]);
-
-                                            return (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart
-                                                        data={displayData}
-                                                        key={chartView}
-                                                        margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
-                                                    >
-                                                        <defs>
-                                                            {categories.map((cat) => (
-                                                                <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
-                                                                    <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
-                                                                </linearGradient>
-                                                            ))}
-                                                        </defs>
-                                                        <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                                                        <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} domain={[0, chartMax]} />
-                                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
-                                                        <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                                        {categories.map((cat) => (
-                                                            <Area
-                                                                key={cat.id}
-                                                                type="monotone"
-                                                                dataKey={cat.name}
-                                                                stackId="1"
-                                                                stroke={cat.color}
-                                                                fill={`url(#gradient-trend-${cat.name})`}
-                                                                strokeWidth={2}
-                                                                isAnimationActive={true}
-                                                                animationBegin={0}
-                                                                animationDuration={1000}
-                                                            />
-                                                        ))}
-                                                    </AreaChart>
-                                                </ResponsiveContainer>
-                                            );
-                                        }}
+                                        {({ isVisible }: { isVisible: boolean }) => (
+                                            <TrendsChart
+                                                isVisible={isVisible}
+                                                activeData={chartView === 'week' ? metrics.weekData : chartView === 'month' ? metrics.monthData : metrics.yearData}
+                                                categories={categories}
+                                                chartView={chartView}
+                                            />
+                                        )}
                                     </VisibilitySensor>
                                 </div>
                             </div>
@@ -2022,6 +2114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {
                                                 id: 'early_bird',
                                                 label: 'Early Bird',
+                                                description: 'You made a purchase between 5 AM and 9 AM. Starting the day early!',
                                                 icon: <Coffee className="w-5 h-5" />,
                                                 unlocked: receipts.some(r => {
                                                     const h = new Date(r.date).getHours();
@@ -2034,6 +2127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {
                                                 id: 'night_owl',
                                                 label: 'Night Owl',
+                                                description: 'You made a purchase between 9 PM and 4 AM. Late night spender!',
                                                 icon: <Tv className="w-5 h-5" />,
                                                 unlocked: receipts.some(r => {
                                                     const h = new Date(r.date).getHours();
@@ -2046,6 +2140,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {
                                                 id: 'high_roller',
                                                 label: 'High Roller',
+                                                description: 'You spent over €100 in a single transaction. Big spender alert!',
                                                 icon: <Car className="w-5 h-5" />,
                                                 unlocked: receipts.some(r => r.total > 100),
                                                 color: 'text-cyan-400',
@@ -2055,6 +2150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {
                                                 id: 'penny_pincher',
                                                 label: 'Penny Pincher',
+                                                description: 'You made a purchase under €5. Every cent counts!',
                                                 icon: <PiggyBank className="w-5 h-5" />,
                                                 unlocked: receipts.some(r => r.total < 5 && r.total > 0),
                                                 color: 'text-lime-400',
@@ -2064,6 +2160,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             {
                                                 id: 'weekend_warrior',
                                                 label: 'Weekender',
+                                                description: 'You spent money on a Saturday or Sunday. Weekend vibes!',
                                                 icon: <Beer className="w-5 h-5" />,
                                                 unlocked: receipts.some(r => {
                                                     const d = new Date(r.date).getDay();
@@ -2084,33 +2181,28 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     const discountProgress = Math.min((unlockedCount / discountThreshold) * 100, 100);
 
                                     return (
-                                        <div className="rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all">
-                                            <div className="mb-4">
+                                        <div className="rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all relative overflow-hidden group">
+                                            {/* Background Gradient */}
+                                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-50 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+
+                                            <div className="mb-4 relative z-10">
                                                 <div className="flex flex-col gap-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide">
                                                             <Target className="w-4 h-4 text-purple-400" />
                                                             Goal Breakdown
                                                         </h3>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setShowIndicators(!showIndicators); }}
-                                                            className={`p-1.5 rounded-lg transition-all ${showIndicators ? 'bg-yellow-500/20 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'}`}
-                                                            title="Toggle Impact Mode"
-                                                        >
-                                                            <Zap size={14} fill={showIndicators ? "currentColor" : "none"} />
-                                                        </button>
-                                                    </div>
-                                                    <div className="w-full flex justify-end">                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                                        {(['daily', 'weekly', 'monthly'] as const).map((view) => (
-                                                            <button
-                                                                key={view}
-                                                                onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
-                                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                                            >
-                                                                {view.charAt(0).toUpperCase() + view.slice(1)}
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                                                            {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                                                <button
+                                                                    key={view}
+                                                                    onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
+                                                                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                >
+                                                                    {view.charAt(0).toUpperCase() + view.slice(1)}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2148,16 +2240,24 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                     else if (total > 50) intensity = 'medium';
 
                                                     return (
-                                                        <div key={goal.id} className="flex justify-center w-full">
-                                                            <GoalGauge
-                                                                goal={goal}
-                                                                total={total}
-                                                                isInView={isInView}
-                                                                trend={trend}
-                                                                intensity={intensity}
-                                                                showIndicators={showIndicators}
-                                                            />
-                                                        </div>
+                                                        <motion.button
+                                                            key={goal.id}
+                                                            onClick={(e) => { e.stopPropagation(); setSelectedGoal(goal); }}
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="flex flex-col items-center justify-center p-2 rounded-2xl bg-slate-800/30 border border-white/5 hover:bg-slate-800/60 hover:border-white/10 transition-all duration-300 w-full"
+                                                        >
+                                                            <div className="mb-2">
+                                                                <GoalGauge
+                                                                    goal={goal}
+                                                                    total={total}
+                                                                    isInView={isInView}
+                                                                    trend={trend}
+                                                                    intensity={intensity}
+                                                                    showIndicators={showIndicators}
+                                                                />
+                                                            </div>
+                                                        </motion.button>
                                                     );
                                                 })}
                                             </div>
@@ -2193,38 +2293,17 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                     <span className="text-xs text-slate-500 font-medium">{unlockedCount}/{totalAchievements} Unlocked</span>
                                                 </div>
 
-                                                {/* Incentive Progress */}
-                                                <div className="mb-6 bg-slate-800/30 rounded-xl p-4 border border-white/5 relative overflow-hidden">
-                                                    {discountUnlocked && (
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 z-0"></div>
-                                                    )}
-                                                    <div className="relative z-10 flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`p-1.5 rounded-lg ${discountUnlocked ? 'bg-yellow-500 text-slate-900' : 'bg-slate-700 text-slate-400'}`}>
-                                                                <Gift size={14} />
-                                                            </div>
-                                                            <div>
-                                                                <p className={`text-xs font-bold ${discountUnlocked ? 'text-yellow-400' : 'text-slate-300'}`}>
-                                                                    {discountUnlocked ? '50% OFF Subscription Unlocked!' : 'Unlock 50% OFF Subscription'}
-                                                                </p>
-                                                                {!discountUnlocked && (
-                                                                    <p className="text-[10px] text-slate-500">Collect {discountThreshold} badges to claim reward</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <span className="text-xs font-bold tabular-nums text-white">{unlockedCount}/{discountThreshold}</span>
-                                                    </div>
-                                                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
-                                                        <div
-                                                            className={`h-full rounded-full transition-all duration-1000 ease-out ${discountUnlocked ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'bg-slate-600'}`}
-                                                            style={{ width: `${discountProgress}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-
                                                 <div className="grid grid-cols-5 gap-2">
                                                     {achievements.map((badge) => (
-                                                        <div key={badge.id} className="flex flex-col items-center gap-2 group cursor-default">
+                                                        <motion.button
+                                                            key={badge.id}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedAchievement(badge);
+                                                            }}
+                                                            className="flex flex-col items-center gap-2 group cursor-pointer"
+                                                        >
                                                             <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-500 ${badge.unlocked
                                                                 ? `${badge.bgColor} ${badge.borderColor} ${badge.color} shadow-[0_0_15px_rgba(0,0,0,0.3)] group-hover:scale-110`
                                                                 : 'bg-slate-800/50 border-white/5 text-slate-600 grayscale opacity-50'
@@ -2235,7 +2314,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                 }`}>
                                                                 {badge.label}
                                                             </span>
-                                                        </div>
+                                                        </motion.button>
                                                     ))}
                                                 </div>
                                             </div>
@@ -2502,6 +2581,21 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 </div>
 
+
+                {/* Goal Details Modal */}
+                <GoalDetailsModal
+                    isOpen={!!selectedGoal}
+                    onClose={() => setSelectedGoal(null)}
+                    goal={selectedGoal}
+                    receipts={receipts}
+                />
+
+                {/* Achievement Details Modal */}
+                <AchievementDetailsModal
+                    isOpen={!!selectedAchievement}
+                    onClose={() => setSelectedAchievement(null)}
+                    achievement={selectedAchievement}
+                />
             </div >
         </motion.div >
     );
