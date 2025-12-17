@@ -123,3 +123,13 @@ export interface Goal {
   lastComplianceDate?: string; // ISO Date
   emoji?: string;
 }
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // ISO Date
+  icon?: any;
+  type?: 'streak' | 'saving' | 'budget';
+}
+

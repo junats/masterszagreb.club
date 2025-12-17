@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, User as UserIcon, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { User } from '../types';
-import { authService, isMockMode } from '../services/authService';
-import { Preferences } from '@capacitor/preferences';
+import { authService } from '../services/authService';
+import { useUser } from '../contexts/UserContext';
 
-interface AuthScreenProps {
-    onLogin: (user: User) => void;
-}
-
-const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
+const AuthScreen: React.FC = () => {
+    const { signIn } = useUser();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,14 +30,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             if (result.error) {
                 setError(result.error);
             } else if (result.user) {
-                onLogin(result.user);
+                signIn(result.user);
             }
-        } catch (err) {
-            setError("An unexpected error occurred.");
+        } catch (err: any) {
+            console.error("Auth Error:", err);
+            setError("Error: " + (err.message || JSON.stringify(err)));
         } finally {
             setLoading(false);
         }
     };
+
+    // ... rest of component until return ...
 
     const handleSocialLogin = async (provider: 'google' | 'apple') => {
         setLoading(true);
@@ -56,8 +56,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             if (result.error) {
                 setError(result.error);
                 setLoading(false);
+            } else if (result.user) {
+                // If successful, redirect happens, so no need to stop loading usually,
+                // but if we get a user back:
+                signIn(result.user);
             }
-            // If successful, redirect happens, so no need to stop loading
         } catch (err) {
             setError("An unexpected error occurred.");
             setLoading(false);
@@ -87,14 +90,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                     </p>
                 </div>
 
-                <div className="bg-surface/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
+                <div className="bg-surface/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative">
+                    {/* Manual Check Button for Stuck Users */}
 
-                    {error && (
-                        <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-start gap-2">
-                            <AlertCircle className="text-red-400 shrink-0 w-4 h-4 mt-0.5" />
-                            <p className="text-red-200 text-xs font-medium">{error}</p>
-                        </div>
-                    )}
 
                     <form onSubmit={handleAuth} className="space-y-4">
                         {!isLogin && (
@@ -196,6 +194,62 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                         </button>
                     </div>
 
+                    {loading && (
+                        <div className="mt-6 relative z-50 text-center">
+                            <button
+                                type="button"
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const btn = e.currentTarget;
+                                    const originalText = btn.innerText;
+                                    btn.innerText = "Checking...";
+                                    btn.disabled = true;
+
+                                    try {
+                                        console.log("Stuck button pressed. Checking session...");
+                                        // Force a timeout race to prevent indefinite hanging
+                                        const checkPromise = authService.getCurrentSession();
+                                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+
+                                        const { data } = await Promise.race([checkPromise, timeoutPromise]) as any;
+
+                                        if (data?.session?.user || data?.user) {
+                                            const user = data.session?.user || data.user;
+                                            signIn(user);
+                                            window.location.reload();
+                                        } else {
+                                            // If check fails (but user thinks they are logged in), reload anyway?
+                                            // User said "Restart fixes it". So let's offering reloading.
+                                            if (confirm("Session not detected yet. Force Reload App? (This usually fixes it)")) {
+                                                window.location.reload();
+                                            }
+                                            btn.innerText = "No Session";
+                                            setTimeout(() => {
+                                                btn.innerText = originalText;
+                                                btn.disabled = false;
+                                            }, 2000);
+                                        }
+                                    } catch (err: any) {
+                                        console.error("Manual check error:", err);
+                                        // On timeout/error, offer reload
+                                        if (confirm("Check timed out. Force Relad App? (This usually fixes it)")) {
+                                            window.location.reload();
+                                        }
+                                        btn.innerText = "Retry";
+                                        setTimeout(() => {
+                                            btn.innerText = originalText;
+                                            btn.disabled = false;
+                                        }, 2000);
+                                    }
+                                }}
+                                className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 touch-manipulation relative z-50 cursor-pointer"
+                            >
+                                Tap here if stuck
+                            </button>
+                        </div>
+                    )}
+
                     <div className="mt-6 text-center">
                         <button
                             onClick={() => {
@@ -212,81 +266,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 <p className="text-center text-slate-600 text-[10px] mt-8 font-medium">
                     Your data is encrypted and secure. By continuing, you agree to our Terms of Service.
                 </p>
-
-                {/* DEBUG SECTION */}
-                <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
-                    <p className="text-white font-bold mb-1">DEBUG INFO:</p>
-                    <DebugUserCount />
-                </div>
             </div>
-        </div>
-    );
-};
-
-const DebugUserCount = () => {
-    const [users, setUsers] = useState<any[]>([]);
-    const [status, setStatus] = useState('Loading...');
-
-    const loadUsers = async () => {
-        try {
-            const { value } = await Preferences.get({ key: 'truetrack_mock_users' });
-            const parsed = value ? JSON.parse(value) : [];
-            setUsers(parsed);
-            setStatus('Loaded');
-        } catch (e) {
-            setStatus('Error reading storage');
-        }
-    };
-
-    const [isMock, setIsMock] = useState(false);
-
-    React.useEffect(() => {
-        loadUsers();
-        checkMode();
-    }, []);
-
-    const checkMode = async () => {
-        const mock = await authService.isMockMode();
-        setIsMock(mock);
-    };
-
-    const toggleMode = async () => {
-        await authService.setMockMode(!isMock);
-        window.location.reload();
-    };
-
-    const handleReset = async () => {
-        await Preferences.remove({ key: 'truetrack_mock_users' });
-        await Preferences.remove({ key: 'truetrack_session' });
-        setUsers([]);
-        alert("Data reset. You can now create a new account.");
-        window.location.reload();
-    };
-
-    return (
-        <div className="mt-2 space-y-2">
-            <div className="flex justify-between items-center">
-                <p>Status: {status}</p>
-                <button
-                    onClick={toggleMode}
-                    className="text-[9px] underline text-blue-400 hover:text-blue-300"
-                >
-                    {isMock ? 'Switch to Real (Supabase)' : 'Switch to Mock (Local)'}
-                </button>
-            </div>
-
-            <p>Stored Users (Mock Only): {users.length}</p>
-            {users.map((u, i) => (
-                <p key={i} className="truncate text-[9px] text-slate-500">
-                    {u.email}
-                </p>
-            ))}
-            <button
-                onClick={handleReset}
-                className="mt-2 bg-red-500/20 text-red-300 border border-red-500/50 px-2 py-1 rounded text-[10px] w-full hover:bg-red-500/30"
-            >
-                RESET ALL DATA (Fix Login)
-            </button>
         </div>
     );
 };

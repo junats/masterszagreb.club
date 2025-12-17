@@ -167,6 +167,18 @@
       }
     }
 
+    @keyframes fillPulse {
+
+      0%,
+      100% {
+        fill: rgba(56, 189, 248, 0.1);
+      }
+
+      50% {
+        fill: rgba(56, 189, 248, 0.6);
+      }
+    }
+
     .animate-glow-pulse {
       animation: glow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
@@ -191,6 +203,32 @@
 
     .transition-all-data {
       transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Dashboard Specific Animations */
+    @keyframes pulse-border-v2 {
+      0% {
+        box-shadow: 0 0 5px -2px var(--glow-color);
+        border-color: var(--glow-color);
+      }
+
+      50% {
+        box-shadow: 0 0 var(--glow-size) 0px var(--glow-color);
+        border-color: var(--glow-color-bright);
+      }
+
+      100% {
+        box-shadow: 0 0 5px -2px var(--glow-color);
+        border-color: var(--glow-color);
+      }
+    }
+
+    .recharts-wrapper {
+      outline: none !important;
+    }
+
+    .recharts-surface {
+      outline: none !important;
     }
   </style>
   <script type="importmap">

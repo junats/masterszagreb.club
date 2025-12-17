@@ -137,6 +137,16 @@ const mockAuthService = {
     };
     await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(mockUser) });
     return { user: mockUser, error: null };
+  },
+
+  async getSessionFromUrl(url: string) {
+    console.log("MockAuth: getSessionFromUrl called with", url);
+    return { data: { session: null }, error: "Mock mode does not support deep linking" };
+  },
+
+  async inviteCoParent(email: string) {
+    console.log(`MockAuth: inviteCoParent called for ${email}`);
+    alert(`(Mock Mode) Invite sent to ${email}`);
   }
 };
 
@@ -156,6 +166,30 @@ const realAuthService = {
     if (error) return { user: null, error: error.message };
 
     if (data.user) {
+      // CRITICAL CHECK: Did we get a session?
+      // If Email Confirm is ON, we get User but NO Session.
+      if (!data.session) {
+        console.warn("AuthService: SignUp succeeded but NO SESSION. Email verification likely required.");
+        // Do NOT log them in. Return error to force them to verify.
+        return {
+          user: null,
+          error: "Account created! Please check your email to conform your address before signing in."
+        };
+      }
+
+      if (data.session) {
+        // MANUAL PERSISTENCE BACKUP (SignUp)
+        try {
+          await Preferences.set({
+            key: 'truetrack-backup-session',
+            value: JSON.stringify(data.session)
+          });
+          console.log("AuthService: Manual session backup saved (SignUp).");
+        } catch (e) {
+          console.error("AuthService: Failed to save manual backup (SignUp)", e);
+        }
+      }
+
       const newUser: User = {
         id: data.user.id,
         email: data.user.email || '',
@@ -174,7 +208,20 @@ const realAuthService = {
 
     if (error) return { user: null, error: error.message };
 
-    if (data.user) {
+    if (data.user && data.session) {
+      // MANUAL PERSISTENCE BACKUP
+      // The Supabase client's internal persistence is failing for some reason.
+      // We manually save verification data.
+      try {
+        await Preferences.set({
+          key: 'truetrack-backup-session',
+          value: JSON.stringify(data.session)
+        });
+        console.log("AuthService: Manual session backup saved.");
+      } catch (e) {
+        console.error("AuthService: Failed to save manual backup", e);
+      }
+
       // Fetch profile table if it exists, otherwise use metadata
       const user: User = {
         id: data.user.id,
@@ -184,11 +231,44 @@ const realAuthService = {
       };
       return { user, error: null };
     }
-    return { user: null, error: "Login failed" };
+    return { user: null, error: "Login failed (No Session)" };
   },
 
   async signOut(): Promise<void> {
-    if (supabase) await supabase.auth.signOut();
+    return supabase.auth.signOut();
+  },
+
+  async inviteCoParent(email: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Must be logged in to invite.");
+
+    // 1. Insert into DB (for our tracking)
+    const { error: dbError } = await supabase
+      .from('coparent_invites')
+      .insert({
+        invited_email: email,
+        invited_by: user.id
+      });
+
+    if (dbError) throw dbError;
+
+    // 2. Call Edge Function (sends the actual email)
+    // We expect 200 OK even if it fails, with { error: ... } in body
+    const { data: funcData, error: funcError } = await supabase.functions.invoke('send-invite', {
+      body: { email }
+    });
+
+    if (funcError) {
+      // This catches network errors or 500s that weren't caught by the function
+      console.error("Invite network failed:", funcError);
+      throw new Error("Network error sending email. " + (funcError.message || "Unknown"));
+    }
+
+    if (funcData && funcData.error) {
+      // This matches the error we returned from the function
+      console.error("Invite function logic failed:", funcData);
+      throw new Error("Email sending failed: " + funcData.error);
+    }
   },
 
   async getUser(): Promise<User | null> {
@@ -211,27 +291,76 @@ const realAuthService = {
 
   async signInWithGoogle(): Promise<{ user: User | null; error: string | null }> {
     if (!supabase) return { user: null, error: "Database not connected" };
+    // Use the deep link scheme we configured
+    const redirectTo = 'com.truetrack.app://login-callback';
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
-      }
-    });
-    if (error) return { user: null, error: error.message };
-    return { user: null, error: null }; // OAuth redirects, so no immediate user
-  },
-
-  async signInWithApple(): Promise<{ user: User | null; error: string | null }> {
-    if (!supabase) return { user: null, error: "Database not connected" };
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: {
-        redirectTo: window.location.origin
+        redirectTo,
+        skipBrowserRedirect: false, // Force browser (Capacitor)
       }
     });
     if (error) return { user: null, error: error.message };
     return { user: null, error: null }; // OAuth redirects
-  }
+  },
+
+  async signInWithApple(): Promise<{ user: User | null; error: string | null }> {
+    if (!supabase) return { user: null, error: "Database not connected" };
+    const redirectTo = 'com.truetrack.app://login-callback';
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: false
+      }
+    });
+    if (error) return { user: null, error: error.message };
+    return { user: null, error: null }; // OAuth redirects
+  },
+
+  async getSessionFromUrl(url: string) {
+    if (!supabase) return { data: { session: null }, error: "No Supabase" };
+
+    console.log("AuthService: Processing OAuth Callback URL", url);
+
+    // URL format: com.truetrack.app://login-callback?code=... OR #code=...
+    // We handle both query (?) and hash (#) fragments just in case.
+    const codeMatch = url.match(/[?&#]code=([^&#]+)/);
+
+    if (codeMatch && codeMatch[1]) {
+      console.log("AuthService: Detected PKCE code. Exchanging...");
+      const code = codeMatch[1];
+
+      try {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.error("AuthService: Exchange failed", error);
+          return { data: { session: null }, error: error.message };
+        }
+        if (data.session) {
+          console.log("AuthService: Exchange success. Session retrieved.");
+          return { data: { session: data.session }, error: null };
+        }
+      } catch (e: any) {
+        console.error("AuthService: Exchange exception", e);
+        return { data: { session: null }, error: e.message || "Unknown error" };
+      }
+    }
+
+    // Also check for error fragments coming back from provider
+    const errorMatch = url.match(/[?&#]error_description=([^&#]+)/) || url.match(/[?&#]error=([^&#]+)/);
+    if (errorMatch && errorMatch[1]) {
+      const err = decodeURIComponent(errorMatch[1]);
+      console.error("AuthService: Provider returned error", err);
+      return { data: { session: null }, error: err };
+    }
+
+    console.warn("AuthService: No code or error found in URL.");
+    return { data: { session: null }, error: "Invalid Callback URL" };
+  },
+
 };
 
 // --- DYNAMIC SERVICE PROXY ---
@@ -250,8 +379,8 @@ async function getService(): Promise<typeof mockAuthService> {
     console.error("AuthService: Failed to check mode preference", e);
   }
 
-  // 3. Default to Mock (Safety first for development/testing)
-  return mockAuthService;
+  // 3. Default: If Supabase exists, use Real! (Production/QA behavior)
+  return realAuthService;
 }
 
 export const authService = {
@@ -290,6 +419,16 @@ export const authService = {
     return service.signInWithApple();
   },
 
+  async getSessionFromUrl(url: string) {
+    const service = await getService();
+    // @ts-ignore
+    if (service.getSessionFromUrl) {
+      // @ts-ignore
+      return service.getSessionFromUrl(url);
+    }
+    return { data: { session: null }, error: "Not implemented in current service" };
+  },
+
   // Helper to toggle mode
   async setMockMode(enable: boolean) {
     await Preferences.set({ key: MOCK_MODE_KEY, value: enable ? 'true' : 'false' });
@@ -298,6 +437,17 @@ export const authService = {
   async isMockMode(): Promise<boolean> {
     const service = await getService();
     return service === mockAuthService;
+  },
+
+  async inviteCoParent(email: string) {
+    const service = await getService();
+    // @ts-ignore
+    if (service.inviteCoParent) {
+      // @ts-ignore
+      return service.inviteCoParent(email);
+    }
+    // Fallback for mock service if not implemented
+    console.warn("AuthService: inviteCoParent not implemented in current service mode.");
   }
 };
 

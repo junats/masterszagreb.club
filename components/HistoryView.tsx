@@ -7,19 +7,35 @@ import HistoryAnalytics from './HistoryAnalytics';
 import AnimatedSection from './AnimatedSection';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 
+import { useData } from '../contexts/DataContext';
+
 interface HistoryViewProps {
-    receipts: Receipt[];
-    ageRestricted: boolean;
-    categoryBudgets: Record<string, number>;
-    onDelete?: (id: string) => void;
-    onUpdate?: (receipt: Receipt) => void;
+    // Only keeping UI-specific props that coordinate with parent view state
     selectedReceipt: Receipt | null;
     onSelectReceipt: (receipt: Receipt | null) => void;
-    childSupportMode: boolean;
-    categories: CategoryDefinition[];
+    // Removed: receipts, ageRestricted, categoryBudgets, onDelete, onUpdate, childSupportMode, categories
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, categoryBudgets, onDelete, onUpdate, selectedReceipt, onSelectReceipt, childSupportMode, categories }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({
+    selectedReceipt,
+    onSelectReceipt
+}) => {
+    const {
+        receipts,
+        ageRestricted,
+        categoryBudgets,
+        deleteReceipt,
+        updateReceipt,
+        childSupportMode,
+        categories
+    } = useData();
+
+    // Map context functions to local names if needed or use directly
+    const onDelete = deleteReceipt;
+    const onUpdate = updateReceipt;
+
+    // ... existing logic
+
     const [searchTerm, setSearchTerm] = useState('');
     const [showFullImage, setShowFullImage] = useState(false);
     const [showStats, setShowStats] = useState(false);
@@ -126,6 +142,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
 
     const filteredReceipts = useMemo(() => {
         return receipts.filter(r => {
+            // 0. Co-Parenting Filter (Strict)
+            if (childSupportMode) {
+                const hasChildItems = r.items.some(i => i.isChildRelated || i.category === Category.EDUCATION || i.category === 'Child');
+                if (!hasChildItems) return false;
+            }
+
             // 1. Search Term
             const matchesSearch = r.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (r.referenceCode && r.referenceCode.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -257,7 +279,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
         return (
 
             <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out">
-                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-20 pb-24">
+                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-32 pb-24">
                     <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
                         &larr; Back to History
                     </button>
@@ -524,7 +546,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
     }
 
     return (
-        <div className="flex flex-col h-full px-4 pt-20 pb-32 bg-background">
+        <div className="flex flex-col h-full px-4 pt-36 pb-32 bg-background">
 
 
             {/* Filters */}
@@ -640,10 +662,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ receipts, ageRestricted, cate
                                             }
                                         }
                                     }}
-                                    onClick={(e) => {
-                                        // Prevent click if we were dragging (simple heuristic)
-                                        // In a real app we might check drag distance, but for now
-                                        // we rely on the user intention.
+                                    onTap={() => {
                                         onSelectReceipt(receipt);
                                     }}
                                     whileTap={{ scale: 0.98 }}

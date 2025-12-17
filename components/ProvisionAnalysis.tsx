@@ -7,17 +7,19 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { useData } from '../contexts/DataContext';
 
 interface ProvisionAnalysisProps {
-    receipts: Receipt[];
     onBack: () => void;
+    // Removed: receipts
 }
 
 import { CATEGORY_COLORS } from '../constants/colors';
 
 const COLORS = CATEGORY_COLORS;
 
-const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack }) => {
+const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
+    const { receipts } = useData();
     const data = useMemo(() => {
         const today = new Date();
         const currentMonth = today.getMonth();
@@ -249,7 +251,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ receipts, onBack 
     return (
         <div id="expense-report-container" className="flex flex-col h-full bg-[#0B1221] text-slate-200 animate-in fade-in duration-300 font-sans selection:bg-blue-500/30">
             {/* Header Bar */}
-            <div className="px-6 py-6 flex items-center justify-between">
+            <div className="px-6 pt-36 pb-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onBack}

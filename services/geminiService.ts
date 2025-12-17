@@ -139,6 +139,25 @@ export const analyzeReceiptImage = async (base64Image: string, categories: { nam
     apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
   }
 
+  // MOCK FALLBACK: If no key is found, return dummy data instead of crashing
+  if (!apiKey) {
+    console.warn("⚠️ API Key missing. Returning Mock Analysis Result.");
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          storeName: "Mock Store (Demo)",
+          date: new Date().toISOString().split('T')[0],
+          total: 42.50,
+          type: 'receipt',
+          items: [
+            { name: "Demo Item 1", price: 10.00, quantity: 1, category: "Food", isRestricted: false, isChildRelated: false, goalType: null },
+            { name: "Demo Item 2", price: 32.50, quantity: 1, category: "Household", isRestricted: false, isChildRelated: false, goalType: null }
+          ]
+        });
+      }, 2000);
+    });
+  }
+
   if (!apiKey) {
     throw new Error("API Key is missing or environment configuration is invalid.");
   }
@@ -275,6 +294,9 @@ export const analyzeReceiptImage = async (base64Image: string, categories: { nam
 
     if (error instanceof Error) {
       console.error("Error message:", error.message);
+      console.error("Error name:", error.name);
+      // @ts-ignore
+      if (error.cause) console.error("Error cause:", error.cause);
       console.error("Error stack:", error.stack);
     }
 

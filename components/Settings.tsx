@@ -8,38 +8,19 @@ import { generateDemoData } from '../utils/demoData';
 import { exportService } from '../services/exportService';
 import { PDFService } from '../services/pdfService';
 import { HapticsService } from '../services/haptics';
+import { Preferences } from '@capacitor/preferences';
 import SubscriptionModal from './SubscriptionModal';
 
-interface SettingsProps {
-    monthlyBudget: number;
-    setMonthlyBudget: (budget: number) => void;
-    categoryBudgets: Record<string, number>;
-    setCategoryBudgets: (budgets: Record<string, number>) => void;
-    ageRestricted: boolean;
-    setAgeRestricted: (restricted: boolean) => void;
-    childSupportMode: boolean;
-    setChildSupportMode: (enabled: boolean) => void;
-    helpEnabled?: boolean;
-    setHelpEnabled?: (enabled: boolean) => void;
-    categories: CategoryDefinition[];
-    setCategories: (categories: CategoryDefinition[]) => void;
-    recurringExpenses: RecurringExpense[];
-    setRecurringExpenses: (expenses: RecurringExpense[]) => void;
-    user: User | null;
-    onSignOut: () => void;
-    onUpgrade: () => void;
-    onDeleteAll: () => void;
-    goals: Goal[];
-    setGoals: (goals: Goal[]) => void;
-    onUpdateUser?: (updates: Partial<User>) => void;
-    setReceipts: (receipts: Receipt[]) => void;
-    setCustodyDays: (days: CustodyDay[]) => void;
-    onSeedData?: (scenario?: 'good' | 'average' | 'bad') => void;
-    ambientMode?: boolean;
-    setAmbientMode?: (enabled: boolean) => void;
-    showGlobalAmbient?: boolean;
-    setShowGlobalAmbient?: (enabled: boolean) => void;
+import { useData } from '../contexts/DataContext';
+import { useUser } from '../contexts/UserContext';
 
+interface SettingsProps {
+    // Most props removed.
+    // onSignOut, onUpgrade logic can be handled inside via context or kept as props if they are just triggers.
+    // Since App.tsx passed simple handlers, we can now use authService directly or context methods.
+    // However, keeping simple UI callback props is fine if they coordinate view changes (like changing view after sign out).
+    // App.tsx handleSignOut also cleared receipts/user state. Context `signOut` should handle user state.
+    // Data context clearing might need a separate call.
 }
 
 const containerVariants = {
@@ -47,36 +28,37 @@ const containerVariants = {
     visible: { opacity: 1, transition: { duration: 0.3 } },
 };
 
-const Settings: React.FC<SettingsProps> = ({
-    monthlyBudget,
-    setMonthlyBudget,
-    categoryBudgets,
-    setCategoryBudgets,
-    ageRestricted,
-    setAgeRestricted,
-    childSupportMode,
-    setChildSupportMode,
-    helpEnabled,
-    setHelpEnabled,
-    categories,
-    setCategories,
-    recurringExpenses,
-    setRecurringExpenses,
-    user,
-    onSignOut,
-    onUpgrade,
-    onDeleteAll,
-    goals,
-    setGoals,
-    setReceipts,
-    onSeedData,
-    ambientMode,
-    setAmbientMode,
-    showGlobalAmbient,
-    setShowGlobalAmbient,
-    onUpdateUser,
-    setCustodyDays
-}) => {
+const Settings: React.FC<SettingsProps> = () => {
+    const {
+        monthlyBudget, setMonthlyBudget,
+        categoryBudgets, setCategoryBudgets,
+        ageRestricted, setAgeRestricted,
+        childSupportMode, setChildSupportMode,
+        helpEnabled, setHelpEnabled,
+        categories, setCategories,
+        recurringExpenses, setRecurringExpenses,
+        goals, setGoals,
+        setReceipts, // For deleteAll
+        generateDummyData,
+        ambientMode, setAmbientMode,
+        showGlobalAmbient, setShowGlobalAmbient,
+        setCustodyDays,
+        deleteAllReceipts,
+        isProMode, setIsProMode
+    } = useData();
+
+    const { user, updateUser, signOut: contextSignOut, upgradeToPro } = useUser();
+
+    // Map context values to names used in the component
+    const onSeedData = generateDummyData;
+    const onDeleteAll = deleteAllReceipts;
+    const onUpgrade = upgradeToPro;
+    const onUpdateUser = updateUser;
+    const onSignOut = async () => {
+        await contextSignOut();
+    };
+
+
     const [showPaywall, setShowPaywall] = useState(false);
     const [showAvatarModal, setShowAvatarModal] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -225,92 +207,83 @@ const Settings: React.FC<SettingsProps> = ({
     return (
         <>
             <motion.div
-                className="w-full h-full overflow-y-auto pt-24 px-4 pb-48 no-scrollbar"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
+                className="flex-1 overflow-y-auto w-full max-w-md mx-auto relative pt-44 pb-24 px-4 custom-scrollbar"
             >
+                <div className="pb-4 px-6 text-center">
+                    <p className="text-[10px] text-slate-500 font-mono">TrueTrack v1.8 (Build {new Date().toLocaleTimeString()})</p>
+                </div>
 
+                {/* Content Container - No Overflow Clipping for Shadows/Badges */}
+                <div className="relative z-10 p-3 flex flex-col gap-3">
+                    <div
+                        className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => {
+                            console.log('Opening Edit Profile Modal');
+                            setTempNickname(user?.nickname || user?.name || '');
+                            setTempAvatar(user?.avatarUrl);
+                            setShowAvatarModal(true);
+                        }}
+                    >
+                        {/* Avatar Section */}
+                        <div className="relative shrink-0">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner ring-1 ring-white/10 z-10 relative ${user?.tier === SubscriptionTier.PRO
+                                ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+                                : 'bg-slate-700'
+                                }`}>
+                                {user?.avatarUrl ? (
+                                    <img key={user.avatarUrl} src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+                                ) : (
+                                    user?.name.charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            {/* Editor Badge - Pop out effect */}
+                            <div className="absolute -bottom-2 -right-2 bg-surface p-1.5 rounded-full border border-white/10 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-20 scale-75 group-hover:scale-100 duration-300">
+                                <div className="bg-slate-700 rounded-full p-1">
+                                    <Plus size={10} className="text-white" />
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Profile Card - Refined (Fixed Clipping) */}
-                {/* Profile Card - Refined (Fixed Clipping) */}
-                <div className="w-full relative group mb-4 text-left transition-transform duration-200">
-                    {/* Background Container - Handles Shape & Overflow */}
-                    <div className="absolute inset-0 bg-surface rounded-3xl border border-white/5 overflow-hidden shadow-sm group-hover:shadow-md group-hover:border-white/10 transition-all duration-300">
-                        {user?.tier === SubscriptionTier.PRO && (
-                            <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500/10 to-transparent w-full h-full pointer-events-none" />
-                        )}
+                        {/* Text Info */}
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <h3 className="text-white font-heading font-bold tracking-tight text-lg truncate group-hover:text-primary transition-colors">{user?.nickname || user?.name}</h3>
+                                {user?.tier === SubscriptionTier.PRO ? (
+                                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide shrink-0">PRO</span>
+                                ) : (
+                                    <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide shrink-0">FREE</span>
+                                )}
+                            </div>
+                            <p className="text-slate-400 text-xs truncate font-medium opacity-80">{user?.email}</p>
+
+                            <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
+                                <span className="text-[10px] text-primary font-bold uppercase tracking-wider">Edit Profile</span>
+                                <ChevronRight size={10} className="text-primary" />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Content Container - No Overflow Clipping for Shadows/Badges */}
-                    <div className="relative z-10 p-3 flex flex-col gap-3">
-                        <div
-                            className="flex items-center gap-3 cursor-pointer"
-                            onClick={() => {
-                                console.log('Opening Edit Profile Modal');
-                                setTempNickname(user?.nickname || user?.name || '');
-                                setTempAvatar(user?.avatarUrl);
-                                setShowAvatarModal(true);
-                            }}
-                        >
-                            {/* Avatar Section */}
-                            <div className="relative shrink-0">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner ring-1 ring-white/10 z-10 relative ${user?.tier === SubscriptionTier.PRO
-                                    ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
-                                    : 'bg-slate-700'
-                                    }`}>
-                                    {user?.avatarUrl ? (
-                                        <img key={user.avatarUrl} src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
-                                    ) : (
-                                        user?.name.charAt(0).toUpperCase()
-                                    )}
-                                </div>
-                                {/* Editor Badge - Pop out effect */}
-                                <div className="absolute -bottom-2 -right-2 bg-surface p-1.5 rounded-full border border-white/10 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-20 scale-75 group-hover:scale-100 duration-300">
-                                    <div className="bg-slate-700 rounded-full p-1">
-                                        <Plus size={10} className="text-white" />
-                                    </div>
-                                </div>
+                    {/* Budget Slider Integration */}
+                    <div className="w-full bg-black/20 rounded-xl p-3 border border-white/5">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <Wallet size={12} className="text-emerald-400" />
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Monthly Budget</span>
                             </div>
-
-                            {/* Text Info */}
-                            <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 mb-0.5">
-                                    <h3 className="text-white font-heading font-bold tracking-tight text-lg truncate group-hover:text-primary transition-colors">{user?.nickname || user?.name}</h3>
-                                    {user?.tier === SubscriptionTier.PRO ? (
-                                        <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide shrink-0">PRO</span>
-                                    ) : (
-                                        <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide shrink-0">FREE</span>
-                                    )}
-                                </div>
-                                <p className="text-slate-400 text-xs truncate font-medium opacity-80">{user?.email}</p>
-
-                                <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                                    <span className="text-[10px] text-primary font-bold uppercase tracking-wider">Edit Profile</span>
-                                    <ChevronRight size={10} className="text-primary" />
-                                </div>
-                            </div>
+                            <span className="text-white font-mono font-bold text-xs tabular-nums">€{monthlyBudget}</span>
                         </div>
-
-                        {/* Budget Slider Integration */}
-                        <div className="w-full bg-black/20 rounded-xl p-3 border border-white/5">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                    <Wallet size={12} className="text-emerald-400" />
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Monthly Budget</span>
-                                </div>
-                                <span className="text-white font-mono font-bold text-xs tabular-nums">€{monthlyBudget}</span>
-                            </div>
-                            <input
-                                type="range"
-                                min="100"
-                                max="5000"
-                                step="50"
-                                value={monthlyBudget}
-                                onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                            />
-                        </div>
+                        <input
+                            type="range"
+                            min="100"
+                            max="5000"
+                            step="50"
+                            value={monthlyBudget}
+                            onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                            className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                        />
                     </div>
                 </div>
 
@@ -369,6 +342,35 @@ const Settings: React.FC<SettingsProps> = ({
                                         }}
                                     />
                                     <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
+                                </label>
+                            </div>
+
+                            {/* Enable Goals/Pro Features */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${isProMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                                        <Target size={18} />
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-200 text-sm font-bold block">Goal Tracking</span>
+                                        <span className="text-xs text-slate-500 font-medium block">Monitor habits & limits (Pro)</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={isProMode}
+                                        onChange={(e) => {
+                                            if (user?.tier !== SubscriptionTier.PRO) {
+                                                setShowPaywall(true);
+                                                return;
+                                            }
+                                            HapticsService.impactMedium();
+                                            setIsProMode(e.target.checked);
+                                        }}
+                                    />
+                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user?.tier === SubscriptionTier.PRO ? 'peer-checked:bg-purple-500' : ''}`}></div>
                                 </label>
                             </div>
 
@@ -849,6 +851,28 @@ const Settings: React.FC<SettingsProps> = ({
 
 
                     <button
+                        onClick={async () => {
+                            const { keys } = await Preferences.keys();
+                            if (keys.length === 0) {
+                                alert("Storage Dump: EMPTY (No keys found)");
+                                return;
+                            }
+
+                            // Dump all values
+                            let dump = "Storage Keys:\n";
+                            for (const key of keys) {
+                                // truncate key for readability
+                                dump += `- ${key}\n`;
+                            }
+                            alert(dump);
+                        }}
+                        className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mb-4"
+                    >
+                        <Database size={18} />
+                        Debug Storage (List Keys)
+                    </button>
+
+                    <button
                         onClick={onDeleteAll}
                         className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
                     >
@@ -856,7 +880,7 @@ const Settings: React.FC<SettingsProps> = ({
                         Delete All Data
                     </button>
                 </div>
-            </motion.div>
+            </motion.div >
             {/* End of Main Content Scroll View */}
 
             {/* Modals */}

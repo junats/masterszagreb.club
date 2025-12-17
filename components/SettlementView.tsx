@@ -9,7 +9,7 @@ interface SettlementViewProps {
 
 const SettlementView: React.FC<SettlementViewProps> = ({ receipts = [], onBack }) => {
     return (
-        <div className="flex flex-col h-full bg-background text-white p-4">
+        <div className="flex flex-col h-full bg-background text-white pt-36 px-4 pb-4">
             <button onClick={onBack} className="mb-4 text-blue-400">Back</button>
             <h1>Settlement View Debug</h1>
             <p>Receipts count: {receipts?.length || 0}</p>

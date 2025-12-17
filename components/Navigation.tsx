@@ -8,6 +8,7 @@ interface NavigationProps {
   currentView: ViewState;
   setView: (view: ViewState) => void;
   isVisible: boolean;
+  childSupportMode?: boolean;
   helpEnabled: boolean;
 }
 
@@ -23,7 +24,12 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
   ] as const;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0B1221]/60 backdrop-blur-2xl border-t border-white/10 pb-safe pt-2 px-2 h-auto min-h-[80px] z-50 transition-all duration-300">
+    <nav className={`fixed bottom-0 left-0 right-0 backdrop-blur-2xl border-t pb-safe pt-2 px-2 h-auto min-h-[80px] z-50 transition-all duration-300 ${childSupportMode ? 'bg-emerald-950/80 border-emerald-500/30' : 'bg-[#0B1221]/60 border-white/10'}`}>
+      {childSupportMode && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-black text-[9px] font-bold px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] flex items-center gap-1">
+          <HeartHandshake size={10} /> CO-PARENTING
+        </div>
+      )}
       <div className="flex justify-between items-center max-w-md mx-auto h-full pb-2">
         {navItems.filter(item => !item.hidden).map((item) => {
           const isActive = currentView === item.id;

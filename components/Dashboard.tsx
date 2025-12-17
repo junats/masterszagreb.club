@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay, User } from '../types';
+import { Receipt, Category, CategoryDefinition, Goal, GoalType, CustodyDay, User, Achievement } from '../types';
 import { Target, TrendingUp, TrendingDown, Minus, Zap, AlertTriangle, PieChart as PieIcon, Shield, ShieldCheck, Calendar, Wallet, ArrowRight, Sparkles, Trophy, Pizza, Beer, Cigarette, Gamepad2, Dices, Coffee, Cookie, ShoppingCart, Shirt, Car, Tv, PiggyBank, ShoppingBag, X, FileText, Store, ArrowUp, BarChart3, Check, Hash, ArrowUpRight, CalendarDays, Activity, Users, Gift, Plus, CheckCircle2 } from 'lucide-react';
 import { HapticsService } from '../services/haptics';
 import { WidgetService } from '../services/widgetService';
@@ -17,6 +18,7 @@ import { AchievementDetailsModal } from './AchievementDetailsModal';
 import { CoParentingDetailsModal } from './CoParentingDetailsModal';
 import { CATEGORY_COLORS } from '../constants/colors';
 import { generateInsights, InsightMessage } from '../services/insightService';
+import SnapshotDetailsModal from './SnapshotDetailsModal';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -48,22 +50,16 @@ const VisibilitySensor = ({ children, threshold = 0.5 }: { children: (props: { i
     return <div ref={ref} className="w-full h-full">{children({ isVisible })}</div>;
 };
 
+import { useData } from '../contexts/DataContext';
+import { useUser } from '../contexts/UserContext';
+
 interface DashboardProps {
-    receipts: Receipt[];
-    monthlyBudget: number;
-    ageRestricted: boolean;
-    childSupportMode: boolean;
-    categories: CategoryDefinition[];
-    categoryBudgets: Record<string, number>;
     onViewReceipt?: (receipt: Receipt) => void;
     onProvisionClick?: () => void;
     onSettlementClick?: () => void;
     onCustodyClick?: () => void;
     onHabitsClick?: () => void;
-    goals?: Goal[];
-    custodyDays?: CustodyDay[];
-    ambientMode?: boolean;
-    user?: User;
+    // Removed data props: receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, recurringExpenses, setRecurringExpenses, goals, custodyDays, user, ambientMode
 }
 
 interface DrillDownState {
@@ -73,7 +69,27 @@ interface DrillDownState {
 
 type DateFilter = 'all' | 'this_month' | 'last_month';
 
-const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestricted, childSupportMode, categories, categoryBudgets, onViewReceipt, onProvisionClick, onSettlementClick, onCustodyClick, onHabitsClick, goals = [], custodyDays = [], user, ambientMode }) => {
+const Dashboard: React.FC<DashboardProps> = ({
+    onViewReceipt,
+    onProvisionClick,
+    onSettlementClick,
+    onCustodyClick,
+    onHabitsClick
+}) => {
+    const {
+        receipts,
+        monthlyBudget,
+        ageRestricted,
+        childSupportMode,
+        categories,
+        categoryBudgets,
+        goals,
+        custodyDays,
+        ambientMode,
+        syncCustody,
+        isProMode
+    } = useData();
+    const { user } = useUser();
 
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
@@ -89,8 +105,9 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
     const [isCoParentingMode, setIsCoParentingMode] = useState(false); // Toggle for Co-parenting view
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-    const [selectedAchievement, setSelectedAchievement] = useState<any | null>(null);
-    const [showCoParentingDetails, setShowCoParentingDetails] = useState(false);
+    const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+    const [selectedSnapshotMetric, setSelectedSnapshotMetric] = useState<any | null>(null);
+    const [showCoParentingModal, setShowCoParentingModal] = useState(false);
     const [viewMode, setViewMode] = useState<'chart' | 'legend'>('chart');
     const [budgetView, setBudgetView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [pieView, setPieView] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
@@ -205,11 +222,11 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     </div>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                    <span className={`text-[10px] font-bold uppercase tracking-wide text-center ${showIndicators && intensity === 'high' ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-400'} `}>
+                    <span className={"text-[10px] font-bold uppercase tracking-wide text-center " + (showIndicators && intensity === 'high' ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-400')}>
                         <CountUp value={total} prefix="€" decimals={0} />
                     </span>
                     {showIndicators && trend && (
-                        <span className={`${trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500'} `}>
+                        <span className={(trend === 'up' ? 'text-red-400' : trend === 'down' ? 'text-emerald-400' : 'text-slate-500')}>
                             {trend === 'up' ? <TrendingUp size={10} /> : trend === 'down' ? <TrendingDown size={10} /> : <Minus size={10} />}
                         </span>
                     )}
@@ -221,21 +238,20 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     // Calculate Metrics
     const metrics = useMemo(() => {
-        console.log(`📊 Dashboard: Metrics Recalculating! Receipts: ${receipts?.length}, DateFilter: ${dateFilter}`);
+        // 0. Source Data (Unfiltered by Child Mode initially, so we can calculate global totals)
+        const sourceReceipts = receipts || [];
 
         // 1. Filter Receipts based on Date Filter
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
-        const filteredReceipts = (receipts || []).filter(r => {
-            // Robust Date Parsing
+        const checkDate = (r: Receipt) => {
             let d = new Date(r.date);
             if (r.date.includes('-') && !r.date.includes('T')) {
                 const parts = r.date.split('-');
                 d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             }
-
             if (dateFilter === 'this_month') {
                 return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
             } else if (dateFilter === 'last_month') {
@@ -244,11 +260,99 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
             }
             return true;
+        };
+
+        // Standard Filtered List (Respects Co-Parenting Mode) -> Powers main dashboard
+        const filteredReceipts = sourceReceipts.filter(r => {
+            if (!checkDate(r)) return false;
+            // Filter if Child Mode is ON
+            if (childSupportMode && !r.items.some(i => i.isChildRelated || i.category === Category.EDUCATION || i.category === 'Child')) {
+                return false;
+            }
+            return true;
+        });
+
+        // Global Filtered List (Ignores Co-Parenting Mode, respects Date) -> Powers "Total" Pie Chart
+        const globalFilteredReceipts = sourceReceipts.filter(checkDate);
+
+        // Calculate Global Totals (for Left Pie Chart)
+        const globalCategoryTotals: Record<string, number> = {};
+        let globalTotal = 0;
+
+        globalFilteredReceipts.forEach(r => {
+            r.items.forEach(i => {
+                const cat = i.category || Category.OTHER;
+                // Simple normalization (copy/paste lite logic or use helper if available? Inline for safety)
+                let normalizedCat = cat;
+                if (typeof cat === 'string') {
+                    const lower = cat.toLowerCase();
+                    if (['groceries', 'food', 'dining'].includes(lower)) normalizedCat = Category.FOOD;
+                    else if (['alcohol', 'beer', 'wine'].includes(lower)) normalizedCat = Category.ALCOHOL;
+                    else if (['health', 'pharmacy'].includes(lower)) normalizedCat = Category.HEALTH;
+                    else if (['household', 'cleaning'].includes(lower)) normalizedCat = Category.HOUSEHOLD;
+                    else if (['education', 'child'].includes(lower)) normalizedCat = Category.EDUCATION;
+                    else if (['transport', 'fuel'].includes(lower)) normalizedCat = Category.TRANSPORT;
+                    else if (['luxury', 'tech'].includes(lower)) normalizedCat = Category.LUXURY;
+                    else if (['necessity'].includes(lower)) normalizedCat = Category.NECESSITY;
+                }
+
+                // Add Sub-categorization Logic (Simplified for redundancy check, or fully robust?)
+                // Let's copy the robust sub-cat logic to ensure charts match visually
+                if (normalizedCat === Category.FOOD) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/apple|banana|orange|grape|fruit|berry|melon|lemon|lime|pear|peach/)) normalizedCat = "Fruit";
+                    else if (nameLower.match(/carrot|potato|onion|pepper|vegetable|salad|tomato|cucumber|lettuce/)) normalizedCat = "Vegetables";
+                    else if (nameLower.match(/coke|pepsi|soda|fanta|sprite|drink|beverage|water/)) normalizedCat = "Soda";
+                    else if (nameLower.match(/chicken|beef|pork|meat|steak/)) normalizedCat = "Meat";
+                    else if (nameLower.match(/milk|cheese|yogurt|butter|cream/)) normalizedCat = "Dairy";
+                    else if (nameLower.match(/bread|bakery|cake|pastry|pizza|burger/)) normalizedCat = "Bakery";
+                    else if (nameLower.match(/chip|snack|chocolate|candy/)) normalizedCat = "Snacks";
+                } else if (normalizedCat === Category.LUXURY) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/tech|phone|laptop|computer|headphone|earbud/)) normalizedCat = "Tech";
+                    else if (nameLower.match(/clothes|shirt|jacket|jean|shoe/)) normalizedCat = "Clothing";
+                    else if (nameLower.match(/game|steam|xbox|playstation|lego/)) normalizedCat = "Gaming"; // Toys -> Gaming/Fun
+                    else if (nameLower.match(/flight|hotel|airbnb|trip|travel/)) normalizedCat = "Travel";
+                } else if (normalizedCat === Category.HOUSEHOLD) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/clean|soap|detergent|bleach/)) normalizedCat = "Cleaning";
+                    else if (nameLower.match(/plant|flower|garden/)) normalizedCat = "Garden";
+                    else if (nameLower.match(/decor|frame|candle/)) normalizedCat = "Decor";
+                }
+                // Sub-categorize Transport
+                else if (normalizedCat === Category.TRANSPORT) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/petrol|diesel|fuel|gas|circle k|applegreen/)) normalizedCat = "Fuel";
+                    else if (nameLower.match(/bus|train|tram|luas|dart|leap|ticket/)) normalizedCat = "Public Transport";
+                    else if (nameLower.match(/taxi|uber|bolt|freenow/)) normalizedCat = "Taxi";
+                    else if (nameLower.match(/park|toll|wash|service|nct|tax|insurance/)) normalizedCat = "Car Expenses";
+                }
+                // Sub-categorize Health
+                else if (normalizedCat === Category.HEALTH) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/pharmacy|boots|lloyds|drug|med|vitamin|prescription/)) normalizedCat = "Pharmacy";
+                    else if (nameLower.match(/doctor|gp|clinic|hospital|dentist|consult/)) normalizedCat = "Doctor";
+                    else if (nameLower.match(/gym|swim|sport|train|fit/)) normalizedCat = "Fitness";
+                }
+                // Sub-categorize Dining
+                else if (normalizedCat === Category.DINING) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/coffee|cafe|latte|cappuccino|tea|starbucks|costa/)) normalizedCat = "Cafe";
+                    else if (nameLower.match(/mcdonald|burger|kfc|subway|pizza|fast|takeaway/)) normalizedCat = "Fast Food";
+                    else normalizedCat = "Restaurant";
+                }
+
+                globalCategoryTotals[normalizedCat] = (globalCategoryTotals[normalizedCat] || 0) + i.price;
+                globalTotal += i.price;
+            });
         });
 
         let totalSpent = 0;
         let provisionTotal = 0; // Essentials only
         const categoryTotals: Record<string, number> = {};
+        const childCategoryTotals: Record<string, number> = {}; // New: Child Only
+        let childTotalSpent = 0;
+
         const categoryItems: Record<string, DrillDownState['items']> = {};
         let luxuryTotal = 0;
 
@@ -286,12 +390,32 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     else if (nameLower.match(/organic|bio|eco/)) normalizedCat = "Organic";
                     else if (nameLower.match(/chicken|beef|pork|meat|steak|lamb|turkey|ham|bacon|sausage/)) normalizedCat = "Meat";
                     else if (nameLower.match(/milk|cheese|yogurt|butter|cream|dairy/)) normalizedCat = "Dairy";
-                    else if (nameLower.match(/bread|bakery|cake|pastry|croissant|bagel|bun|roll/)) normalizedCat = "Bakery";
+                    else if (nameLower.match(/bread|bakery|cake|pastry|croissant|bagel|bun|roll|pizza|burger/)) normalizedCat = "Bakery"; // Added pizza/burger
                     else if (nameLower.match(/chip|snack|chocolate|candy|sweet|cookie|biscuit/)) normalizedCat = "Snacks";
+                }
+                // Sub-categorize Luxury
+                else if (normalizedCat === Category.LUXURY) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/tech|phone|laptop|computer|headphone|earbud|watch|camera|electronic|apple|samsung|sony/)) normalizedCat = "Tech";
+                    else if (nameLower.match(/clothes|shirt|jacket|jean|shoe|sneaker|dress|coat|fashion|zara|h&m|nike|adidas/)) normalizedCat = "Clothing";
+                    else if (nameLower.match(/game|steam|xbox|playstation|nintendo|toy|lego/)) normalizedCat = "Gaming"; // Toys -> Gaming/Fun
+                    else if (nameLower.match(/flight|hotel|airbnb|trip|travel/)) normalizedCat = "Travel";
+                }
+                // Sub-categorize Household
+                else if (normalizedCat === Category.HOUSEHOLD) {
+                    const nameLower = i.name.toLowerCase();
+                    if (nameLower.match(/clean|soap|detergent|bleach|sponge|towel|paper|tissue/)) normalizedCat = "Cleaning";
+                    else if (nameLower.match(/plant|flower|garden|seed|pot/)) normalizedCat = "Garden";
+                    else if (nameLower.match(/decor|frame|candle|lamp|light|furniture|chair|table/)) normalizedCat = "Decor";
                 }
 
                 categoryTotals[normalizedCat] = (categoryTotals[normalizedCat] || 0) + i.price;
                 totalSpent += i.price; // Accumulate total spent here
+
+                if (i.isChildRelated) {
+                    childCategoryTotals[normalizedCat] = (childCategoryTotals[normalizedCat] || 0) + i.price;
+                    childTotalSpent += i.price;
+                }
 
                 // Provision Calculation (using normalized or raw)
                 // ... (existing logic is fine, but we can simplify using normalizedCat if we trust it,
@@ -328,8 +452,17 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
         const provisionRatio = totalSpent > 0 ? (provisionTotal / totalSpent) * 100 : 0;
 
+        // Global Data (Unfiltered)
+        const globalCategoryData = Object.entries(globalCategoryTotals)
+            .map(([name, value]) => ({ name, value, percentage: globalTotal > 0 ? (value / globalTotal) * 100 : 0 }))
+            .sort((a, b) => b.value - a.value);
+
         const categoryData = Object.entries(categoryTotals)
             .map(([name, value]) => ({ name, value, percentage: totalSpent > 0 ? (value / totalSpent) * 100 : 0 }))
+            .sort((a, b) => b.value - a.value);
+
+        const childCategoryData = Object.entries(childCategoryTotals)
+            .map(([name, value]) => ({ name, value, percentage: childTotalSpent > 0 ? (value / childTotalSpent) * 100 : 0 }))
             .sort((a, b) => b.value - a.value);
 
         // Sort drilldown items
@@ -424,12 +557,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             });
             if (dayEntry[Category.OTHER] === undefined) dayEntry[Category.OTHER] = 0;
 
-            receipts.forEach(r => {
+            if (dayEntry[Category.OTHER] === undefined) dayEntry[Category.OTHER] = 0;
+
+            // Use filteredReceipts for Context-Aware Data (Child Mode or Single Mode)
+            filteredReceipts.forEach(r => {
                 let rDateStr = r.date;
                 if (r.date.includes('T')) {
                     rDateStr = r.date.split('T')[0];
                 } else if (r.date.length === 10 && r.date.includes('-')) {
-                    // Already YYYY-MM-DD - Verify validity
                     // No-op
                 } else {
                     try {
@@ -444,12 +579,11 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
                 if (rDateStr === dStr) {
                     r.items.forEach(item => {
-                        if (ageRestricted && item.isRestricted) return;
-
-                        // Normalize Category
+                        // Sub-category logic handled loosely here, but main category required for Bar Chart
                         let cat = item.category || Category.OTHER;
                         if (typeof cat === 'string') {
                             const lower = cat.toLowerCase();
+                            // Simple mapping provided here for bar chart consistency
                             if (['groceries', 'food', 'dining', 'alcohol'].includes(lower)) cat = Category.FOOD;
                             else if (['health', 'pharmacy', 'medical'].includes(lower)) cat = Category.HEALTH;
                             else if (['household', 'cleaning', 'furniture'].includes(lower)) cat = Category.HOUSEHOLD;
@@ -468,6 +602,50 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
             if (dayEntry.total > maxDayTotal) maxDayTotal = dayEntry.total;
             weeklyActivity.push(dayEntry);
+        }
+
+        // 1.5 Global Weekly Activity (For "Total" Chart Context even in Child Mode)
+        const globalWeeklyActivity: any[] = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const offset = d.getTimezoneOffset();
+            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+            const dStr = localDate.toISOString().split('T')[0];
+
+            const dayEntry: any = { total: 0 };
+            Object.values(Category).forEach(cat => dayEntry[cat] = 0);
+            if (dayEntry[Category.OTHER] === undefined) dayEntry[Category.OTHER] = 0;
+
+            sourceReceipts.forEach(r => { // GLOBAL SOURCE
+                let rDateStr = r.date.includes('T') ? r.date.split('T')[0] : r.date;
+                // (Simplified date check for brevity, assuming standard format or consistent with above)
+                try {
+                    const parsed = new Date(r.date);
+                    if (!isNaN(parsed.getTime())) rDateStr = parsed.toISOString().split('T')[0];
+                } catch (e) { }
+
+                if (rDateStr === dStr) {
+                    r.items.forEach(item => {
+                        let cat = item.category || Category.OTHER;
+                        // Normalize (Simplified for Global Calc)
+                        if (typeof cat === 'string') {
+                            const lower = cat.toLowerCase();
+                            if (['groceries', 'food', 'dining', 'alcohol'].includes(lower)) cat = Category.FOOD;
+                            else if (['health', 'pharmacy', 'medical'].includes(lower)) cat = Category.HEALTH;
+                            else if (['household', 'cleaning', 'furniture'].includes(lower)) cat = Category.HOUSEHOLD;
+                            else if (['education', 'school', 'tuition', 'child'].includes(lower)) cat = Category.EDUCATION;
+                            else if (['transport', 'fuel', 'parking'].includes(lower)) cat = Category.TRANSPORT;
+                            else if (['luxury', 'electronics', 'entertainment'].includes(lower)) cat = Category.LUXURY;
+                            else if (['necessity'].includes(lower)) cat = Category.NECESSITY;
+                        }
+                        if (dayEntry[cat] === undefined) cat = Category.OTHER;
+                        dayEntry[cat] += item.price;
+                        dayEntry.total += item.price;
+                    });
+                }
+            });
+            globalWeeklyActivity.push(dayEntry);
         }
 
         console.log("Weekly Activity:", weeklyActivity); // Debug log
@@ -536,7 +714,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             // Format: "W23" or "Oct 12" (Start date)
             const weekStart = new Date(d);
             weekStart.setDate(weekStart.getDate() - 6);
-            const label = `${weekStart.getDate()} ${weekStart.toLocaleString('default', { month: 'short' })} `;
+            const label = weekStart.getDate() + ' ' + weekStart.toLocaleString('default', { month: 'short' });
 
             const weekEntry: any = {
                 name: label,
@@ -608,7 +786,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
         for (let i = 11; i >= 0; i--) {
             const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const key = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)} `;
+            const key = months[d.getMonth()] + ' ' + d.getFullYear().toString().substr(2);
 
             // Initialize with all categories set to 0
             const monthEntry: any = { label: key, total: 0 };
@@ -649,7 +827,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             }
 
             // Populate Year Data
-            const yearKey = `${months[d.getMonth()]} ${d.getFullYear().toString().substr(2)} `;
+            const yearKey = months[d.getMonth()] + ' ' + d.getFullYear().toString().substr(2);
             const yearEntry = (yearData || []).find(m => m.label === yearKey);
 
             // Populate Month Data
@@ -696,6 +874,10 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             provisionTotal,
             provisionRatio,
             categoryData,
+            childCategoryData,
+            childTotalSpent,    // Restored
+            globalCategoryData, // Exposed
+            globalTotal,        // Exposed
             luxuryTotal,
             categoryItems,
             topStores,
@@ -715,17 +897,30 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             monthDiff,
             projectedTotal,
             thisMonthTotal,
-            trendData: yearData, // Keep for backward compatibility if needed, but we use yearData now
-            yearData,
-            monthData,
-            weekData,
+            trendData: yearData, // Keep for backward compatibility
+            yearData, // Explicitly exposed for TrendsChart
+            monthData, // Explicitly exposed for TrendsChart
+            weekData, // Explicitly exposed for TrendsChart
             weeklyData,
             thisMonthReceipts,
+            sourceReceipts, // Export filtered receipts for Insights
             dailyAverage: daysPassed > 0 ? thisMonthTotal / daysPassed : 0,
             foodRatio: totalSpent > 0 ? ((categoryTotals[Category.FOOD] || 0) / totalSpent) * 100 : 0,
             luxuryRatio: totalSpent > 0 ? (luxuryTotal / totalSpent) * 100 : 0,
             educationRatio: totalSpent > 0 ? ((categoryTotals[Category.EDUCATION] || 0) / totalSpent) * 100 : 0,
             healthRatio: totalSpent > 0 ? ((categoryTotals[Category.HEALTH] || 0) / totalSpent) * 100 : 0,
+
+            // Daily Ratios (For Gauges)
+            dailyRatios: (() => {
+                const today = weeklyActivity[weeklyActivity.length - 1] || { total: 0 };
+                const t = today.total || 0;
+                return {
+                    education: t > 0 ? ((today[Category.EDUCATION] || 0) / t) * 100 : 0,
+                    food: t > 0 ? ((today[Category.FOOD] || 0) / t) * 100 : 0,
+                    activities: t > 0 ? ((today[Category.LUXURY] || 0) / t) * 100 : 0,
+                    health: t > 0 ? ((today[Category.HEALTH] || 0) / t) * 100 : 0,
+                };
+            })(),
 
             // Daily Metrics
             todayTotal: weeklyActivity[weeklyActivity.length - 1]?.total || 0,
@@ -744,23 +939,48 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     .sort((a, b) => b.value - a.value);
             })(),
 
-            // Weekly Metrics
-            weeklyAverage: weeklyData.length > 0 ? weeklyData.reduce((acc, w) => acc + w.total, 0) / weeklyData.length : 0,
-            thisWeekTotal: weeklyData[weeklyData.length - 1]?.total || 0,
-            lastWeekTotal: weeklyData[weeklyData.length - 2]?.total || 0,
+            // GLOBAL Daily/Weekly Data (Ignores Child Mode)
+            globalTotalToday: globalWeeklyActivity[globalWeeklyActivity.length - 1]?.total || 0,
+
+            globalTodayCategoryData: (() => {
+                const today = globalWeeklyActivity[globalWeeklyActivity.length - 1];
+                if (!today) return [];
+                return Object.entries(today)
+                    .filter(([key]) => Object.values(Category).includes(key as any) && (today as any)[key] > 0)
+                    .map(([name, value]) => ({ name, value: value as number, percentage: today.total > 0 ? ((value as number) / today.total) * 100 : 0 }))
+                    .sort((a, b) => b.value - a.value);
+            })(),
+
+            globalThisWeekCategoryData: (() => {
+                const rollingWeekTotal: Record<string, number> = {};
+                let rollingTotal = 0;
+                globalWeeklyActivity.forEach(day => {
+                    Object.entries(day).forEach(([key, val]) => {
+                        if (Object.values(Category).includes(key as any)) {
+                            rollingWeekTotal[key] = (rollingWeekTotal[key] || 0) + (val as number);
+                            rollingTotal += (val as number);
+                        }
+                    });
+                });
+                return Object.entries(rollingWeekTotal)
+                    .map(([name, value]) => ({ name, value, percentage: rollingTotal > 0 ? (value / rollingTotal) * 100 : 0 }))
+                    .sort((a, b) => b.value - a.value);
+            })(),
+
             thisWeekCategoryData: (() => {
                 const thisWeek = weeklyData[weeklyData.length - 1];
                 if (!thisWeek) return [];
                 return Object.entries(thisWeek)
-                    .filter(([key]) => Object.values(Category).includes(key as any))
-                    .map(([name, value]) => ({
-                        name,
-                        value: value as number,
-                        percentage: thisWeek.total > 0 ? ((value as number) / thisWeek.total) * 100 : 0
-                    }))
-                    .filter(i => i.value > 0)
+                    .filter(([key]) => Object.values(Category).includes(key as any) && (thisWeek as any)[key] > 0)
+                    .map(([name, value]) => ({ name, value: value as number, percentage: thisWeek.total > 0 ? ((value as number) / thisWeek.total) * 100 : 0 }))
                     .sort((a, b) => b.value - a.value);
             })(),
+
+            // Weekly Metrics
+            weeklyAverage: weeklyData.length > 0 ? weeklyData.reduce((acc, w) => acc + w.total, 0) / weeklyData.length : 0,
+            thisWeekTotal: weeklyData[weeklyData.length - 1]?.total || 0,
+            lastWeekTotal: weeklyData[weeklyData.length - 2]?.total || 0,
+
             weeklyRatios: (() => {
                 const thisWeek = weeklyData[weeklyData.length - 1];
                 if (!thisWeek || thisWeek.total === 0) return { education: 0, food: 0, activities: 0, health: 0 };
@@ -783,14 +1003,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         insights.push({
                             type: 'warning',
                             title: 'Over Budget',
-                            message: `You've exceeded your monthly budget by €${(thisMonthTotal - monthlyBudget).toFixed(0)}. Consider reducing discretionary spending.`,
+                            message: "You've exceeded your monthly budget by €" + (thisMonthTotal - monthlyBudget).toFixed(0) + ". Consider reducing discretionary spending.",
                             icon: <AlertTriangle size={16} />
                         });
                     } else if (usage > 0.85) {
                         insights.push({
                             type: 'warning',
                             title: 'Approaching Limit',
-                            message: `You've used ${(usage * 100).toFixed(0)}% of your budget. Be careful with upcoming expenses.`,
+                            message: "You've used " + (usage * 100).toFixed(0) + "% of your budget. Be careful with upcoming expenses.",
                             icon: <AlertTriangle size={16} />
                         });
                     }
@@ -802,8 +1022,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     if (topCat && topCat.value > (thisMonthTotal * 0.4)) {
                         insights.push({
                             type: 'info',
-                            title: `High Spending on ${topCat.name}`,
-                            message: `${topCat.name} accounts for ${(topCat.percentage).toFixed(0)}% of your spending this month.`,
+                            title: "High Spending on " + topCat.name,
+                            message: topCat.name + " accounts for " + (topCat.percentage).toFixed(0) + "% of your spending this month.",
                             icon: <PieIcon size={16} />
                         });
                     }
@@ -814,7 +1034,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     insights.push({
                         type: 'success',
                         title: 'Great Progress',
-                        message: `You're halfway through the month and well under budget!`,
+                        message: "You're halfway through the month and well under budget!",
                         icon: <TrendingDown size={16} />
                     });
                 }
@@ -840,16 +1060,16 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         if (goalSpending > 0) {
                             insights.push({
                                 type: 'warning',
-                                title: `${goal.name} Alert`,
-                                message: `You've spent €${goalSpending.toFixed(2)} on ${goal.name.toLowerCase()} items this month.`,
+                                title: goal.name + " Alert",
+                                message: "You've spent €" + goalSpending.toFixed(2) + " on " + goal.name.toLowerCase() + " items this month.",
                                 icon: <Target size={16} className="text-purple-400" />
                             });
                         } else if (new Date().getDate() > 7) {
                             // Reward for 0 spending if it's been at least a week
                             insights.push({
                                 type: 'success',
-                                title: `${goal.name} Streak!`,
-                                message: `Great job! You haven't spent anything on ${goal.name.toLowerCase()} this month!`,
+                                title: goal.name + " Streak!",
+                                message: "Great job! You haven't spent anything on " + goal.name.toLowerCase() + " this month!",
                                 icon: <Trophy size={16} className="text-yellow-400" />
                             });
                         }
@@ -864,8 +1084,8 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                             if (monthlySavings > 20) { // Only show if significant
                                 insights.push({
                                     type: 'info',
-                                    title: `Potential Savings 💰`,
-                                    message: `Cutting out ${goal.name} could save you ~€${monthlySavings.toFixed(0)}/mo or €${yearlySavings.toFixed(0)}/yr!`,
+                                    title: "Potential Savings 💰",
+                                    message: "Cutting out " + goal.name + " could save you ~€" + monthlySavings.toFixed(0) + "/mo or €" + yearlySavings.toFixed(0) + "/yr!",
                                     icon: <PiggyBank size={16} className="text-emerald-400" />
                                 });
                             }
@@ -873,8 +1093,9 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     });
                 }
 
-                return insights.slice(0, 3); // Limit to 3 insights
-            })()
+                return insights.slice(0, 3);
+            })(),
+            latestReceipt: recentLogs[recentLogs.length - 1],
         };
     }, [receipts, monthlyBudget, ageRestricted, dateFilter, goals]);
 
@@ -959,12 +1180,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         return generateInsights(
             metrics.thisMonthTotal,
             monthlyBudget,
-            receipts,
+            metrics.sourceReceipts, // Use mode-filtered receipts
             custodyDays,
             metrics.lastMonthTotal,
             goals
         );
-    }, [metrics.thisMonthTotal, monthlyBudget, receipts, custodyDays, goals]);
+    }, [metrics.thisMonthTotal, monthlyBudget, metrics.sourceReceipts, custodyDays, metrics.lastMonthTotal, goals]);
 
     // AI Smart Metrics
     const aiMetrics = useMemo(() => {
@@ -994,22 +1215,203 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
         const warning = suggestions.find(s => s.severity === 'warning' || s.severity === 'danger');
         const success = suggestions.find(s => s.severity === 'success');
 
+        // Dynamic Status Logic
+        let statusLabel = 'Forecast';
+        let statusValue = "€" + projected.toFixed(0);
+        let statusTrend = projected > monthlyBudget ? 'down' : 'up';
+        let statusIcon = projected > monthlyBudget ? TrendingDown : TrendingUp;
+        let statusDetail = metrics.spendingInsight;
+        let statusPopup = {
+            title: 'Budget Forecast',
+            description: "Based on your current spending velocity, we project a Month End total of €" + projected.toFixed(0) + ".",
+            insight: projected > monthlyBudget ? "You are on track to exceed your budget by €" + (projected - monthlyBudget).toFixed(0) + "." : 'You are comfortably on track to stay under budget.',
+            items: [
+                { label: 'Current Spend', value: "€" + totalSpent.toFixed(0) },
+                { label: 'Remaining Budget', value: "€" + Math.max(0, monthlyBudget - totalSpent).toFixed(0) },
+                { label: 'Projected Total', value: "€" + projected.toFixed(0) }
+            ]
+        };
+
+        const latestReceipt = metrics.latestReceipt;
+        // Priority 1: Just Added (Last 5 mins)
+        if (latestReceipt && (new Date().getTime() - new Date(latestReceipt.date).getTime() < 5 * 60 * 1000)) {
+            statusLabel = 'Just Added';
+            statusValue = "Receipt Added";
+            statusTrend = 'up';
+            statusIcon = CheckCircle2;
+            statusDetail = `+€${latestReceipt.total.toFixed(2)} at ${latestReceipt.storeName}`;
+            statusPopup = {
+                title: 'Receipt Processed',
+                description: `We just added a receipt from ${latestReceipt.storeName} for €${latestReceipt.total.toFixed(2)}.`,
+                insight: 'Your dashboard has been updated with the latest figures.',
+                items: [
+                    { label: 'Store', value: latestReceipt.storeName },
+                    { label: 'Amount', value: "€" + latestReceipt.total.toFixed(2) },
+                    { label: 'Time', value: new Date(latestReceipt.date).toLocaleTimeString() }
+                ]
+            };
+        }
+        // Priority 2: Critical Alerts
+        else if (metrics.thisMonthTotal > monthlyBudget) {
+            statusLabel = 'Alert';
+            statusValue = 'Over Budget';
+            statusTrend = 'down';
+            statusIcon = AlertTriangle;
+            statusDetail = `Exceeded by €${(metrics.thisMonthTotal - monthlyBudget).toFixed(0)}`;
+            statusPopup = {
+                title: 'Budget Alert',
+                description: `You have exceeded your monthly budget of €${monthlyBudget}.`,
+                insight: 'Consider pausing non-essential spending for the rest of the month.',
+                items: [
+                    { label: 'Total Spent', value: "€" + metrics.thisMonthTotal.toFixed(0) },
+                    { label: 'Budget', value: "€" + monthlyBudget.toFixed(0) },
+                    { label: 'Overage', value: "€" + (metrics.thisMonthTotal - monthlyBudget).toFixed(0) }
+                ]
+            };
+        }
+        // Priority 3: Success / Warning (Existing logic)
+        else if (warning) {
+            statusLabel = 'Alert';
+            if (warning.id === 'late-night-habit') statusValue = 'Late Spending';
+            else if (warning.id === 'weekend-splurge') statusValue = 'Weekend Spike';
+            else if (warning.id.startsWith('cat-drift')) statusValue = 'Category Drift';
+            else if (warning.id === 'budget-warning') statusValue = 'Check Budget';
+            else if (warning.id === 'budget-critical') statusValue = 'Over Budget';
+            else statusValue = 'Insight Alert';
+
+            // Catch-all for heavy text if ID logic misses (safety)
+            if (/over budget/i.test(warning.text)) statusValue = 'Over Budget';
+
+            statusTrend = 'down';
+            statusIcon = AlertTriangle;
+            statusDetail = warning.text;
+            statusPopup = {
+                title: statusValue, // Use the specific label as title
+                description: warning.text,
+                insight: warning.subtext || 'Review your recent transactions.',
+                items: []
+            };
+        }
+        else if (success) {
+            statusLabel = 'Status';
+            statusValue = 'On Track';
+            statusTrend = 'up';
+            statusIcon = CheckCircle2;
+            statusDetail = success.text;
+            statusPopup = {
+                title: 'Good Progress',
+                description: success.text,
+                insight: success.subtext || 'Keep it up!',
+                items: []
+            };
+        }
+
+        // Helper for Top 3 Cats
+        const top3Cats = metrics.categoryData.slice(0, 3).map(c => ({
+            label: c.name,
+            value: c.percentage.toFixed(0) + "% ",
+            subtext: "€" + c.value.toFixed(0) + " "
+        }));
+
+        // Helper for Biggest Purchase details
+        const biggestReceipt = (metrics.thisMonthReceipts || []).sort((a, b) => b.total - a.total)[0];
+
+        // Calculate Target Daily
+        const dailyTarget = monthlyBudget / 30; // Approx
+        const dailyTrendDiff = dailyAvg - dailyTarget;
+
         return [
-            { label: 'Daily Avg', value: `€${dailyAvg.toFixed(0)}`, trend: 'neutral', icon: CalendarDays },
-            // Replace Forecast with a dynamic tip if available, otherwise show Forecast
             {
-                label: warning ? 'Alert' : (success ? 'Status' : 'Forecast'),
-                value: warning ? 'Check Budget' : (success ? 'On Track' : `€${projected.toFixed(0)}`),
-                trend: warning ? 'down' : (success ? 'up' : (projected > monthlyBudget ? 'down' : 'up')),
-                icon: warning ? AlertTriangle : (success ? CheckCircle2 : TrendingUp),
-                detail: warning?.text || success?.text
+                label: 'Daily Avg',
+                value: "€" + dailyAvg.toFixed(0) + " ",
+                trend: dailyTrendDiff > 0 ? 'up' : 'down',
+                trendLabel: dailyTrendDiff > 0 ? 'Above Target' : 'On Track',
+                icon: CalendarDays,
+                detail: "Target: €" + dailyTarget.toFixed(0),
+                popup: {
+                    title: 'Daily Spending Average',
+                    description: "You are spending an average of €" + dailyAvg.toFixed(0) + " every day this month. To stay within your €" + monthlyBudget + " budget, try to keep this under €" + (monthlyBudget / daysInMonth).toFixed(0) + ".",
+                    insight: dailyAvg > (monthlyBudget / daysInMonth) ? 'You are pacing to overspend. Try having one "No Spend Day" this week.' : 'Great job! Your daily pacing is sustainable.',
+                    items: [
+                        { label: 'Today', value: "€" + metrics.todayTotal.toFixed(0) },
+                        { label: 'Yesterday', value: "€" + (metrics.weekData[6]?.total || 0).toFixed(0) }, // Approx
+                        { label: 'Target', value: "€" + (monthlyBudget / daysInMonth).toFixed(0) }
+                    ]
+                }
             },
-            { label: 'Top Cat', value: topCategory, trend: 'neutral', icon: ShoppingBag },
-            { label: 'Big Buy', value: `€${biggestPurchase.toFixed(0)}`, trend: 'neutral', icon: ArrowUpRight },
-            { label: 'Weekend', value: `${weekendPercent.toFixed(0)}%`, trend: 'neutral', icon: Calendar },
-            { label: 'Freq/Day', value: frequency, trend: 'neutral', icon: Activity }
+            {
+                label: statusLabel,
+                value: statusValue,
+                trend: statusTrend,
+                trendLabel: statusTrend === 'down' ? 'Improving' : 'Attention',
+                icon: statusIcon,
+                detail: statusDetail,
+                popup: statusPopup
+            },
+            {
+                label: 'Top Cat',
+                value: topCategory,
+                trend: 'neutral',
+                trendLabel: 'Dominant',
+                icon: ShoppingBag,
+                detail: (top3Cats[0]?.value || '0%') + " of total",
+                popup: {
+                    title: 'Top Categories',
+                    description: "Your spending is heavily concentrated in " + topCategory + ". Diversifying or reducing this category is the fastest way to save.",
+                    insight: 'Check if these are essential or discretionary expenses.',
+                    items: top3Cats
+                }
+            },
+            {
+                label: 'Big Buy',
+                value: "€" + biggestPurchase.toFixed(0),
+                trend: 'neutral',
+                trendLabel: 'One-off',
+                icon: ArrowUpRight,
+                detail: biggestReceipt?.storeName || '-',
+                popup: {
+                    title: 'Biggest Purchase',
+                    description: biggestReceipt ? "Your largest single transaction was at " + biggestReceipt.storeName + " on " + new Date(biggestReceipt.date).toLocaleDateString() + "." : 'No large purchases yet.',
+                    insight: 'Large one-off purchases can derail a budget quickly. Plan for these in advance.',
+                    items: biggestReceipt ? [{ label: biggestReceipt.storeName, value: "€" + biggestReceipt.total.toFixed(2), subtext: new Date(biggestReceipt.date).toLocaleTimeString() }] : []
+                }
+            },
+            {
+                label: 'Weekend',
+                value: weekendPercent.toFixed(0) + "%",
+                trend: weekendPercent > 40 ? 'up' : 'neutral',
+                trendLabel: weekendPercent > 40 ? 'High' : 'Balanced',
+                icon: Calendar,
+                detail: 'vs Weekday',
+                popup: {
+                    title: 'Weekend vs Weekday',
+                    description: weekendPercent.toFixed(0) + "% of your spending happens on weekends (Sat/Sun).",
+                    insight: weekendPercent > 40 ? 'You have a "Weekend Splurge" habit. Try to stick to your routine on Saturdays.' : 'Your spending is fairly balanced throughout the week.',
+                    items: [
+                        { label: 'Weekend Total', value: "€" + weekendSpend.toFixed(0) },
+                        { label: 'Weekday Total', value: "€" + (totalSpent - weekendSpend).toFixed(0) }
+                    ]
+                }
+            },
+            {
+                label: 'Freq/Day',
+                value: frequency,
+                trend: parseFloat(frequency) > 3 ? 'up' : 'neutral',
+                trendLabel: parseFloat(frequency) > 3 ? 'High' : 'Normal',
+                icon: Activity,
+                detail: 'Trans./Day',
+                popup: {
+                    title: 'Spending Frequency',
+                    description: "On average, you make " + frequency + " transactions per day.",
+                    insight: parseFloat(frequency) > 3 ? 'High frequency often indicates impulsive micro-transactions. Try to batch your purchases.' : 'Low frequency suggests planned, deliberate spending.',
+                    items: [
+                        { label: 'Total Txns', value: "" + (metrics.thisMonthReceipts || []).length },
+                        { label: 'Days Passed', value: "" + daysPassed }
+                    ]
+                }
+            }
         ];
-    }, [metrics.thisMonthTotal, metrics.thisMonthReceipts, metrics.categoryData, monthlyBudget, suggestions]);
+    }, [metrics.thisMonthTotal, metrics.thisMonthReceipts, metrics.categoryData, monthlyBudget, suggestions, metrics.todayTotal, metrics.weekData, metrics.latestReceipt, metrics.spendingInsight]);
 
     const activePieData = useMemo(() => {
         if (selectedCategory) return drillDownData;
@@ -1047,7 +1449,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             const g = Math.round(g1 + (g2 - g1) * factor);
             const b = Math.round(b1 + (b2 - b1) * factor);
 
-            return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
         };
 
         const green = '#84cc16'; // Lime-500
@@ -1102,9 +1504,9 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             '--glow-color-bright': brightColor,
             '--glow-size': glowSize,
             borderColor: color,
-            boxShadow: `0 0 ${glowSize} ${color}`,
+            boxShadow: "0 0 " + glowSize + " " + color,
             transition: 'all 1s ease',
-            animation: `pulse-border-v2 ${duration}s infinite ease-in-out`
+            animation: "pulse-border-v2 " + duration + "s infinite ease-in-out"
         } as React.CSSProperties;
     };
 
@@ -1134,7 +1536,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
             '--glow-color-bright': active.bright,
             '--glow-size': active.glow,
             borderColor: active.color,
-            boxShadow: `0 0 ${active.glow} ${active.color}`,
+            boxShadow: "0 0 " + active.glow + " " + active.color,
             transition: 'all 1s ease',
             animation: healthState === 'critical' ? 'pulse-border-v2 3s infinite ease-in-out' : undefined
         } as React.CSSProperties;
@@ -1142,18 +1544,11 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
     return (
         <motion.div
-            className="w-full h-full overflow-y-auto overflow-x-hidden pt-20 px-4 pb-28 scroll-smooth no-scrollbar"
+            className="w-full h-full overflow-y-auto overflow-x-hidden pt-32 px-4 pb-28 scroll-smooth no-scrollbar"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
         >
-            <style>{`
-                @keyframes pulse-border-v2 {
-                    0% { box-shadow: 0 0 5px -2px var(--glow-color); border-color: var(--glow-color); }
-                    50% { box-shadow: 0 0 var(--glow-size) 0px var(--glow-color); border-color: var(--glow-color-bright); }
-                    100% { box-shadow: 0 0 5px -2px var(--glow-color); border-color: var(--glow-color); }
-                }
-            `}</style>
 
             {/* Main Content Wrapper */}
             <div className="pt-4 pb-32 space-y-4">
@@ -1168,7 +1563,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 >
                     <div
                         style={ambientMode ? ambientStyle : {}}
-                        className={`relative rounded-3xl border p-4 transition-all duration-1000 overflow-hidden group mb-4 ${ambientMode ? 'bg-card' : 'bg-card border-slate-800 shadow-lg'}`}
+                        className={"relative rounded-3xl border p-4 transition-all duration-1000 overflow-hidden group mb-4 " + (ambientMode ? 'bg-card' : 'bg-card border-slate-800 shadow-lg')}
                     >
                         {ambientMode && (
                             <div className="absolute inset-0 pointer-events-none z-0">
@@ -1176,74 +1571,116 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 <div
                                     className="absolute inset-0 opacity-15 transition-colors duration-1000"
                                     style={{
-                                        background: `radial-gradient(circle at 50% 50%, var(--glow-color), transparent 70%)`
+                                        background: "radial-gradient(circle at 50% 50%, var(--glow-color), transparent 70%)"
                                     }}
                                 />
                             </div>
                         )}
 
                         {/* Original BG Backing if needed */}
-                        <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 bg-card/80 backdrop-blur-sm -z-10`} />
+                        <div className={"absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 bg-card/80 backdrop-blur-sm z-0"} />
 
-                        <div className="flex items-start justify-between mb-4 relative z-10">
-                            <div className="flex-1 min-w-0 mr-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide truncate flex items-center gap-2">
-                                        <Wallet className="w-4 h-4 text-emerald-400" />
-                                        {budgetView} Budget
-                                    </h3>
-                                </div>
+                        {(() => {
+                            // Calculate view-specific values
+                            const currentTotal = budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal;
+                            const currentBudget = budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30;
+                            const percentage = currentBudget > 0 ? (currentTotal / currentBudget) * 100 : 0;
+                            const isOverBudget = percentage > 100;
+                            const statusColor = isOverBudget ? '#ef4444' : '#10b981'; // Red-500 : Emerald-500
+                            const glowColor = isOverBudget ? 'rgba(239, 68, 68, 1)' : 'var(--glow-color)'; // Override glow for red state
 
+                            return (
+                                <>
+                                    {/* Header Row: Title & Tabs */}
+                                    <div className="flex items-center justify-between mb-6 relative z-10">
+                                        <div className="flex items-center gap-2">
+                                            <div className={"p-2 rounded-xl bg-gradient-to-br " + (isOverBudget ? 'from-red-500/20 to-red-600/10' : 'from-emerald-500/20 to-emerald-600/10')}>
+                                                <Wallet className={"w-5 h-5 " + (isOverBudget ? 'text-red-400' : 'text-emerald-400')} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                                                    {budgetView} Budget
+                                                </h3>
+                                                <p className="text-[10px] font-medium text-slate-400">
+                                                    {budgetView === 'monthly' ? 'This Month' : budgetView === 'weekly' ? 'This Week' : 'Today'}
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                <div className="flex items-baseline gap-1.5 flex-wrap">
-                                    <p className={`${(metrics.thisMonthTotal.toFixed(2).length + (monthlyBudget.toString().length)) > 12 ? 'text-xl' : 'text-3xl'} font-heading font-bold text-white tracking-tight`}>
-                                        <CountUp
-                                            value={budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal}
-                                            prefix="€"
-                                            decimals={2}
-                                        />
-                                    </p>
+                                        <div className="flex bg-slate-900/50 rounded-lg p-1 border border-white/5 backdrop-blur-sm">
+                                            {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                                <button
+                                                    key={view}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent card click
+                                                        HapticsService.selection();
+                                                        setBudgetView(view);
+                                                    }}
+                                                    className={"px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all " + (
+                                                        budgetView === view
+                                                            ? isOverBudget
+                                                                ? 'bg-red-500/20 text-red-400 shadow-sm'
+                                                                : 'bg-emerald-500/20 text-emerald-400 shadow-sm'
+                                                            : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                                    )}
+                                                >
+                                                    {view === 'daily' ? 'Day' : view === 'weekly' ? 'Week' : 'Month'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                                    <span className="text-sm text-slate-500 font-medium whitespace-nowrap">
-                                        / €{Math.round(budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30)}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="text-right flex-shrink-0 pt-1">
-                                <span
-                                    className="text-2xl font-bold transition-colors duration-500"
-                                    style={{ color: ambientMode ? 'var(--glow-color)' : '#10b981' }}
-                                >
-                                    <CountUp
-                                        value={monthlyBudget > 0 ? (
-                                            (budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal) /
-                                            (budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30)
-                                        ) * 100 : 0}
-                                        suffix="%"
-                                        decimals={0}
-                                    />
-                                </span>
-                                <p className="text-xs text-slate-500 font-medium mt-1">Used</p>
-                            </div>
-                        </div>
+                                    {/* Main Numbers Row */}
+                                    <div className="flex items-end justify-between mb-5 relative z-10">
+                                        <div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-heading font-black text-white tracking-tight leading-none">
+                                                    €<CountUp value={currentTotal} decimals={2} />
+                                                </span>
+                                            </div>
+                                            <div className="text-sm font-medium text-slate-400 mt-1 pl-1 relative z-20">
+                                                of €{Math.round(currentBudget)} limit
+                                            </div>
+                                        </div>
 
-                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5 relative z-10 mb-4">
-                            <motion.div
-                                className="h-full rounded-full shadow-[0_0_15px_currentColor] opacity-90"
-                                initial={{ width: 0 }}
-                                animate={{
-                                    width: `${Math.min((monthlyBudget > 0 ? (
-                                        (budgetView === 'monthly' ? metrics.thisMonthTotal : budgetView === 'weekly' ? metrics.thisWeekTotal : metrics.todayTotal) /
-                                        (budgetView === 'monthly' ? monthlyBudget : budgetView === 'weekly' ? monthlyBudget / 4 : monthlyBudget / 30)
-                                    ) * 100 : 0), 100)}%`
-                                }}
-                                transition={{ duration: 1.5, ease: "easeOut" }}
-                                style={{
-                                    backgroundColor: ambientMode ? 'var(--glow-color)' : '#10b981',
-                                    color: ambientMode ? 'var(--glow-color)' : '#10b981'
-                                }}
-                            />
-                        </div>
+                                        <div className="text-right">
+                                            <div
+                                                className={"text-3xl font-black tracking-tight leading-none transition-colors duration-500 " + (isOverBudget ? 'text-red-500' : 'text-emerald-500')}
+                                                style={{ textShadow: isOverBudget ? '0 0 20px rgba(239, 68, 68, 0.3)' : '0 0 20px rgba(16, 185, 129, 0.3)' }}
+                                            >
+                                                <CountUp value={percentage} decimals={0} suffix="%" />
+                                            </div>
+                                            <div className={"text-xs font-bold uppercase tracking-wider mt-1 " + (isOverBudget ? 'text-red-400/80' : 'text-emerald-400/80')}>
+                                                {isOverBudget ? 'Over Budget' : 'Used'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Bar */}
+                                    <div className="h-4 w-full bg-slate-900/50 rounded-full overflow-hidden border border-white/5 relative z-10 mb-2">
+                                        <motion.div
+                                            className="h-full rounded-full opacity-100 relative overflow-hidden"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: Math.min(percentage, 100) + "%" }}
+                                            transition={{ duration: 1.5, ease: "easeOut" }}
+                                            style={{
+                                                backgroundColor: statusColor,
+                                                boxShadow: "0 0 15px " + statusColor,
+                                            }}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full h-full -skew-x-12 animate-[shimmer_2s_infinite]"></div>
+                                        </motion.div>
+                                    </div>
+
+                                    {isOverBudget && (
+                                        <div className="flex items-start gap-2 mt-3 text-xs font-medium text-red-400 bg-red-500/5 p-2 rounded-lg border border-red-500/10 relative z-20">
+                                            <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                                            <p>You have exceeded your {budgetView} budget by €{(currentTotal - currentBudget).toFixed(2)}.</p>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
 
                         {suggestions.length > 0 && (
                             <div className="relative z-10 mt-3 border-t border-white/10 pt-3">
@@ -1256,15 +1693,16 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         transition={{ duration: 0.5 }}
                                         className="flex items-start gap-3"
                                     >
-                                        <div className={`p-1.5 rounded-lg ${suggestions[currentTipIndex].severity === 'danger' ? 'bg-red-500/10 text-red-400' :
-                                            suggestions[currentTipIndex].severity === 'warning' ? 'bg-amber-500/10 text-amber-400' :
-                                                'bg-emerald-500/10 text-emerald-400'
-                                            }`}>
+                                        <div className={"p-1.5 rounded-lg " + (
+                                            suggestions[currentTipIndex].severity === 'danger' ? 'bg-red-500/10 text-red-400' :
+                                                suggestions[currentTipIndex].severity === 'warning' ? 'bg-amber-500/10 text-amber-400' :
+                                                    'bg-emerald-500/10 text-emerald-400'
+                                        )}>
                                             {React.createElement(suggestions[currentTipIndex].icon, { size: 14 })}
                                         </div>
                                         <div>
                                             <p className="text-xs text-slate-300 font-medium leading-tight">{suggestions[currentTipIndex].text}</p>
-                                            {suggestions[currentTipIndex].subtext && <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">{suggestions[currentTipIndex].subtext}</p>}
+                                            {suggestions[currentTipIndex].subtext && <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{suggestions[currentTipIndex].subtext}</p>}
                                         </div>
                                     </motion.div>
                                 </AnimatePresence>
@@ -1272,19 +1710,36 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         )}
 
                         <div className="relative z-10 border-t border-white/5 pt-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <h4
-                                    onClick={() => {
-                                        if (selectedCategory) {
-                                            HapticsService.selection();
-                                            setSelectedCategory(null);
-                                        }
-                                    }}
-                                    className={`text-[10px] uppercase tracking-wider font-bold ${selectedCategory ? 'text-indigo-400 cursor-pointer hover:text-indigo-300' : 'text-slate-500'} transition-colors`}
-                                >
-                                    {selectedCategory ? '← Back to Overview' : 'Spending Distribution'}
-                                </h4>
-                                <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
+                            <div className="flex flex-col gap-4 mb-4 relative z-10 w-full">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                                        <PieIcon className="w-5 h-5 text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                                            Spending
+                                        </h3>
+                                        <div
+                                            onClick={() => {
+                                                if (selectedCategory) {
+                                                    HapticsService.selection();
+                                                    setSelectedCategory(null);
+                                                }
+                                            }}
+                                            className={"flex items-center gap-1 text-[10px] font-medium transition-colors " + (selectedCategory ? 'text-indigo-400 cursor-pointer hover:text-indigo-300' : 'text-slate-400')}
+                                        >
+                                            {selectedCategory ? (
+                                                <span className="flex items-center gap-1">
+                                                    Distribution <ArrowRight size={10} /> {selectedCategory}
+                                                </span>
+                                            ) : (
+                                                "Distribution Overview"
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex bg-slate-800/50 rounded-lg p-1 border border-white/5 w-full">
                                     {(['daily', 'weekly', 'monthly'] as const).map((view) => (
                                         <button
                                             key={view}
@@ -1292,139 +1747,185 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                 HapticsService.selection();
                                                 setPieView(view);
                                             }}
-                                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${pieView === view
-                                                ? 'bg-emerald-500/20 text-emerald-400 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
-                                                }`}
+                                            className={"flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all " + (
+                                                pieView === view
+                                                    ? 'bg-indigo-500/20 text-indigo-400 shadow-sm ring-1 ring-indigo-500/10'
+                                                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                                            )}
                                         >
-                                            {view === 'daily' ? 'D' : view === 'weekly' ? 'W' : 'M'}
+                                            {view === 'daily' ? 'Day' : view === 'weekly' ? 'Week' : 'Month'}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            {/* Pie Chart & Legend Split Layout */}
-                            {/* Pie Chart & Legend Split Layout */}
-                            {/* Pie Chart & Legend Split Layout */}
-                            <AnimatedSection triggerOnce={false} noSlide className="w-full">
-                                {({ isInView }: { isInView?: boolean } = {}) => (
-                                    <div className="flex flex-col items-center gap-4 h-[350px] max-w-full mx-auto group">
-                                        <style>{`
-                                        .recharts-wrapper { outline: none !important; }
-                                        .recharts-surface { outline: none !important; }
-                                        `}</style>
+                        </div>
 
-                                        {/* Top: Pie Chart */}
-                                        <div className="w-full h-2/3 relative flex items-center justify-center">
-                                            {/* Center Hub */}
-                                            <AnimatePresence>
-                                                {isInView && (
-                                                    <motion.div
-                                                        initial={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
-                                                        animate={{ scale: 1, opacity: 1, x: "-50%", y: "-50%" }}
-                                                        exit={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
-                                                        transition={{ type: "spring", bounce: 0.4, duration: 0.6 }}
-                                                        onClick={() => {
-                                                            HapticsService.selection();
-                                                            setSelectedCategory(null);
-                                                        }}
-                                                        className="absolute z-30 top-1/2 left-1/2 w-20 h-20 bg-slate-900 rounded-full border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center cursor-pointer group active:scale-95"
-                                                    >
-                                                        <div className="absolute inset-0 rounded-full border border-white/5 animate-pulse-slow pointer-events-none"></div>
-                                                        <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider mb-0.5">
-                                                            {selectedCategory ? 'Cat.' : 'Total'}
-                                                        </span>
-                                                        <span className={`font-heading font-bold text-white tabular-nums text-center leading-none whitespace-normal break-words w-full px-2 line-clamp-2 ${selectedCategory ? 'text-[9px]' : 'text-xs'}`}>
-                                                            {selectedCategory ? selectedCategory : `€${metrics.thisMonthTotal.toFixed(0)}`}
-                                                        </span>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
+                        {/* Dual Pie Chart Logic */}
+                        <div className={`grid gap-4 relative z-20 ${childSupportMode ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {[
+                                {
+                                    title: 'Total Distribution',
+                                    data: (() => {
+                                        // Global (Total) Mode
+                                        if (childSupportMode) {
+                                            if (pieView === 'daily') return metrics.globalTodayCategoryData;
+                                            if (pieView === 'weekly') return metrics.globalThisWeekCategoryData;
+                                            return metrics.globalCategoryData;
+                                        }
+                                        // Standard Mode (Context Only)
+                                        if (pieView === 'daily') return metrics.todayCategoryData;
+                                        if (pieView === 'weekly') return metrics.thisWeekCategoryData;
+                                        return metrics.categoryData;
+                                    })(),
+                                    total: (() => {
+                                        if (childSupportMode) {
+                                            if (pieView === 'daily') return metrics.globalTotalToday;
+                                            if (pieView === 'weekly') return metrics.globalThisWeekCategoryData.reduce((s, i) => s + i.value, 0);
+                                            return metrics.globalTotal;
+                                        }
+                                        if (pieView === 'daily') return metrics.todayTotal;
+                                        if (pieView === 'weekly') return metrics.thisWeekCategoryData.reduce((s, i) => s + i.value, 0);
+                                        return metrics.thisMonthTotal;
+                                    })(),
+                                    id: 'total',
+                                    colors: ['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'] // Standard
+                                },
+                                ...(childSupportMode ? [{
+                                    title: 'Child Expenses',
+                                    data: (() => {
+                                        // Child Mode Always (Context)
+                                        if (pieView === 'daily') return metrics.todayCategoryData; // Child Only in this mode
+                                        if (pieView === 'weekly') return metrics.thisWeekCategoryData; // Child Only in this mode
+                                        return metrics.childCategoryData; // Child Only in this mode
+                                    })(),
+                                    total: (() => {
+                                        if (pieView === 'daily') return metrics.todayTotal;
+                                        if (pieView === 'weekly') return metrics.thisWeekCategoryData.reduce((s, i) => s + i.value, 0);
+                                        return metrics.childTotalSpent;
+                                    })(),
+                                    id: 'child',
+                                    isEmpty: metrics.childCategoryData.length === 0, // Fallback check?
+                                    colors: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#06b6d4'] // Warm/Distinct
+                                }] : [])
+                            ].map((chartConfig: any) => (
+                                <AnimatedSection key={chartConfig.id} triggerOnce={false} noSlide className="w-full">
+                                    {({ isInView }: { isInView?: boolean } = {}) => (
+                                        <div className="flex flex-col items-center gap-4 h-[350px] max-w-full mx-auto group">
+                                            <h5 className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-[-10px] z-10">{chartConfig.title}</h5>
 
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart key={`pie-${isInView}`} margin={{ top: 0, left: 0, right: 0, bottom: 0 }}>
-                                                    <defs>
-                                                    </defs>
-                                                    <Pie
-                                                        data={activePieData}
-                                                        cx="50%"
-                                                        cy="50%"
-                                                        innerRadius={45}
-                                                        outerRadius={110}
-                                                        paddingAngle={4}
-                                                        dataKey="value"
-                                                        stroke="none"
-                                                        isAnimationActive={true}
-                                                        animationDuration={1000}
-                                                        shape={(props: any) => {
-                                                            const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, index } = props;
-                                                            const color = ['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'][index % 5];
+                                            {/* Top: Pie Chart */}
+                                            <div className="w-full h-2/3 relative flex items-center justify-center">
+                                                {/* Center Hub */}
+                                                <AnimatePresence>
+                                                    {isInView && (
+                                                        <motion.div
+                                                            initial={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
+                                                            animate={{ scale: 1, opacity: 1, x: "-50%", y: "-50%" }}
+                                                            exit={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
+                                                            transition={{ type: "spring", bounce: 0.4, duration: 0.6 }}
+                                                            onClick={() => {
+                                                                HapticsService.selection();
+                                                                setSelectedCategory(null);
+                                                            }}
+                                                            className="absolute z-30 top-1/2 left-1/2 w-20 h-20 bg-slate-900 rounded-full border border-slate-700 flex flex-col items-center justify-center cursor-pointer group active:scale-95"
+                                                        >
+                                                            <div className="absolute inset-0 rounded-full border border-white/5 animate-pulse-slow pointer-events-none"></div>
+                                                            <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider mb-0.5">
+                                                                {selectedCategory ? 'Cat.' : 'Total'}
+                                                            </span>
+                                                            <span className={"font-heading font-bold text-white tabular-nums text-center leading-none whitespace-normal break-words w-full px-2 line-clamp-2 " + (selectedCategory ? 'text-[10px]' : 'text-xs')}>
+                                                                {selectedCategory ? selectedCategory : "€" + chartConfig.total.toFixed(0)}
+                                                            </span>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
 
-                                                            return (
-                                                                <Sector
-                                                                    cx={cx}
-                                                                    cy={cy}
-                                                                    innerRadius={innerRadius}
-                                                                    outerRadius={outerRadius}
-                                                                    startAngle={startAngle}
-                                                                    endAngle={endAngle}
-                                                                    fill={color}
-                                                                    cornerRadius={4}
-                                                                    className="transition-all duration-300 outline-none"
-                                                                />
-                                                            );
-                                                        }}
-                                                    >
-                                                        {activePieData.map((entry: any, index: number) => (
-                                                            <Cell key={`cell-${index}`} fill={['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'][index % 5]} stroke="none" />
-                                                        ))}
-                                                    </Pie>
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </div>
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart key={"pie-" + chartConfig.id + "-" + isInView} margin={{ top: 0, left: 0, right: 0, bottom: 0 }}>
+                                                        <defs>
+                                                        </defs>
+                                                        <Pie
+                                                            data={chartConfig.data}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={50}
+                                                            outerRadius={70}
+                                                            paddingAngle={4}
+                                                            dataKey="value"
+                                                            stroke="none"
+                                                            isAnimationActive={true}
+                                                            animationDuration={1000}
+                                                            shape={(props: any) => {
+                                                                const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, index } = props;
+                                                                const isPlaceholder = (chartConfig as any).isEmpty;
+                                                                const color = isPlaceholder ? '#1e293b' : chartConfig.colors[index % chartConfig.colors.length];
 
-                                        {/* Bottom: Legend */}
-                                        <div className="w-full h-1/3 overflow-y-auto scroller px-2">
-                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                                {(activePieData || []).map((entry, index) => {
-                                                    const color = ['#84cc16', '#3b82f6', '#a855f7', '#22d3ee', '#f472b6'][index % 5];
-                                                    const percentage = monthlyBudget > 0 ? ((entry.value / monthlyBudget) * 100) : 0;
-                                                    return (
-                                                        <div key={index} className="group cursor-pointer" onClick={() => setSelectedCategory(entry.name)}>
-                                                            <div className="flex justify-between items-end mb-1">
-                                                                <div className="flex items-center gap-1.5 overflow-hidden">
-                                                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}` }}></div>
-                                                                    <span className="text-[10px] font-medium text-slate-300 capitalize truncate max-w-[80px]">{entry.name}</span>
+                                                                return (
+                                                                    <Sector
+                                                                        cx={cx}
+                                                                        cy={cy}
+                                                                        innerRadius={innerRadius}
+                                                                        outerRadius={outerRadius}
+                                                                        startAngle={startAngle}
+                                                                        endAngle={endAngle}
+                                                                        fill={color}
+                                                                        cornerRadius={4}
+                                                                        className="transition-all duration-300 outline-none"
+                                                                    />
+                                                                );
+                                                            }}
+                                                        >
+                                                            {chartConfig.data.map((entry: any, index: number) => (
+                                                                <Cell key={"cell-" + index} fill={(chartConfig as any).isEmpty ? '#1e293b' : chartConfig.colors[index % chartConfig.colors.length]} stroke="none" />
+                                                            ))}
+                                                        </Pie>
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+
+                                            {/* Bottom: Legend */}
+                                            <div className="w-full h-1/3 overflow-y-auto scroller px-2">
+                                                <div className="grid grid-cols-1 gap-x-2 gap-y-1.5">
+                                                    {(chartConfig.data || []).map((entry: any, index: number) => {
+                                                        const color = chartConfig.colors[index % chartConfig.colors.length];
+                                                        const percentage = chartConfig.total > 0 ? ((entry.value / chartConfig.total) * 100) : 0;
+                                                        return (
+                                                            <div key={index} className="group cursor-pointer" onClick={() => setSelectedCategory(entry.name)}>
+                                                                <div className="flex justify-between items-end mb-0.5">
+                                                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color, boxShadow: "0 0 6px " + color }}></div>
+                                                                        <span className="text-[9px] font-medium text-slate-300 capitalize truncate max-w-[80px]">{entry.name}</span>
+                                                                    </div>
+                                                                    <div className="flex items-baseline gap-1 shrink-0">
+                                                                        <span className="text-[9px] font-bold text-white tabular-nums">
+                                                                            <CountUp value={entry.value} prefix="€" decimals={0} />
+                                                                        </span>
+                                                                        <span className="text-[8px] text-slate-500 font-medium tabular-nums text-right">
+                                                                            <CountUp value={percentage} suffix="%" decimals={0} />
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex items-baseline gap-1 shrink-0">
-                                                                    <span className="text-[10px] font-bold text-white tabular-nums">
-                                                                        <CountUp value={entry.value} prefix="€" decimals={0} />
-                                                                    </span>
-                                                                    <span className="text-[9px] text-slate-500 font-medium tabular-nums text-right">
-                                                                        <CountUp value={percentage} suffix="%" decimals={0} />
-                                                                    </span>
+                                                                <div className="h-0.5 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
+                                                                    <motion.div
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: isInView ? Math.min(percentage * 1.5, 100) + "%" : 0 }}
+                                                                        transition={{ duration: 1, delay: index * 0.1 }}
+                                                                        className="h-full rounded-full opacity-80"
+                                                                        style={{ backgroundColor: color }}
+                                                                    />
                                                                 </div>
                                                             </div>
-                                                            <div className="h-1 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
-                                                                <motion.div
-                                                                    initial={{ width: 0 }}
-                                                                    animate={{ width: isInView ? `${Math.min(percentage * 1.5, 100)}%` : 0 }}
-                                                                    transition={{ duration: 1, delay: index * 0.1 }}
-                                                                    className="h-full rounded-full opacity-80"
-                                                                    style={{ backgroundColor: color }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
-                            </AnimatedSection>
+                                    )}
+                                </AnimatedSection>
+                            ))}
                         </div>
                     </div>
                 </motion.div>
-
 
                 {/* BENTO GRID LAYOUT */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
@@ -1436,37 +1937,46 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                     <motion.div variants={itemVariants} className="col-span-2">
                         <SpotlightCard
                             onClick={isCoParentingMode ? onProvisionClick : undefined}
-                            className={`rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all ${isCoParentingMode ? 'cursor-pointer hover:border-slate-700' : ''} `}
+                            className={"rounded-3xl border border-slate-800 bg-card p-4 shadow-lg transition-all " + (isCoParentingMode ? 'cursor-pointer hover:border-slate-700' : '')}
                             spotlightColor="rgba(59, 130, 246, 0.1)" // Blue tint
                         >
                             <div className="mb-4 relative z-10">
 
-                                <div className="flex flex-col gap-4 mb-4">
-                                    <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-yellow-500" />
-                                        Insights
-                                    </h3>
-                                    <div className="w-full flex justify-end">
-                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setInsightView('daily'); }}
-                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'daily' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                            >
-                                                Daily
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setInsightView('weekly'); }}
-                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'weekly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                            >
-                                                Weekly
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setInsightView('monthly'); }}
-                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${insightView === 'monthly' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                            >
-                                                Monthly
-                                            </button>
+                                <div className="flex flex-col gap-4 mb-4 relative z-10 w-full">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                                            <Sparkles className="w-5 h-5 text-yellow-500" />
                                         </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                                                Insights
+                                            </h3>
+                                            <p className="text-[10px] font-medium text-slate-400">
+                                                Performance & Trends
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex bg-slate-800/50 rounded-lg p-1 border border-white/5 w-full">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setInsightView('daily'); }}
+                                            className={"flex-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (insightView === 'daily' ? 'bg-blue-500/20 text-blue-400 shadow-sm ring-1 ring-blue-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5')}
+                                        >
+                                            Daily
+                                        </button>
+
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setInsightView('weekly'); }}
+                                            className={"flex-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (insightView === 'weekly' ? 'bg-blue-500/20 text-blue-400 shadow-sm ring-1 ring-blue-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5')}
+                                        >
+                                            Weekly
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setInsightView('monthly'); }}
+                                            className={"flex-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (insightView === 'monthly' ? 'bg-blue-500/20 text-blue-400 shadow-sm ring-1 ring-blue-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5')}
+                                        >
+                                            Monthly
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1493,7 +2003,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             <div className="h-8 w-px bg-slate-800"></div>
                                             <div className="text-right">
                                                 <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Evidence</p>
-                                                <p className={`text-xl font-bold tabular-nums ${metrics.evidenceColor} `}>{metrics.evidenceLabel}</p>
+                                                <p className={"text-xl font-bold tabular-nums " + metrics.evidenceColor}>{metrics.evidenceLabel}</p>
                                             </div>
                                         </>
                                     )}
@@ -1518,12 +2028,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         Smart Suggestions
                                     </h4>
                                     {metrics.smartInsights.map((insight, idx) => (
-                                        <div key={idx} className={`p-3 rounded-xl border flex items-start gap-3 ${insight.type === 'warning' ? 'bg-red-500/10 border-red-500/20' : insight.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-blue-500/10 border-blue-500/20'} `}>
-                                            <div className={`mt-0.5 ${insight.type === 'warning' ? 'text-red-400' : insight.type === 'success' ? 'text-emerald-400' : 'text-blue-400'} `}>
+                                        <div key={idx} className={"p-3 rounded-xl border flex items-start gap-3 " + (insight.type === 'warning' ? 'bg-red-500/10 border-red-500/20' : insight.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-blue-500/10 border-blue-500/20')}>
+                                            <div className={"mt-0.5 " + (insight.type === 'warning' ? 'text-red-400' : insight.type === 'success' ? 'text-emerald-400' : 'text-blue-400')}>
                                                 {insight.icon}
                                             </div>
                                             <div>
-                                                <p className={`text-xs font-bold ${insight.type === 'warning' ? 'text-red-300' : insight.type === 'success' ? 'text-emerald-300' : 'text-blue-300'} `}>{insight.title}</p>
+                                                <p className={"text-xs font-bold " + (insight.type === 'warning' ? 'text-red-300' : insight.type === 'success' ? 'text-emerald-300' : 'text-blue-300')}>{insight.title}</p>
                                                 <p className="text-[10px] text-slate-400 leading-relaxed">{insight.message}</p>
                                             </div>
                                         </div>
@@ -1582,7 +2092,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                 <h3 className="text-sm font-bold text-slate-200">Custody</h3>
                                                             </div>
                                                             {(() => {
-                                                                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                                                const todayStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
                                                                 const todaysEvents = custodyDays.find(d => d.date === todayStr)?.activities || [];
 
                                                                 if (todaysEvents.length > 0) {
@@ -1601,14 +2111,14 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                             <motion.button
                                                                 whileTap={{ scale: 0.95 }}
                                                                 onClick={() => { HapticsService.selection(); setCustodyView('weekly'); }}
-                                                                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'weekly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                className={"px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all " + (custodyView === 'weekly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                                             >
                                                                 Week
                                                             </motion.button>
                                                             <motion.button
                                                                 whileTap={{ scale: 0.95 }}
                                                                 onClick={() => { HapticsService.selection(); setCustodyView('monthly'); }}
-                                                                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all ${custodyView === 'monthly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                className={"px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md transition-all " + (custodyView === 'monthly' ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                                             >
                                                                 Month
                                                             </motion.button>
@@ -1636,17 +2146,18 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                             <div key={i} className="flex flex-col items-center gap-1.5">
                                                                                 <span className="text-[9px] font-medium text-slate-500 uppercase">{dayLabel}</span>
                                                                                 <div
-                                                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${status === 'me' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)] scale-110' :
-                                                                                        (status === 'partner' || status === 'split') ? 'bg-blue-500/20 border-blue-500/50 text-blue-300' :
-                                                                                            'bg-slate-800/50 border-slate-700 text-slate-500'
-                                                                                        } ${isToday ? 'ring-2 ring-white/20' : ''}`}
+                                                                                    className={"w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all " + (
+                                                                                        status === 'me' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)] scale-110' :
+                                                                                            (status === 'partner' || status === 'split') ? 'bg-blue-500/20 border-blue-500/50 text-blue-300' :
+                                                                                                'bg-slate-800/50 border-slate-700 text-slate-500'
+                                                                                    ) + (isToday ? ' ring-2 ring-white/20' : '')}
                                                                                 >
                                                                                     {status === 'me' ? <Check size={14} strokeWidth={4} /> : status ? d.getDate() : d.getDate()}
                                                                                 </div>
                                                                                 {(() => {
-                                                                                    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                                                                    const dStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
                                                                                     const hasEvent = (custodyDays.find(day => day.date === dStr)?.activities || []).length > 0;
-                                                                                    return <div className={`w-1 h-1 rounded-full transition-colors ${hasEvent ? 'bg-purple-400' : 'bg-transparent'}`}></div>;
+                                                                                    return <div className={"w-1 h-1 rounded-full transition-colors " + (hasEvent ? 'bg-purple-400' : 'bg-transparent')}></div>;
                                                                                 })()}
                                                                             </div>
                                                                         );
@@ -1660,13 +2171,13 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                         <div className="flex bg-slate-800/50 p-0.5 rounded-lg w-fit self-center">
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); setMonthViewMode('share'); }}
-                                                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${monthViewMode === 'share' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                                className={"px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (monthViewMode === 'share' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                                                             >
                                                                                 Share
                                                                             </button>
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); setMonthViewMode('insights'); }}
-                                                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${monthViewMode === 'insights' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                                className={"px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (monthViewMode === 'insights' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                                                             >
                                                                                 Insights
                                                                             </button>
@@ -1699,7 +2210,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                                 </div>
                                                                                 <div className="h-20 w-20 relative shrink-0">
                                                                                     <ResponsiveContainer width="100%" height="100%">
-                                                                                        <PieChart key={`custody-pie-${isInView}`}>
+                                                                                        <PieChart key={"custody-pie-" + isInView}>
                                                                                             <Pie
                                                                                                 data={[
                                                                                                     { name: 'Me', value: monthDaysCount },
@@ -1730,15 +2241,136 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                                 </div>
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-right-2">
-                                                                                <div className="p-2.5 rounded-xl bg-slate-800/30 border border-white/5 flex flex-col justify-center">
-                                                                                    <p className="text-[9px] text-slate-500 font-bold uppercase mb-1 tracking-wider">Pattern</p>
-                                                                                    <p className="text-xs font-medium text-slate-200 leading-tight">2-2-3 Rotation</p>
+                                                                            // Insights View - Weekend Split & Parenting Pulse
+                                                                            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-2">
+                                                                                {/* Weekend Split */}
+                                                                                <div>
+                                                                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mb-2">Weekend Split</p>
+                                                                                    {(() => {
+                                                                                        const weekendDays = custodyDays.filter(d => {
+                                                                                            const date = new Date(d.date);
+                                                                                            const day = date.getDay();
+                                                                                            return day === 0 || day === 6; // Sun or Sat
+                                                                                        });
+                                                                                        const totalWeekends = weekendDays.length || 1;
+                                                                                        const myWeekends = weekendDays.filter(d => d.status === 'me').length;
+                                                                                        const partnerWeekends = weekendDays.filter(d => d.status === 'partner').length;
+
+                                                                                        return (
+                                                                                            <div className="flex h-2 rounded-full overflow-hidden w-full bg-slate-800">
+                                                                                                <div style={{ width: ((myWeekends / totalWeekends) * 100) + "%" }} className="bg-emerald-500 h-full" />
+                                                                                                <div style={{ width: ((partnerWeekends / totalWeekends) * 100) + "%" }} className="bg-blue-500 h-full" />
+                                                                                            </div>
+                                                                                        );
+                                                                                    })()}
+                                                                                    <div className="flex justify-between text-[9px] text-slate-400 mt-1">
+                                                                                        <span>You</span>
+                                                                                        <span>Partner</span>
+                                                                                    </div>
                                                                                 </div>
-                                                                                <div className="p-2.5 rounded-xl bg-slate-800/30 border border-white/5 flex flex-col justify-center">
-                                                                                    <p className="text-[9px] text-slate-500 font-bold uppercase mb-1 tracking-wider">Next</p>
-                                                                                    <p className="text-xs font-medium text-purple-300 leading-tight">Fri 5:00 PM</p>
-                                                                                </div>
+
+                                                                                {/* Parenting Pulse */}
+                                                                                {(() => {
+                                                                                    // Metrics Calculation
+                                                                                    const totalDays = custodyDays.length;
+                                                                                    const myDays = custodyDays.filter(d => d.status === 'me').length;
+                                                                                    const balance = totalDays > 0 ? myDays / totalDays : 0.5;
+
+                                                                                    // 1. Equity Score (Target 50/50)
+                                                                                    const equityRaw = 1 - (Math.abs(balance - 0.5) * 2);
+                                                                                    const equityScore = Math.round(equityRaw * 100);
+
+                                                                                    // 2. Stability Score (Weekend Consistency)
+                                                                                    let stabilityScore = 85;
+                                                                                    if (balance > 0.8 || balance < 0.2) stabilityScore = 40;
+
+                                                                                    // 3. Harmony Score
+                                                                                    const harmonyScore = Math.round((equityScore + stabilityScore) / 2);
+
+                                                                                    let status: 'optimum' | 'good' | 'attention' | 'critical' = 'good';
+                                                                                    let title = 'Steady Pulse';
+                                                                                    let message = 'Your co-parenting rhythm is stable. Consistency builds security for everyone.';
+                                                                                    let color = 'text-emerald-400';
+                                                                                    let bgColor = 'bg-emerald-500/10';
+                                                                                    let borderColor = 'border-emerald-500/20';
+
+                                                                                    if (harmonyScore < 50) {
+                                                                                        status = 'critical';
+                                                                                        title = 'Action Needed';
+                                                                                        message = 'Schedule is currently lopsided. Consider renegotiating days for better balance.';
+                                                                                        color = 'text-red-400';
+                                                                                        bgColor = 'bg-red-500/10';
+                                                                                        borderColor = 'border-red-500/20';
+                                                                                    } else if (harmonyScore < 75) {
+                                                                                        status = 'attention';
+                                                                                        title = 'Uneven Rhythm';
+                                                                                        message = 'Minor friction detected. A small adjustment could help.';
+                                                                                        color = 'text-orange-400';
+                                                                                        bgColor = 'bg-orange-500/10';
+                                                                                        borderColor = 'border-orange-500/20';
+                                                                                    } else if (harmonyScore > 90) {
+                                                                                        status = 'optimum';
+                                                                                        title = 'In Sync';
+                                                                                        message = 'Outstanding cooperation! Healthy partnership.';
+                                                                                        color = 'text-cyan-400';
+                                                                                        bgColor = 'bg-cyan-500/10';
+                                                                                        borderColor = 'border-cyan-500/20';
+                                                                                    }
+
+                                                                                    const metrics = [
+                                                                                        { label: 'Equity', score: equityScore, color: 'bg-blue-500' },
+                                                                                        { label: 'Stability', score: stabilityScore, color: 'bg-purple-500' },
+                                                                                        { label: 'Harmony', score: harmonyScore, color: 'bg-pink-500' },
+                                                                                    ];
+
+                                                                                    return (
+                                                                                        <>
+                                                                                            <motion.button
+                                                                                                whileTap={{ scale: 0.98 }}
+                                                                                                onClick={(e) => { e.stopPropagation(); setShowCoParentingModal(true); }}
+                                                                                                className={"w-full rounded-2xl p-4 border relative overflow-hidden group mt-4 transition-all hover:bg-opacity-20 text-left " + bgColor + " " + borderColor}
+                                                                                            >
+                                                                                                <div className="flex items-start gap-3 mb-4">
+                                                                                                    <div className={"p-2 rounded-lg border " + bgColor + " " + borderColor}>
+                                                                                                        <Activity className={"w-4 h-4 " + color} />
+                                                                                                    </div>
+                                                                                                    <div>
+                                                                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                                                                            <h4 className={"text-sm font-bold " + color}>{title}</h4>
+                                                                                                            <span className={"text-[9px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold " + bgColor + " " + borderColor + " " + color}>{status}</span>
+                                                                                                        </div>
+                                                                                                        <p className="text-[10px] text-slate-400 leading-tight max-w-[200px]">{message}</p>
+                                                                                                    </div>
+                                                                                                </div>
+
+                                                                                                <div className="space-y-3">
+                                                                                                    {metrics.map((m) => (
+                                                                                                        <div key={m.label} className="group/bar">
+                                                                                                            <div className="flex justify-between items-end mb-1">
+                                                                                                                <span className="text-[10px] font-medium text-slate-500 group-hover/bar:text-slate-300 transition-colors uppercase tracking-wide">{m.label}</span>
+                                                                                                                <span className="text-[10px] font-bold text-slate-300 tabular-nums">{m.score}/100</span>
+                                                                                                            </div>
+                                                                                                            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
+                                                                                                                <motion.div
+                                                                                                                    initial={{ width: 0 }}
+                                                                                                                    whileInView={{ width: m.score + "%" }}
+                                                                                                                    transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                                                                                                                    className={"h-full rounded-full " + m.color}
+                                                                                                                />
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            </motion.button>
+                                                                                            <CoParentingDetailsModal
+                                                                                                isOpen={showCoParentingModal}
+                                                                                                onClose={() => setShowCoParentingModal(false)}
+                                                                                                metrics={{ equity: equityScore, stability: stabilityScore, harmony: harmonyScore }}
+                                                                                                custodyDays={custodyDays}
+                                                                                            />
+                                                                                        </>
+                                                                                    );
+                                                                                })()}
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -1746,158 +2378,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                             </AnimatedSection>
                                                         )}
                                                     </AnimatePresence>
-
-                                                    {custodyView === 'monthly' && (
-                                                        <>
-                                                            {/* Weekend Split */}
-                                                            <div>
-                                                                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mb-2">Weekend Split</p>
-                                                                {(() => {
-                                                                    const weekendDays = custodyDays.filter(d => {
-                                                                        const date = new Date(d.date);
-                                                                        const day = date.getDay();
-                                                                        return day === 0 || day === 6; // Sun or Sat
-                                                                    });
-                                                                    const totalWeekends = weekendDays.length || 1;
-                                                                    const myWeekends = weekendDays.filter(d => d.status === 'me').length;
-                                                                    const partnerWeekends = weekendDays.filter(d => d.status === 'partner').length;
-
-                                                                    return (
-                                                                        <div className="flex h-2 rounded-full overflow-hidden w-full bg-slate-800">
-                                                                            <div style={{ width: `${(myWeekends / totalWeekends) * 100}%` }} className="bg-emerald-500 h-full" />
-                                                                            <div style={{ width: `${(partnerWeekends / totalWeekends) * 100}%` }} className="bg-blue-500 h-full" />
-                                                                        </div>
-                                                                    );
-                                                                })()}
-                                                                <div className="flex justify-between text-[9px] text-slate-400 mt-1">
-                                                                    <span>You</span>
-                                                                    <span>Partner</span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Parenting Pulse */}
-                                                            {(() => {
-                                                                // Metrics Calculation
-                                                                const totalDays = custodyDays.length;
-                                                                const myDays = custodyDays.filter(d => d.status === 'me').length;
-                                                                const balance = totalDays > 0 ? myDays / totalDays : 0.5;
-
-                                                                const weekendDays = custodyDays.filter(d => {
-                                                                    const date = new Date(d.date);
-                                                                    return date.getDay() === 0 || date.getDay() === 6;
-                                                                });
-                                                                const myWeekends = weekendDays.filter(d => d.status === 'me').length;
-                                                                const totalWeekends = weekendDays.length;
-
-                                                                // 1. Equity Score (Target 50/50)
-                                                                // If balance is 0.5, score is 100. If 0.0 or 1.0, score is 0.
-                                                                const equityRaw = 1 - (Math.abs(balance - 0.5) * 2);
-                                                                const equityScore = Math.round(equityRaw * 100);
-
-                                                                // 2. Stability Score (Weekend Consistency)
-                                                                // Check if weekends are alternating or random. 
-                                                                // Simple proxy: if we have "streaks" of me/partner too long, stability drops.
-                                                                // For now, let's just use a high base for good/avg scenarios.
-                                                                let stabilityScore = 85;
-                                                                if (balance > 0.8 || balance < 0.2) stabilityScore = 40; // Highly unstable/lopsided
-
-                                                                // 3. Harmony Score (Mocked based on scenario implicitly via balance)
-                                                                // Good balance = High Harmony.
-                                                                const harmonyScore = Math.round((equityScore + stabilityScore) / 2);
-
-
-                                                                let status: 'optimum' | 'good' | 'attention' | 'critical' = 'good';
-                                                                let title = 'Steady Pulse';
-                                                                let message = 'Your co-parenting rhythm is stable. Consistency builds security for everyone.';
-                                                                let color = 'text-emerald-400';
-                                                                let bgColor = 'bg-emerald-500/10';
-                                                                let borderColor = 'border-emerald-500/20';
-
-                                                                if (harmonyScore < 50) {
-                                                                    status = 'critical';
-                                                                    title = 'Action Needed';
-                                                                    message = 'Recent patterns show significant imbalance. Consider a schedule review.';
-                                                                    color = 'text-red-400';
-                                                                    bgColor = 'bg-red-500/10';
-                                                                    borderColor = 'border-red-500/20';
-                                                                } else if (harmonyScore < 75) {
-                                                                    status = 'attention';
-                                                                    title = 'Uneven Rhythm';
-                                                                    message = 'Minor friction detected in the schedule. A small adjustment could help.';
-                                                                    color = 'text-orange-400';
-                                                                    bgColor = 'bg-orange-500/10';
-                                                                    borderColor = 'border-orange-500/20';
-                                                                } else if (harmonyScore > 90) {
-                                                                    status = 'optimum';
-                                                                    title = 'In Sync';
-                                                                    message = 'Outstanding cooperation! You are modeling a healthy partnership.';
-                                                                    color = 'text-cyan-400';
-                                                                    bgColor = 'bg-cyan-500/10';
-                                                                    borderColor = 'border-cyan-500/20';
-                                                                }
-
-                                                                const metrics = [
-                                                                    { label: 'Equity', score: equityScore, color: 'bg-blue-500' },
-                                                                    { label: 'Stability', score: stabilityScore, color: 'bg-purple-500' },
-                                                                    { label: 'Harmony', score: harmonyScore, color: 'bg-pink-500' },
-                                                                ];
-
-                                                                return (
-                                                                    <>
-                                                                        <motion.button
-                                                                            whileTap={{ scale: 0.98 }}
-                                                                            onClick={(e) => { e.stopPropagation(); setShowCoParentingDetails(true); }}
-                                                                            className={`w-full rounded-2xl p-4 border ${bgColor} ${borderColor} relative overflow-hidden group mt-4 transition-all hover:bg-opacity-20 text-left`}
-                                                                        >
-                                                                            {/* Header */}
-                                                                            <div className="flex items-start gap-3 mb-4">
-                                                                                <div className={`p-2 rounded-lg ${bgColor} border ${borderColor}`}>
-                                                                                    <Activity className={`w-4 h-4 ${color}`} />
-                                                                                </div>
-                                                                                <div>
-                                                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                                                        <h4 className={`text-sm font-bold ${color}`}>{title}</h4>
-                                                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${bgColor} ${borderColor} ${color}`}>{status}</span>
-                                                                                    </div>
-                                                                                    <p className="text-[10px] text-slate-400 leading-tight max-w-[200px]">{message}</p>
-                                                                                </div>
-                                                                                <div className="absolute top-4 right-4 opacity-50">
-                                                                                    <div className={`w-2 h-2 rounded-full ${color.replace('text-', 'bg-')} animate-pulse`} />
-                                                                                </div>
-                                                                            </div>
-
-                                                                            {/* Metrics Bars */}
-                                                                            <div className="space-y-3">
-                                                                                {metrics.map((m) => (
-                                                                                    <div key={m.label} className="group/bar">
-                                                                                        <div className="flex justify-between items-end mb-1">
-                                                                                            <span className="text-[10px] font-medium text-slate-500 group-hover/bar:text-slate-300 transition-colors uppercase tracking-wide">{m.label}</span>
-                                                                                            <span className="text-[10px] font-bold text-slate-300 tabular-nums">{m.score}/100</span>
-                                                                                        </div>
-                                                                                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
-                                                                                            <motion.div
-                                                                                                initial={{ width: 0 }}
-                                                                                                whileInView={{ width: `${m.score}%` }}
-                                                                                                transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
-                                                                                                className={`h-full rounded-full ${m.color}`}
-                                                                                            />
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        </motion.button>
-
-                                                                        <CoParentingDetailsModal
-                                                                            isOpen={showCoParentingDetails}
-                                                                            onClose={() => setShowCoParentingDetails(false)}
-                                                                            metrics={{ equity: equityScore, stability: stabilityScore, harmony: harmonyScore }}
-                                                                            custodyDays={custodyDays}
-                                                                        />
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </>
-                                                    )}
 
                                                     {/* Upcoming Activities */}
                                                     <div className="mt-3 pt-3 border-t border-white/5">
@@ -1912,7 +2392,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                         </div>
                                                         <div className="space-y-1.5">
                                                             {(() => {
-                                                                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                                                                const todayStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
                                                                 const upcoming = custodyDays
                                                                     .filter(d => d.date > todayStr)
                                                                     .flatMap(d => (d.activities || []).map(a => ({ ...a, date: d.date })))
@@ -1924,11 +2404,12 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                                 }
 
                                                                 return upcoming.map((acc, idx) => (
-                                                                    <div key={`${acc.id}-${idx}`} className="flex items-center gap-2">
-                                                                        <div className={`w-1.5 h-1.5 rounded-full ${acc.type === 'birthday' ? 'bg-pink-400' :
-                                                                            acc.type === 'sport' ? 'bg-orange-400' :
-                                                                                acc.type === 'school' ? 'bg-blue-400' : 'bg-slate-400'
-                                                                            }`}></div>
+                                                                    <div key={acc.id + "-" + idx} className="flex items-center gap-2">
+                                                                        <div className={"w-1.5 h-1.5 rounded-full " + (
+                                                                            acc.type === 'birthday' ? 'bg-pink-400' :
+                                                                                acc.type === 'sport' ? 'bg-orange-400' :
+                                                                                    acc.type === 'school' ? 'bg-blue-400' : 'bg-slate-400'
+                                                                        )}></div>
                                                                         <div className="flex-1 min-w-0">
                                                                             <div className="flex justify-between items-baseline">
                                                                                 <span className="text-[10px] text-slate-300 font-medium truncate">{acc.title}</span>
@@ -1965,21 +2446,21 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => { HapticsService.selection(); setChartView('week'); }}
-                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'week' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                className={"px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (chartView === 'week' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                             >
                                                 Week
                                             </motion.button>
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => { HapticsService.selection(); setChartView('month'); }}
-                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'month' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                className={"px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (chartView === 'month' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                             >
                                                 Month
                                             </motion.button>
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => { HapticsService.selection(); setChartView('year'); }}
-                                                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${chartView === 'year' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                                                className={"px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (chartView === 'year' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
                                             >
                                                 Year
                                             </motion.button>
@@ -2006,7 +2487,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
 
                     {/* Goal Breakdown (500ms) */}
                     {
-                        goals && goals.some(g => g.isEnabled) ? (
+                        isProMode && goals && goals.some(g => g.isEnabled) ? (
                             <div className="col-span-2"><AnimatedSection delay={0} triggerOnce={false} variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                                 {({ isInView }: { isInView?: boolean } = {}) => {
                                     // Filter receipts based on goalView
@@ -2186,28 +2667,26 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-50 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
 
                                             <div className="mb-4 relative z-10">
-                                                <div className="flex flex-col gap-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide">
-                                                            <Target className="w-4 h-4 text-purple-400" />
-                                                            Goal Breakdown
-                                                        </h3>
-                                                        <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
-                                                            {(['daily', 'weekly', 'monthly'] as const).map((view) => (
-                                                                <button
-                                                                    key={view}
-                                                                    onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
-                                                                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                                                                >
-                                                                    {view.charAt(0).toUpperCase() + view.slice(1)}
-                                                                </button>
-                                                            ))}
-                                                        </div>
+                                                <div className="flex flex-wrap items-center justify-between gap-y-2">
+                                                    <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                                        <Target className="w-4 h-4 text-purple-400" />
+                                                        Goal Breakdown
+                                                    </h3>
+                                                    <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5 ml-auto">
+                                                        {(['daily', 'weekly', 'monthly'] as const).map((view) => (
+                                                            <button
+                                                                key={view}
+                                                                onClick={(e) => { e.stopPropagation(); setGoalView(view); }}
+                                                                className={"px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all " + (goalView === view ? 'bg-purple-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
+                                                            >
+                                                                {view.charAt(0).toUpperCase() + view.slice(1)}
+                                                            </button>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className={`relative z-10 w-full ${goals.filter(g => g.isEnabled).length === 1 ? 'flex justify-center py-8' : 'grid grid-cols-4 gap-4'}`}>
+                                            <div className={"relative z-10 w-full " + (goals.filter(g => g.isEnabled).length === 1 ? 'flex justify-center py-8' : 'grid grid-cols-4 gap-4')}>
                                                 {goals.filter(g => g.isEnabled).map(goal => {
                                                     let total = 0;
                                                     filteredGoalReceipts.forEach(r => {
@@ -2304,14 +2783,16 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                             }}
                                                             className="flex flex-col items-center gap-2 group cursor-pointer"
                                                         >
-                                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-500 ${badge.unlocked
-                                                                ? `${badge.bgColor} ${badge.borderColor} ${badge.color} shadow-[0_0_15px_rgba(0,0,0,0.3)] group-hover:scale-110`
-                                                                : 'bg-slate-800/50 border-white/5 text-slate-600 grayscale opacity-50'
-                                                                }`}>
+                                                            <div className={"w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-500 " + (
+                                                                badge.unlocked
+                                                                    ? badge.bgColor + " " + badge.borderColor + " " + badge.color + " shadow-[0_0_15px_rgba(0,0,0,0.3)] group-hover:scale-110"
+                                                                    : 'bg-slate-800/50 border-white/5 text-slate-600 grayscale opacity-50'
+                                                            )}>
                                                                 {badge.icon}
                                                             </div>
-                                                            <span className={`text-[9px] font-bold uppercase tracking-wide text-center transition-colors ${badge.unlocked ? 'text-slate-300' : 'text-slate-600'
-                                                                }`}>
+                                                            <span className={"text-[9px] font-bold uppercase tracking-wide text-center transition-colors " + (
+                                                                badge.unlocked ? 'text-slate-300' : 'text-slate-600'
+                                                            )}>
                                                                 {badge.label}
                                                             </span>
                                                         </motion.button>
@@ -2323,56 +2804,184 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                 }}
                             </AnimatedSection></div>
                         ) : (
-                            <div className="col-span-2">
-                                <motion.div
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => {
-                                        HapticsService.selection();
-                                        onHabitsClick();
-                                    }}
-                                    className="rounded-3xl border border-slate-800 bg-card p-4 shadow-lg relative overflow-hidden flex items-center justify-between cursor-pointer hover:border-slate-700 transition-all"
-                                >
-                                    <div>
-                                        <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
-                                            <Target className="w-4 h-4 text-purple-400" />
-                                            Track Your Habits
-                                        </h3>
-                                        <p className="text-xs text-slate-500">Enable goals in settings to track spending.</p>
-                                    </div>
-                                    <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                                        <ArrowRight size={16} className="text-purple-400" />
-                                    </div>
-                                </motion.div>
-                            </div>
+                            isProMode ? (
+                                <div className="col-span-2">
+                                    <motion.div
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => {
+                                            HapticsService.selection();
+                                            onHabitsClick();
+                                        }}
+                                        className="rounded-3xl border border-slate-800 bg-card p-4 shadow-lg relative overflow-hidden flex items-center justify-between cursor-pointer hover:border-slate-700 transition-all"
+                                    >
+                                        <div>
+                                            <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
+                                                <Target className="w-4 h-4 text-purple-400" />
+                                                Track Your Habits
+                                            </h3>
+                                            <p className="text-xs text-slate-500">Enable goals in settings to track spending.</p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                                            <ArrowRight size={16} className="text-purple-400" />
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            ) : null
                         )
                     }
 
                     {/* 4. Financial Snapshot (Grid of 3) */}
+                    {/* 4. Financial Snapshot (Grid of 3) - Premium Redesign */}
+                    {/* 4. Financial Snapshot (Grid of 3) - Premium Redesign */}
+                    {/* 4. Financial Snapshot (Bento Layout) - Premium Redesign */}
                     <div className="col-span-2">
-                        <div className="relative rounded-3xl border border-slate-800 bg-card p-4 transition-all duration-300 overflow-hidden group shadow-lg hover:border-slate-700">
+                        <div className="relative rounded-3xl overflow-hidden group shadow-2xl transition-all duration-500 hover:shadow-indigo-500/10 border border-white/5">
+                            {/* Deep, Rich Gradient Background - Obsidian/Deep Space Theme */}
+                            <div className="absolute inset-0 bg-[#0B0F17]"></div>
+                            {/* Subtle noise texture or gradient mesh */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 opacity-50"></div>
 
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Wallet className="text-emerald-400 w-4 h-4" />
-                                    <span className="text-slate-400 text-xs font-heading font-semibold tracking-wide uppercase">Financial Snapshot (All Time)</span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {aiMetrics.map((metric, i) => (
-                                        <div key={i} className={`p-3 rounded-2xl border transition-all duration-300 ${metric.label === 'Alert' ? 'bg-red-500/10 border-red-500/30' : 'bg-surfaceHighlight/50 border-white/5 hover:bg-surfaceHighlight hover:border-white/10'}`}>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <p className={`text-[10px] font-medium ${metric.label === 'Alert' ? 'text-red-400' : 'text-slate-500'}`}>{metric.label}</p>
-                                                <metric.icon size={10} className={metric.label === 'Alert' ? 'text-red-400' : 'text-slate-600'} />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <p className={`text-sm font-bold tabular-nums tracking-tight ${metric.trend === 'down' ? 'text-red-400' : metric.trend === 'up' ? 'text-emerald-400' : 'text-white'}`}>
-                                                    {metric.value}
-                                                </p>
-                                                {(metric as any).detail && (
-                                                    <p className="text-[8px] text-slate-400 leading-tight mt-1 line-clamp-2">{(metric as any).detail}</p>
-                                                )}
-                                            </div>
+                            {/* Radial Glow Effects */}
+                            <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+                            <div className="absolute bottom-[-50%] left-[-20%] w-[80%] h-[80%] bg-blue-500/5 rounded-full blur-[60px] pointer-events-none"></div>
+
+                            <div className="relative z-10 p-5">
+                                {/* Header (Compact) */}
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)] backdrop-blur-md">
+                                            <Wallet className="text-indigo-400 w-3.5 h-3.5" />
                                         </div>
-                                    ))}
+                                        <div className="flex flex-col">
+                                            <span className="text-white text-xs font-bold leading-none">Financial Snapshot</span>
+                                            <span className="text-indigo-300/50 text-[9px] uppercase tracking-wider font-bold leading-none mt-0.5">Real-time Overview</span>
+                                        </div>
+                                    </div>
+                                    {/* Pulse Indicator */}
+                                    <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-2 py-0.5">
+                                        <div className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></div>
+                                        <span className="text-[9px] font-bold text-indigo-300">LIVE</span>
+                                    </div>
+                                </div>
+
+                                {/* Bento Layout */}
+                                <div className="flex flex-col md:flex-row gap-3">
+                                    {/* HERO SECTION (Left) - Status/Alert/Forecast */}
+                                    {(() => {
+                                        const heroMetric = aiMetrics.find(m => ['Alert', 'Status', 'Forecast'].includes(m.label)) || aiMetrics[0];
+                                        const gridMetrics = aiMetrics.filter(m => m !== heroMetric);
+
+                                        return (
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        HapticsService.selection();
+                                                        setSelectedSnapshotMetric(heroMetric as any);
+                                                    }}
+                                                    className={"flex-1 md:max-w-[40%] relative p-3 rounded-xl border transition-all duration-300 group/hero overflow-hidden flex flex-col justify-between gap-3 " + (
+                                                        heroMetric.label === 'Alert' ?
+                                                            'bg-red-500/10 border-red-500/20 hover:bg-red-500/15 hover:border-red-500/30' :
+                                                            'bg-white/[0.03] border-white/10 hover:bg-white/[0.05] hover:border-white/20 backdrop-blur-xl'
+                                                    )}>
+
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={"p-1.5 rounded-lg " + (
+                                                                heroMetric.label === 'Alert' ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-300'
+                                                            )}>
+                                                                <heroMetric.icon size={14} />
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Status</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="flex items-baseline gap-2 mb-1">
+                                                            <div className={"text-2xl font-heading font-light tracking-tight leading-none " + (
+                                                                heroMetric.label === 'Alert' ? 'text-red-400' : 'text-white'
+                                                            )}>
+                                                                {heroMetric.value}
+                                                            </div>
+                                                            {heroMetric.trend && heroMetric.trend !== 'neutral' && (
+                                                                <div className={"flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border " + (
+                                                                    heroMetric.trend === 'up' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                                )}>
+                                                                    {(heroMetric as any).trendLabel || (heroMetric.trend === 'up' ? 'Safe' : 'Risk')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {(heroMetric as any).detail && (
+                                                            <p className="text-[9px] text-slate-500 leading-tight opacity-70 line-clamp-1 text-left">{(heroMetric as any).detail}</p>
+                                                        )}
+                                                    </div>
+                                                </button>
+
+                                                {/* GRID SECTION (Right) - 2x2 */}
+                                                <div className="flex-1 grid grid-cols-2 gap-2">
+                                                    {gridMetrics.slice(0, 4).map((metric, i) => {
+                                                        const isUp = metric.trend === 'up';
+                                                        const isDown = metric.trend === 'down';
+                                                        const trendColor = isUp ? 'text-red-400' : isDown ? 'text-emerald-400' : 'text-slate-500'; // Context dependent? Up is bad for spending usually
+                                                        // Context check:
+                                                        // Freq: Up = bad (red)
+                                                        // Weekend: Up = bad (red)
+                                                        // Daily Avg: Up = bad (red)
+                                                        // Top Cat: Neutral
+
+                                                        // Let's assume 'up' in aiMetrics (for spending) is BAD/Warning usually, unless 'improvement'
+                                                        // Actually, let's trust the color logic I just wrote: Red = Up/Bad for spending.
+
+                                                        return (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => {
+                                                                    HapticsService.selection();
+                                                                    setSelectedSnapshotMetric(metric as any);
+                                                                }}
+                                                                className="text-left relative p-3 rounded-xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/10 backdrop-blur-md transition-all duration-300 group/item flex flex-col justify-between min-h-[80px]"
+                                                            >
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider truncate pr-1">{metric.label}</p>
+                                                                    {metric.trend !== 'neutral' ? (
+                                                                        isUp ? <TrendingUp size={12} className="text-amber-400" /> : <TrendingDown size={12} className="text-emerald-400" />
+                                                                    ) : (
+                                                                        <Minus size={12} className="text-slate-600" />
+                                                                    )}
+                                                                </div>
+
+                                                                <div>
+                                                                    <div className="text-sm font-heading font-bold text-slate-200 tracking-tight leading-none mb-1">
+                                                                        {!isNaN(parseFloat(metric.value.replace(/[^0-9.-]/g, ''))) && /[0-9]/.test(metric.value) ? (
+                                                                            <CountUp
+                                                                                prefix={metric.value.includes('€') ? '€' : ''}
+                                                                                suffix={metric.value.includes('%') ? '%' : ''}
+                                                                                value={parseFloat(metric.value.replace(/[^0-9.-]/g, ''))}
+                                                                                decimals={metric.value.includes('.') ? 1 : 0}
+                                                                            />
+                                                                        ) : (
+                                                                            metric.value
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between w-full">
+                                                                        {(metric as any).detail && (
+                                                                            <p className="text-[9px] text-slate-500 leading-none truncate opacity-70 max-w-[70px]">
+                                                                                {(metric as any).detail.split(':')[0]}
+                                                                            </p>
+                                                                        )}
+                                                                        {(metric as any).trendLabel && (
+                                                                            <span className={"text-[8px] font-bold px-1 rounded " + (isUp ? 'bg-amber-500/10 text-amber-500' : isDown ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-700/30 text-slate-500')}>
+                                                                                {(metric as any).trendLabel}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -2393,7 +3002,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                         <span className="text-slate-400 tabular-nums">€{store.value.toFixed(0)}</span>
                                                     </div>
                                                     <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${isInView ? store.percentage : 0}%` }}></div>
+                                                        <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out" style={{ width: (isInView ? store.percentage : 0) + "%" }}></div>
                                                     </div>
                                                 </div>
                                             ))
@@ -2434,7 +3043,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                 <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full rounded-full transition-all duration-1000 ease-out group-hover:brightness-125 group-hover:shadow-[0_0_15px_currentColor]"
-                                                        style={{ width: `${isInView ? d.percentage : 0}%`, backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}
+                                                        style={{ width: (isInView ? d.percentage : 0) + "%", backgroundColor: getCategoryColor(d.name) || '#94a3b8', color: getCategoryColor(d.name) || '#94a3b8' }}
                                                     ></div>
                                                 </div>
                                             </motion.div>
@@ -2460,10 +3069,11 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                     className="w-full bg-surface border border-white/5 rounded-2xl p-3 flex justify-between items-center shadow-sm hover:border-white/15 hover:bg-surfaceHighlight transition-all duration-300 text-left group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 ${r.type === 'bill'
-                                            ? 'bg-indigo-900/30 text-indigo-300 border border-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
-                                            : 'bg-surfaceHighlight text-slate-400 border border-white/5'
-                                            }`}>
+                                        <div className={"w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all duration-300 " + (
+                                            r.type === 'bill'
+                                                ? 'bg-indigo-900/30 text-indigo-300 border border-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                                                : 'bg-surfaceHighlight text-slate-400 border border-white/5'
+                                        )}>
                                             {r.type === 'bill' ? <FileText size={16} /> : r.storeName.charAt(0)}
                                         </div>
                                         <div>
@@ -2475,7 +3085,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                         {ageRestricted && r.items.some(i => i.isRestricted) && (
                                             <AlertTriangle className="text-amber-500 w-3 h-3" />
                                         )}
-                                        <span className={`font-mono text-sm font-bold tracking-tight tabular-nums ${r.type === 'bill' ? 'text-indigo-400' : 'text-white'}`}>
+                                        <span className={"font-mono text-sm font-bold tracking-tight tabular-nums " + (r.type === 'bill' ? 'text-indigo-400' : 'text-white')}>
                                             €{r.items.reduce((acc, i) => (!ageRestricted || !i.isRestricted ? acc + i.price : acc), 0).toFixed(2)}
                                         </span>
                                     </div>
@@ -2520,7 +3130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                                                     <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full rounded-full opacity-90 shadow-[0_0_5px_currentColor]"
-                                                            style={{ width: `${width}%`, backgroundColor: getCategoryColor(drillDown.category) || '#818cf8', color: getCategoryColor(drillDown.category) || '#818cf8' }}
+                                                            style={{ width: width + "%", backgroundColor: getCategoryColor(drillDown.category) || '#818cf8', color: getCategoryColor(drillDown.category) || '#818cf8' }}
                                                         ></div>
                                                     </div>
                                                 </div>
@@ -2554,34 +3164,6 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                         </div>
                     )
                 }
-                {/* DEBUG SECTION */}
-                <div className="mt-8 p-4 bg-black/50 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono text-left">
-                    <p className="text-white font-bold mb-2">DEBUG CALCULATION:</p>
-                    <p>Age Restricted: {ageRestricted ? 'ON' : 'OFF'}</p>
-                    <p>Calculated Total: €{metrics.thisMonthTotal.toFixed(2)}</p>
-                    <p className="mt-2 mb-1 text-white">Receipts included in this month:</p>
-                    <div className="space-y-1">
-                        {(metrics.thisMonthReceipts || []).map((r, i) => (
-                            <div key={i} className="flex justify-between border-b border-white/5 pb-1">
-                                <span>{r.date} - {r.storeName}</span>
-                                <span>€{r.total.toFixed(2)}</span>
-                            </div>
-                        ))}
-                        {metrics.thisMonthReceipts.length === 0 && <p>No receipts found for this month.</p>}
-                    </div>
-
-                    <p className="mt-4 mb-1 text-white border-t border-white/10 pt-2">Last 5 Receipts (All Time):</p>
-                    <div className="space-y-1">
-                        {(receipts || []).slice(0, 5).map((r, i) => (
-                            <div key={i} className="flex justify-between border-b border-white/5 pb-1">
-                                <span>{r.date} - {r.storeName}</span>
-                                <span>€{r.total.toFixed(2)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-
                 {/* Goal Details Modal */}
                 <GoalDetailsModal
                     isOpen={!!selectedGoal}
@@ -2591,11 +3173,38 @@ const Dashboard: React.FC<DashboardProps> = ({ receipts, monthlyBudget, ageRestr
                 />
 
                 {/* Achievement Details Modal */}
-                <AchievementDetailsModal
-                    isOpen={!!selectedAchievement}
-                    onClose={() => setSelectedAchievement(null)}
-                    achievement={selectedAchievement}
-                />
+                <AnimatePresence>
+                    {selectedAchievement && (
+                        <AchievementDetailsModal
+                            achievement={selectedAchievement}
+                            onClose={() => setSelectedAchievement(null)}
+                        />
+                    )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                    {selectedSnapshotMetric && (
+                        <SnapshotDetailsModal
+                            metric={selectedSnapshotMetric}
+                            onClose={() => setSelectedSnapshotMetric(null)}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {
+                    showCoParentingModal && (
+                        <CoParentingDetailsModal
+                            isOpen={showCoParentingModal}
+                            onClose={() => setShowCoParentingModal(false)}
+                            metrics={{
+                                equity: metrics.equity,
+                                stability: metrics.stability,
+                                harmony: metrics.harmony
+                            }}
+                            custodyDays={custodyDays}
+                        />
+                    )
+                }
             </div >
         </motion.div >
     );

@@ -1,15 +1,22 @@
+
+
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon, ChevronLeft, ChevronRight, User, Users, UserX, X, Plus, Clock, Cake, Activity, GraduationCap, MoreHorizontal, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Calendar as CalendarIcon, ChevronLeft, ChevronRight, User, Users, UserX, X, Plus, Clock, Cake, Activity, GraduationCap, MoreHorizontal, Trash2, RefreshCw, Copy, Check, Share2, Download } from 'lucide-react';
 import { CustodyDay, CustodyStatus, CalendarActivity } from '../types';
 
+import { useData } from '../contexts/DataContext';
+
 interface CustodyCalendarProps {
-    custodyDays: CustodyDay[];
-    onUpdateDay: (day: CustodyDay) => void;
     onBack: () => void;
 }
 
-const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ custodyDays, onUpdateDay, onBack }) => {
+const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
+    const { custodyDays, updateCustodyDay, syncCustody } = useData();
+    const onUpdateDay = updateCustodyDay; // Alias for compatibility with existing logic
+
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDay, setSelectedDay] = useState<number | null>(null);
     const [manageEvents, setManageEvents] = useState(false);
     const [showActivityModal, setShowActivityModal] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -17,6 +24,49 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ custodyDays, onUpdate
     const [newActivityType, setNewActivityType] = useState<CalendarActivity['type']>('other');
     const [newActivityStartTime, setNewActivityStartTime] = useState('');
     const [newActivityEndTime, setNewActivityEndTime] = useState('');
+
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    // --- Invite Modal Logic ---
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [isInviting, setIsInviting] = useState(false);
+
+    const handleInvite = async () => {
+        if (!inviteEmail.includes('@')) {
+            alert("Please enter a valid email.");
+            return;
+        }
+        setIsInviting(true);
+        try {
+            // Lazy import to avoid circular dependencies if any
+            const { authService } = await import('../services/authService');
+            await authService.inviteCoParent(inviteEmail);
+
+            alert(`Invite sent to ${inviteEmail}!`);
+            setShowInviteModal(false);
+            setInviteEmail('');
+        } catch (e: any) {
+            console.error("Invite failed:", e);
+            alert("Invite Failed: " + (e.message || e));
+            // Fallback: If edge function fails (not deployed), suggest mailto?
+            // For now, simple error is better than confusion.
+        } finally {
+            setIsInviting(false);
+        }
+    };
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            await syncCustody(true); // Forces manual mode (alerts enabled)
+        } catch (e) {
+            console.error("Sync failed:", e);
+            alert("Sync Failed: " + e);
+        } finally {
+            setTimeout(() => setIsSyncing(false), 500); // Visual feedback
+        }
+    };
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -136,31 +186,104 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ custodyDays, onUpdate
 
     return (
         <div className="flex flex-col h-full bg-background text-white relative pt-24">
-            {/* Toolbar */}
-            <div className="px-4 py-2 flex items-center justify-between border-b border-white/5 bg-background/95 backdrop-blur-md sticky top-0 z-40">
-                <div className="flex items-center gap-4">
+            {/* Toolbar (Visible below Global Header) */}
+            <div className="px-4 py-4 flex flex-col gap-3 border-b border-white/5 bg-background/95 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/20">
+                {/* Row 1: Nav & Title */}
+                <div className="flex items-center justify-between">
                     <button
                         onClick={onBack}
-                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                        className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
                     >
-                        <ArrowLeft size={20} className="text-slate-300" />
+                        <ArrowLeft size={24} className="text-slate-300" />
                     </button>
-                    <h1 className="text-lg font-heading font-bold flex items-center gap-2">
-                        <CalendarIcon className="w-5 h-5 text-purple-400" />
+                    <h1 className="text-xl font-heading font-bold flex items-center gap-2">
                         Custody Calendar
                     </h1>
+                    {/* Placeholder for alignment, as invite button moved */}
+                    <div className="w-10"></div>
                 </div>
 
-                <button
-                    onClick={() => setManageEvents(!manageEvents)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${manageEvents
-                        ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                        : 'bg-slate-800 text-slate-400 border-white/5 hover:bg-slate-700'
-                        }`}
-                >
-                    {manageEvents ? 'Done' : 'Manage Events'}
-                </button>
+                {/* Action Row: Sync | Invite | Manage */}
+                <div className="grid grid-cols-3 gap-2">
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="py-3 px-2 rounded-xl bg-surface border border-white/10 flex flex-col items-center justify-center gap-1 hover:bg-white/5 active:scale-95 transition-all"
+                    >
+                        <RefreshCw size={18} className={`text-blue-400 ${isSyncing ? "animate-spin" : ""}`} />
+                        <span className="font-bold text-xs text-blue-100">Sync</span>
+                    </button>
+
+                    <button
+                        onClick={() => setShowInviteModal(true)}
+                        className="py-3 px-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col items-center justify-center gap-1 hover:bg-indigo-500/20 active:scale-95 transition-all"
+                    >
+                        <User size={18} className="text-indigo-400" />
+                        <span className="font-bold text-xs text-indigo-100">Invite</span>
+                    </button>
+
+                    <button
+                        onClick={() => setManageEvents(!manageEvents)}
+                        className={`py-3 px-2 rounded-xl border flex flex-col items-center justify-center gap-1 active:scale-95 transition-all ${manageEvents
+                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
+                            : 'bg-surface border-white/10 text-slate-300 hover:bg-white/5'
+                            }`}
+                    >
+                        {manageEvents ? <Check size={18} /> : <CalendarIcon size={18} />}
+                        <span className="font-bold text-xs">{manageEvents ? 'Done' : 'Events'}</span>
+                    </button>
+                </div>
             </div>
+
+            {/* Invite Modal */}
+            <AnimatePresence>
+                {showInviteModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setShowInviteModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                            className="relative bg-surface border border-white/10 p-6 rounded-2xl w-full max-w-sm shadow-xl"
+                        >
+                            <h3 className="text-lg font-bold text-white mb-2">Invite Co-Parent</h3>
+                            <p className="text-white/60 text-sm mb-4">Send an invite to share this calendar.</p>
+
+                            <input
+                                type="email"
+                                placeholder="ex-partner@example.com"
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white mb-4 focus:ring-2 focus:ring-primary outline-none"
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                            />
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowInviteModal(false)}
+                                    className="flex-1 py-3 rounded-xl font-bold text-white/70 hover:bg-white/5 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleInvite}
+                                    disabled={isInviting}
+                                    className="flex-1 bg-primary py-3 rounded-xl font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-50"
+                                >
+                                    {isInviting ? 'Sending...' : 'Send Invite'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ... Rest of existing UI ... */}
+
 
             <div className="flex-1 overflow-y-auto p-4">
 
