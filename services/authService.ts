@@ -28,7 +28,7 @@ const mockAuthService = {
     };
 
     // Save "Password" (In reality, we just check existence in mock)
-    users.push({ ...newUser, password: password.trim() });
+    users.push({ ...newUser, password: password });
     await Preferences.set({ key: MOCK_STORAGE_KEY, value: JSON.stringify(users) });
     await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(newUser) });
 
@@ -41,7 +41,7 @@ const mockAuthService = {
     const { value: stored } = await Preferences.get({ key: MOCK_STORAGE_KEY });
     const users = stored ? JSON.parse(stored) : [];
     const normalizedEmail = email.toLowerCase().trim();
-    const normalizedPassword = password.trim(); // Fix for mobile auto-spacing
+    const rawPassword = password;
 
     console.log(`MockAuth: Attempting sign in for '${normalizedEmail}'`);
 
@@ -62,7 +62,7 @@ const mockAuthService = {
         tier: SubscriptionTier.PRO
       };
       // Use provided password or default
-      const finalPassword = normalizedPassword || 'password';
+      const finalPassword = rawPassword || 'password';
 
       usersList.push({ ...newUser, password: finalPassword });
 
@@ -82,13 +82,13 @@ const mockAuthService = {
     }
 
     console.log(`MockAuth: Checking password for ${normalizedEmail}`);
-    console.log(`MockAuth: Input password length: ${normalizedPassword.length}`);
+    console.log(`MockAuth: Input password length: ${rawPassword.length}`);
     console.log(`MockAuth: Stored password length: ${userExists.password.length}`);
-    // console.log(`MockAuth: Input: '${normalizedPassword}', Stored: '${userExists.password}'`); // Uncomment if desperate
+    // console.log(`MockAuth: Input: '${rawPassword}', Stored: '${userExists.password}'`); // Uncomment if desperate
 
     // Simple mock auth check
-    // Note: We compare against trimmed password now
-    const foundUser = usersList.find((u: any) => u.email === normalizedEmail && u.password === normalizedPassword);
+    // Note: We compare against raw password now
+    const foundUser = usersList.find((u: any) => u.email === normalizedEmail && u.password === rawPassword);
 
     if (foundUser) {
       const { password, ...safeUser } = foundUser;
@@ -166,14 +166,19 @@ const realAuthService = {
     if (error) return { user: null, error: error.message };
 
     if (data.user) {
-      // CRITICAL CHECK: Did we get a session?
-      // If Email Confirm is ON, we get User but NO Session.
+      // HANDLE MISSING SESSION (Email Confirmation Enabled)
       if (!data.session) {
         console.warn("AuthService: SignUp succeeded but NO SESSION. Email verification likely required.");
-        // Do NOT log them in. Return error to force them to verify.
+
+        // Check if user accidentally tried to sign up again for existing email
+        if (data.user.identities && data.user.identities.length === 0) {
+          return { user: null, error: "This email is already registered. Try signing in." };
+        }
+
+        // Otherwise, it's a true new pending user
         return {
           user: null,
-          error: "Account created! Please check your email to conform your address before signing in."
+          error: "Success! Please check your email to confirm your account."
         };
       }
 
@@ -184,7 +189,6 @@ const realAuthService = {
             key: 'truetrack-backup-session',
             value: JSON.stringify(data.session)
           });
-          console.log("AuthService: Manual session backup saved (SignUp).");
         } catch (e) {
           console.error("AuthService: Failed to save manual backup (SignUp)", e);
         }
@@ -198,7 +202,7 @@ const realAuthService = {
       };
       return { user: newUser, error: null };
     }
-    return { user: null, error: "Unknown error" };
+    return { user: null, error: "Registration failed. Please try again." };
   },
 
   async signIn(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
@@ -365,22 +369,34 @@ const realAuthService = {
 
 // --- DYNAMIC SERVICE PROXY ---
 const MOCK_MODE_KEY = 'force_mock_mode';
+let cachedService: typeof mockAuthService | null = null;
 
 async function getService(): Promise<typeof mockAuthService> {
+  if (cachedService) return cachedService;
+
   // 1. Check if Supabase is even available
-  if (!supabase) return mockAuthService;
+  if (!supabase) {
+    cachedService = mockAuthService;
+    return cachedService;
+  }
 
   // 2. Check Preference for forced mock mode
   try {
-    const { value } = await Preferences.get({ key: MOCK_MODE_KEY });
-    // If explicitly set to 'false', use Real. Otherwise (null or 'true'), use Mock.
-    if (value === 'false') return realAuthService;
+    const prefPromise = Preferences.get({ key: MOCK_MODE_KEY });
+    const timeoutPromise = new Promise<{ value: string | null }>(resolve => setTimeout(() => resolve({ value: null }), 600));
+
+    const { value } = await Promise.race([prefPromise, timeoutPromise]);
+
+    if (value === 'false') {
+      cachedService = realAuthService;
+    } else {
+      cachedService = mockAuthService;
+    }
+    return cachedService;
   } catch (e) {
     console.error("AuthService: Failed to check mode preference", e);
+    return realAuthService;
   }
-
-  // 3. Default: If Supabase exists, use Real! (Production/QA behavior)
-  return realAuthService;
 }
 
 export const authService = {
@@ -448,6 +464,11 @@ export const authService = {
     }
     // Fallback for mock service if not implemented
     console.warn("AuthService: inviteCoParent not implemented in current service mode.");
+  },
+
+  async getServiceMode(): Promise<'mock' | 'real'> {
+    const service = await getService();
+    return service === mockAuthService ? 'mock' : 'real';
   }
 };
 

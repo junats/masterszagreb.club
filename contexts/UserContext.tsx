@@ -31,57 +31,65 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const initAuth = async () => {
             console.log('UserContext: initAuth starting...');
             try {
-                // 1. Check Supabase Session Integrity FIRST
-                const { data: { session }, error } = await supabase.auth.getSession();
-                console.log('UserContext: Supabase Session:', session?.user?.id, error);
+                if (supabase) {
+                    // 1. Check Supabase Session Integrity FIRST
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    console.log('UserContext: Supabase Session:', session?.user?.id, error);
 
-                if (error || !session) {
-                    console.log("UserContext: No active session. Checking manual backup...");
+                    if (error || !session) {
+                        console.log("UserContext: No active session. Checking manual backup...");
 
-                    // RETRY: Try to restore from manual backup
-                    const { value: backupJson } = await Preferences.get({ key: 'truetrack-backup-session' });
-                    if (backupJson) {
-                        console.log("UserContext: Found backup session. Restoring...");
-                        const { data: { session: restoredSession }, error: restoreError } = await supabase.auth.setSession(JSON.parse(backupJson));
+                        // RETRY: Try to restore from manual backup
+                        const { value: backupJson } = await Preferences.get({ key: 'truetrack-backup-session' });
+                        if (backupJson) {
+                            console.log("UserContext: Found backup session. Restoring...");
+                            const { data: { session: restoredSession }, error: restoreError } = await supabase.auth.setSession(JSON.parse(backupJson));
 
-                        if (restoredSession && !restoreError) {
-                            console.log("UserContext: Manual restore SUCCESS.");
-                            // Proceed to get user...
-                            const currentUser = await authService.getUser();
-                            if (currentUser) {
-                                setUser(currentUser);
-                                setIsAuthLoading(false);
-                                await SplashScreen.hide();
-                                return;
+                            if (restoredSession && !restoreError) {
+                                console.log("UserContext: Manual restore SUCCESS.");
+                                // Proceed to get user...
+                                const currentUser = await authService.getUser();
+                                if (currentUser) {
+                                    setUser(currentUser);
+                                    setIsAuthLoading(false);
+                                    await SplashScreen.hide();
+                                    return;
+                                }
+                            } else {
+                                console.warn("UserContext: Manual restore failed:", restoreError);
+                                await Preferences.remove({ key: 'truetrack-backup-session' }); // Bad backup
                             }
-                        } else {
-                            console.warn("UserContext: Manual restore failed:", restoreError);
-                            await Preferences.remove({ key: 'truetrack-backup-session' }); // Bad backup
                         }
+
+                        // Only clear if explicitly error'd out (e.g. refresh token invalid)
+                        if (error) {
+                            console.warn("UserContext: Session error. Clearing local state.", error);
+                            await Preferences.remove({ key: 'truetrack_session' });
+                            await Preferences.remove({ key: 'truetrack-backup-session' });
+                            setUser(null);
+                        }
+
+                        setIsAuthLoading(false);
+                        await SplashScreen.hide();
+                        return;
                     }
 
-                    // Only clear if explicitly error'd out (e.g. refresh token invalid)
-                    if (error) {
-                        console.warn("UserContext: Session error. Clearing local state.", error);
-                        await Preferences.remove({ key: 'truetrack_session' });
-                        await Preferences.remove({ key: 'truetrack-backup-session' });
+                    // 2. If valid session, get full user profile
+                    const currentUser = await authService.getUser();
+                    console.log('UserContext: initAuth currentUser:', currentUser);
+                    if (currentUser) {
+                        setUser(currentUser);
+                    } else {
+                        // Session exists but no profile? Weird, but safe to logout.
+                        console.warn("UserContext: Session valid but no profile found.");
                         setUser(null);
                     }
-
-                    setIsAuthLoading(false);
-                    await SplashScreen.hide();
-                    return;
-                }
-
-                // 2. If valid session, get full user profile
-                const currentUser = await authService.getUser();
-                console.log('UserContext: initAuth currentUser:', currentUser);
-                if (currentUser) {
-                    setUser(currentUser);
                 } else {
-                    // Session exists but no profile? Weird, but safe to logout.
-                    console.warn("UserContext: Session valid but no profile found.");
-                    setUser(null);
+                    // NO SUPABASE - Assume Mock or just check authService
+                    console.log("UserContext: Supabase is null. Checking authService (Mock?)");
+                    const currentUser = await authService.getUser();
+                    if (currentUser) setUser(currentUser);
+                    else setUser(null);
                 }
             } catch (e) {
                 console.error('UserContext: initAuth error:', e);
@@ -89,88 +97,89 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             } finally {
                 setIsAuthLoading(false);
                 console.log('UserContext: initAuth finished');
-                await SplashScreen.hide();
+                try { await SplashScreen.hide(); } catch (e) { }
             }
         };
         initAuth();
 
-        // 3. LISTEN FOR DYNAMIC CHANGES
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`UserContext: Auth Event: ${event}`);
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                // Refresh user profile
-                const u = await authService.getUser();
-                if (u) setUser(u);
-            } else if (event === 'SIGNED_OUT') {
-                setUser(null);
-            }
-        });
+        // 3. LISTEN FOR DYNAMIC CHANGES (Only if Supabase exists)
+        let subscription: any = null;
+        if (supabase) {
+            const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log(`UserContext: Auth Event: ${event}`);
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    // Refresh user profile
+                    const u = await authService.getUser();
+                    if (u) setUser(u);
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null);
+                }
+            });
+            subscription = data.subscription;
+        }
 
-        // 4. DEEP LINK LISTENER (OAuth Callback)
-        // 4. DEEP LINK LISTENER (OAuth Callback)
-        App.addListener('appUrlOpen', async (data) => {
+        // 4. DEEP LINK LISTENER (OAuth Callback & Email Confirmation)
+        const appListener = App.addListener('appUrlOpen', async (data) => {
             console.log('UserContext: App opened with URL:', data.url);
 
-            // Check if it's our login callback
-            if (data.url.includes('login-callback')) {
-                console.log('UserContext: Detected login callback. Initiating FAIL-SAFE sequence...');
+            // Check if it's our login callback or an auth-related URL
+            const isAuthFlow = data.url.includes('login-callback') ||
+                data.url.includes('access_token=') ||
+                data.url.includes('code=') ||
+                data.url.includes('type=signup');
+
+            if (isAuthFlow) {
+                console.log('UserContext: Detected auth callback. Initiating FAIL-SAFE sequence...');
 
                 // FAIL-SAFE: If nothing happens in 4 seconds, BLINDLY RELOAD.
-                // The user confirmed that "restarting" fixes the issue.
-                // This timer guarantees that "restart" happens automatically.
-                setTimeout(() => {
+                // This handles cases where the session might have arrived but state didn't update.
+                const failSafe = setTimeout(() => {
                     console.warn("UserContext: 4s Fail-safe timer hit. FORCING RELOAD.");
                     window.location.reload();
                 }, 4000);
 
-                // 1. Try manual exchange first (non-blocking)
-                authService.getSessionFromUrl(data.url).catch(console.error);
+                try {
+                    // 1. Try manual exchange (some patterns need explicit handling)
+                    await authService.getSessionFromUrl(data.url);
 
-                // 2. Poll for session (Supabase SDK takes time to persist/notify)
-                // Validation loop: Check 10 times with 1s delay (10s window)
-                // We wrap getSession in a timeout so the loop doesn't freeze.
-                for (let i = 0; i < 10; i++) {
-                    console.log(`UserContext: Session Check Attempt ${i + 1}/10...`);
+                    // 2. Poll for session (Supabase SDK takes time to persist/notify)
+                    for (let i = 0; i < 8; i++) {
+                        console.log(`UserContext: Session Check Attempt ${i + 1}/8...`);
+                        const { data: { session } } = await supabase!.auth.getSession();
 
-                    try {
-                        // Race against a 2s timeout
-                        const checkPromise = supabase.auth.getSession();
-                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
-
-                        const { data } = await Promise.race([checkPromise, timeoutPromise]) as any;
-
-                        if (data?.session?.user) {
+                        if (session?.user) {
                             console.log("UserContext: Session FOUND! Setting user and RELOADING...");
-                            await Preferences.set({ key: 'truetrack-backup-session', value: JSON.stringify(data.session) });
-                            window.location.reload(); // Immediate reload on success
-                            break;
-                        }
-                    } catch (e) {
-                        console.warn(`UserContext: Attempt ${i + 1} failed/timed-out:`, e);
-                    }
+                            clearTimeout(failSafe);
+                            await Preferences.set({ key: 'truetrack-backup-session', value: JSON.stringify(session) });
 
-                    // Wait 1s before retry
-                    if (i < 9) await new Promise(r => setTimeout(r, 1000));
+                            // Get full user and set it before reload for smoother transition
+                            const u = await authService.getUser();
+                            if (u) setUser(u);
+
+                            window.location.reload();
+                            return;
+                        }
+                        await new Promise(r => setTimeout(r, 500)); // Poll every 500ms
+                    }
+                } catch (e) {
+                    console.warn(`UserContext: Deep link processing failed:`, e);
                 }
             }
         });
 
-
-        // Safety timeout - IF Supabase hangs completely, we must eventually let the user in.
+        // Safety timeout
         const safetyTimeout = setTimeout(async () => {
             console.warn("UserContext: Auth Timed Out. Forcing Entry.");
             setIsAuthLoading(false);
             try {
                 await SplashScreen.hide();
-            } catch (e) {
-                // Ignore splash screen errors
-            }
+            } catch (e) { }
         }, 8000);
 
         // Cleanup subscription
         return () => {
-            subscription.unsubscribe();
-            App.removeAllListeners();
+            if (subscription) subscription.unsubscribe();
+            appListener.then(handle => handle.remove()).catch(() => App.removeAllListeners());
             clearTimeout(safetyTimeout);
         };
     }, []);
@@ -208,6 +217,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error("SignOut service error (ignoring):", e);
         }
 
+        // Set flag to prevent auto-login loop immediately after signing out
+        await Preferences.set({ key: 'manual_logout_at', value: Date.now().toString() });
+
         // Force clear all local persistence
         await Preferences.remove({ key: 'truetrack_session' });
         await Preferences.remove({ key: 'truetrack-backup-session' });
@@ -216,13 +228,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const signIn = (user: User) => {
+        console.log("UserContext: signIn called for", user.email);
         setUser(user);
     };
 
     const upgradeToPro = () => {
         if (user) {
             updateUser({ tier: SubscriptionTier.PRO });
-            alert("Upgraded to Pro (Mock)!");
         }
     };
 

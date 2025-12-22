@@ -18,6 +18,7 @@ const DEFAULT_CATEGORIES: CategoryDefinition[] = [
     { id: 'health', name: 'Health', color: '#fb7185' },
     { id: 'transport', name: 'Transport', color: '#facc15' },
     { id: 'education', name: 'Education', color: '#6366f1' },
+    { id: 'child', name: 'Child', color: '#ec4899' },
     { id: 'other', name: 'Other', color: '#94a3b8' },
 ];
 
@@ -51,6 +52,20 @@ const getReceiptSignature = (r: Receipt) => {
 
 import { supabase } from '../lib/supabaseClient';
 
+export interface CalendarChange {
+    id: string;
+    type: 'added' | 'modified' | 'deleted' | 'custody_changed';
+    eventTitle?: string;
+    eventType?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    oldDate?: string;
+    oldTime?: string;
+    custodyStatus?: string;
+    timestamp: string;
+}
+
 interface DataContextType {
     receipts: Receipt[];
     setReceipts: React.Dispatch<React.SetStateAction<Receipt[]>>;
@@ -81,6 +96,8 @@ interface DataContextType {
     setCustodyDays: React.Dispatch<React.SetStateAction<CustodyDay[]>>;
     updateCustodyDay: (day: CustodyDay) => void;
     syncCustody: (manual?: boolean) => Promise<void>; // Setup Sync
+    recentChanges: CalendarChange[];
+    setRecentChanges: React.Dispatch<React.SetStateAction<CalendarChange[]>>;
 
     // Settings
     ageRestricted: boolean;
@@ -99,11 +116,12 @@ interface DataContextType {
     // Meta
     isDataLoaded: boolean;
     dataVersion: number;
-    generateDummyData: (scenario?: 'good' | 'average' | 'bad') => void;
+    generateDummyData: (scenario?: 'good' | 'average' | 'bad') => Promise<number>;
     spendRatio: number;
 }
 
 import { useUser } from './UserContext';
+import { useToast } from './ToastContext';
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -115,7 +133,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [monthlyBudget, setMonthlyBudget] = useState(300);
     const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
     const [ageRestricted, setAgeRestricted] = useState(false);
-    const [childSupportMode, setChildSupportMode] = useState(false);
+    const [childSupportMode, setChildSupportMode] = useState(true);
     const [categories, setCategories] = useState<CategoryDefinition[]>(DEFAULT_CATEGORIES);
     const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
     const [custodyDays, setCustodyDays] = useState<CustodyDay[]>([]);
@@ -125,7 +143,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [helpEnabled, setHelpEnabled] = useState(false);
     const [isProMode, setIsProMode] = useState(false);
     const [dataVersion, setDataVersion] = useState(0);
+    const [lastPartnerChanges, setLastPartnerChanges] = useState<string | null>(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
+    const [recentChanges, setRecentChanges] = useState<CalendarChange[]>([]);
 
     // --- Load Data ---
     useEffect(() => {
@@ -158,7 +178,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (parsed.goals !== undefined) setGoals(parsed.goals);
                     if (parsed.ambientMode !== undefined) setAmbientMode(parsed.ambientMode);
                     if (parsed.showGlobalAmbient !== undefined) setShowGlobalAmbient(parsed.showGlobalAmbient);
-                    if (parsed.isProMode !== undefined) setIsProMode(parsed.isProMode);
+                    if (parsed.helpEnabled !== undefined) setHelpEnabled(parsed.helpEnabled);
+                    if (parsed.isProMode !== undefined) {
+                        console.log('📦 Loading Pro mode from storage:', parsed.isProMode);
+                        setIsProMode(parsed.isProMode);
+                    } else {
+                        console.warn('⚠️ No Pro mode found in storage, defaulting to false');
+                    }
                 }
 
                 const { value: savedCustody } = await Preferences.get({ key: 'truetrack_custody' });
@@ -174,6 +200,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loadData();
     }, []);
 
+    const { showToast } = useToast();
+
     // --- Persistence Effects ---
     useEffect(() => {
         const saveReceipts = async () => {
@@ -184,23 +212,56 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         const saveSettings = async () => {
-            await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, isProMode }) });
+            await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled, isProMode }) });
             await Preferences.set({ key: 'truetrack_custody', value: JSON.stringify(custodyDays) });
         };
         saveSettings();
-    }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays, ambientMode, showGlobalAmbient, isProMode]);
+    }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays, ambientMode, showGlobalAmbient, helpEnabled, isProMode]);
+
+    // Immediate persistence for Pro mode (critical to prevent loss on background)
+    useEffect(() => {
+        const savePro = async () => {
+            try {
+                const settings = {
+                    budget: monthlyBudget,
+                    categoryBudgets,
+                    ageRestricted,
+                    childSupportMode,
+                    categories,
+                    recurringExpenses,
+                    goals,
+                    ambientMode,
+                    showGlobalAmbient,
+                    helpEnabled,
+                    isProMode
+                };
+                await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify(settings) });
+                console.log('✅ Pro mode saved immediately:', isProMode);
+            } catch (e) {
+                console.error('Failed to save Pro mode:', e);
+            }
+        };
+        savePro();
+    }, [isProMode, monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled]);
+
+    // Auto-Sync when Co-Parenting Mode is enabled
+    useEffect(() => {
+        if (childSupportMode && isDataLoaded) {
+            syncCustody(false);
+        }
+    }, [childSupportMode, isDataLoaded]);
 
     // --- Widget Sync ---
     useEffect(() => {
         const syncWidget = async () => {
             try {
-                await WidgetService.updateWidgetData(receipts, monthlyBudget);
+                await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays);
             } catch (e) {
                 console.error("Widget sync failed:", e);
             }
         };
         syncWidget();
-    }, [receipts, monthlyBudget]);
+    }, [receipts, monthlyBudget, custodyDays]);
 
     // --- Recurring Expenses Check ---
     useEffect(() => {
@@ -263,68 +324,69 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let duplicateCount = 0;
         let confirmedNewReceipts: Receipt[] = [];
 
-        setReceipts(prev => {
-            const existingSignatures = new Set(prev.map(r => getReceiptSignature(r)));
-            const existingImageHashes = new Set(prev.map(r => r.imageHash).filter(Boolean));
-            const existingFileHashes = new Set(prev.map(r => r.fileHash).filter(Boolean));
-            const existingTransactionIds = new Set(prev.map(r => r.transactionId).filter(Boolean));
+        const existingSignatures = new Set(receipts.map(r => getReceiptSignature(r)));
+        const existingImageHashes = new Set(receipts.map(r => r.imageHash).filter(Boolean));
+        const existingFileHashes = new Set(receipts.map(r => r.fileHash).filter(Boolean));
+        const existingTransactionIds = new Set(receipts.map(r => r.transactionId).filter(Boolean));
 
-            const findWeakMatch = (r: Receipt) => {
-                return prev.find(existing =>
-                    existing.date === r.date &&
-                    Math.abs(existing.total - r.total) < 0.01 &&
-                    existing.id !== r.id
-                );
-            };
+        const findWeakMatch = (r: Receipt) => {
+            return receipts.find(existing =>
+                existing.date === r.date &&
+                Math.abs(existing.total - r.total) < 0.01 &&
+                existing.storeName.toLowerCase() === r.storeName.toLowerCase() &&
+                existing.id !== r.id
+            );
+        };
 
-            for (const receipt of newReceipts) {
-                const sig = getReceiptSignature(receipt);
-                const imgHash = receipt.imageHash;
-                const fHash = receipt.fileHash;
-                const txId = receipt.transactionId;
+        for (const receipt of newReceipts) {
+            const sig = getReceiptSignature(receipt);
+            const imgHash = receipt.imageHash;
+            const fHash = receipt.fileHash;
+            const txId = receipt.transactionId;
+            const rRef = receipt.referenceCode;
 
-                const isDuplicateSig = existingSignatures.has(sig);
-                const isDuplicateImageHash = imgHash ? existingImageHashes.has(imgHash) : false;
-                const isDuplicateFileHash = fHash ? existingFileHashes.has(fHash) : false;
-                const isDuplicateTxId = txId ? existingTransactionIds.has(txId) : false;
+            // Only hard block if it's the exact same file/image, or has same unique Transaction ID/Ref Code
+            const isDuplicateImageHash = imgHash ? existingImageHashes.has(imgHash) : false;
+            const isDuplicateFileHash = fHash ? existingFileHashes.has(fHash) : false;
+            const isDuplicateTxId = txId ? existingTransactionIds.has(txId) : false;
 
-                if (isDuplicateSig || isDuplicateImageHash || isDuplicateFileHash || isDuplicateTxId) {
-                    duplicateCount++;
-                    console.log(`Duplicate blocked: Sig=${isDuplicateSig}, ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}, TxId=${isDuplicateTxId}`);
-                    continue;
-                }
+            // Also hard block if Reference Code exists and is identical (strong identifier)
+            const isDuplicateRef = rRef ? receipts.some(existing => existing.referenceCode === rRef && existing.storeName === receipt.storeName) : false;
 
-                const weakMatch = findWeakMatch(receipt);
-                if (weakMatch) {
-                    const confirmMessage = `Potential duplicate detected:\n\nStore: ${receipt.storeName}\nDate: ${receipt.date}\nTotal: €${receipt.total.toFixed(2)}\n\nThis matches an existing receipt from "${weakMatch.storeName}".\n\nDo you want to add it anyway?`;
-                    if (window.confirm(confirmMessage)) {
-                        confirmedNewReceipts.push(receipt);
-                        existingSignatures.add(sig);
-                        if (txId) existingTransactionIds.add(txId);
-                    } else {
-                        duplicateCount++;
-                    }
-                } else {
+            if (isDuplicateImageHash || isDuplicateFileHash || isDuplicateTxId || isDuplicateRef) {
+                duplicateCount++;
+                console.log(`Duplicate blocked: ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}, TxId=${isDuplicateTxId}, Ref=${isDuplicateRef}`);
+                continue;
+            }
+
+            const weakMatch = findWeakMatch(receipt);
+            if (weakMatch) {
+                const confirmMessage = `Potential duplicate detected:\n\nStore: ${receipt.storeName}\nDate: ${receipt.date}\nTotal: €${receipt.total.toFixed(2)}\n\nThis looks identical to an existing record.\n\nDo you want to add it anyway?`;
+                if (window.confirm(confirmMessage)) {
                     confirmedNewReceipts.push(receipt);
                     existingSignatures.add(sig);
                     if (txId) existingTransactionIds.add(txId);
+                } else {
+                    duplicateCount++;
                 }
+            } else {
+                confirmedNewReceipts.push(receipt);
+                existingSignatures.add(sig);
+                if (txId) existingTransactionIds.add(txId);
             }
+        }
 
-            // This effect needs to handle alerts outside the render cycle technically, 
-            // but for now we follow the existing pattern. 
-            // We can move alerts to a useEffect if we want to be pure.
-            if (duplicateCount > 0) {
-                setTimeout(() => {
-                    alert(`${duplicateCount} duplicate receipt(s) were removed.`);
-                }, 100);
-            }
+        if (duplicateCount > 0) {
+            alert(`${duplicateCount} duplicate receipt(s) were removed.`);
+        }
 
-            const updatedReceipts = [...confirmedNewReceipts, ...prev];
-            return updatedReceipts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        });
-
-        setDataVersion(v => v + 1);
+        if (confirmedNewReceipts.length > 0) {
+            setReceipts(prev => {
+                const updatedReceipts = [...confirmedNewReceipts, ...prev];
+                return updatedReceipts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            });
+            setDataVersion(v => v + 1);
+        }
     };
 
     const updateReceipt = (updated: Receipt) => {
@@ -339,102 +401,237 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const deleteAllReceipts = () => {
         setReceipts([]);
-        alert('All receipts deleted.');
+        setCustodyDays([]);
+        alert('All data cleared (receipts & custody calendar).');
     };
 
     // --- Cloud Sync ---
     const syncCustody = async (manual: boolean = false) => {
         if (!supabase) {
-            alert("Sync unavailable: App is running in Mock Mode (No Database Connection).");
+            console.warn("Sync unavailable: App is running in Mock Mode (No Database Connection).");
             return;
         }
 
-        // FETCH FRESH USER directly to avoid stale closure issues
-        // const currentUser = await authService.getUser(); // Too silent
-
-        // TIMEOUT WRAPPER: If Supabase hangs here, we must fail gracefully to stop the spinner.
         const getUserPromise = supabase.auth.getUser();
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase Auth Timeout")), 5000));
 
         let currentUser = null;
-        let authError = null;
-
         try {
             // @ts-ignore
             const result: any = await Promise.race([getUserPromise, timeoutPromise]);
             currentUser = result.data?.user;
-            authError = result.error;
         } catch (e: any) {
             console.error("Sync Auth Hang:", e);
-            if (manual) alert("Sync Failed: Connection timed out. Please restart the app.");
-            return; // Exit to stop spinner
-        }
-
-        if (authError || !currentUser) {
-            if (manual) {
-                console.warn("Sync aborted: Supabase Auth Error:", authError);
-                // Alert the ACTUAL error from Supabase
-                const errorMsg = authError?.message || "No user found (Null)";
-                alert(`Sync Auth Error: ${errorMsg}\n\nPlease sign in again.`);
-
-                await signOut(); // Force logout to clean up state
-            }
             return;
         }
 
-        // Use currentUser.id for the query
-        // The original logic used 'user.id' from the closure, which might be null.
-        const userId = currentUser.id;
+        if (!currentUser) return;
 
         try {
+            // Step 1: Get the shared calendar ID for this user
+            const { data: pairData, error: pairError } = await supabase
+                .from('coparent_pairs')
+                .select('id')
+                .or(`user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}`)
+                .single();
+
+            if (pairError) {
+                console.error("Failed to get co-parent pair:", pairError);
+                return;
+            }
+
+            if (!pairData) {
+                console.warn("No co-parent pair found for user");
+                return;
+            }
+
+            const sharedCalendarId = pairData.id;
+
+            // Step 2: Fetch custody days using shared_calendar_id
             const { data, error } = await supabase
                 .from('custody_days')
                 .select('*')
-                .eq('user_id', currentUser.id);
+                .eq('shared_calendar_id', sharedCalendarId);
 
             if (error) throw error;
 
             if (data) {
-                // 1. Merge Remote -> Local
-                // Create a map starting with LOCAL data
-                const mergedMap = new Map(custodyDays.map(d => [d.date, d]));
+                const mergedMap = new Map<string, any>(custodyDays.map(d => [d.date, d]));
+                let newFromRemote = 0;
+                let updatedFromRemote = 0;
+                const detectedChanges: CalendarChange[] = [];
 
-                // Overwrite/Add REMOTE data (Server wins on conflict usually, but for empty server, local stays)
                 data.forEach((row: any) => {
-                    mergedMap.set(row.date, {
-                        date: row.date,
-                        status: row.status,
-                        activities: row.activities || []
-                    });
+                    const local = mergedMap.get(row.date);
+                    const remoteActivities = row.activities || [];
+
+                    if (!local) {
+                        // New day from remote
+                        newFromRemote++;
+                        mergedMap.set(row.date, {
+                            date: row.date,
+                            status: row.status,
+                            activities: remoteActivities
+                        });
+
+                        // Track new activities
+                        remoteActivities.forEach((activity: any) => {
+                            detectedChanges.push({
+                                id: `${Date.now()}_${Math.random()}`,
+                                type: 'added',
+                                eventTitle: activity.title,
+                                eventType: activity.type,
+                                date: row.date,
+                                startTime: activity.startTime,
+                                endTime: activity.endTime,
+                                timestamp: new Date().toISOString()
+                            });
+                        });
+
+                        // Track custody status if not 'none'
+                        if (row.status !== 'none') {
+                            detectedChanges.push({
+                                id: `${Date.now()}_${Math.random()}`,
+                                type: 'custody_changed',
+                                custodyStatus: row.status,
+                                date: row.date,
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                    } else {
+                        // Check for changes in existing day
+                        const localActivities = local.activities || [];
+                        let hasChanges = false;
+
+                        // Detect custody status change
+                        if (local.status !== row.status) {
+                            hasChanges = true;
+                            updatedFromRemote++;
+                            detectedChanges.push({
+                                id: `${Date.now()}_${Math.random()}`,
+                                type: 'custody_changed',
+                                custodyStatus: row.status,
+                                date: row.date,
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+
+                        // Detect activity changes
+                        const localActivityMap = new Map(localActivities.map((a: any) => [a.id, a]));
+                        const remoteActivityMap = new Map(remoteActivities.map((a: any) => [a.id, a]));
+
+                        // Find new activities
+                        remoteActivities.forEach((remoteActivity: any) => {
+                            if (!localActivityMap.has(remoteActivity.id)) {
+                                hasChanges = true;
+                                detectedChanges.push({
+                                    id: `${Date.now()}_${Math.random()}`,
+                                    type: 'added',
+                                    eventTitle: remoteActivity.title,
+                                    eventType: remoteActivity.type,
+                                    date: row.date,
+                                    startTime: remoteActivity.startTime,
+                                    endTime: remoteActivity.endTime,
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                        });
+
+                        // Find deleted activities
+                        localActivities.forEach((localActivity: any) => {
+                            if (!remoteActivityMap.has(localActivity.id)) {
+                                hasChanges = true;
+                                detectedChanges.push({
+                                    id: `${Date.now()}_${Math.random()}`,
+                                    type: 'deleted',
+                                    eventTitle: localActivity.title,
+                                    eventType: localActivity.type,
+                                    date: row.date,
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                        });
+
+                        // Find modified activities
+                        remoteActivities.forEach((remoteActivity: any) => {
+                            const localActivity = localActivityMap.get(remoteActivity.id) as any;
+                            if (localActivity) {
+                                const titleChanged = localActivity.title !== remoteActivity.title;
+                                const timeChanged = localActivity.startTime !== remoteActivity.startTime ||
+                                    localActivity.endTime !== remoteActivity.endTime;
+
+                                if (titleChanged || timeChanged) {
+                                    hasChanges = true;
+                                    detectedChanges.push({
+                                        id: `${Date.now()}_${Math.random()}`,
+                                        type: 'modified',
+                                        eventTitle: remoteActivity.title,
+                                        eventType: remoteActivity.type,
+                                        date: row.date,
+                                        startTime: remoteActivity.startTime,
+                                        endTime: remoteActivity.endTime,
+                                        oldTime: localActivity.startTime,
+                                        timestamp: new Date().toISOString()
+                                    });
+                                }
+                            }
+                        });
+
+                        if (hasChanges) {
+                            updatedFromRemote++;
+                            mergedMap.set(row.date, {
+                                date: row.date,
+                                status: row.status,
+                                activities: remoteActivities
+                            });
+                        }
+                    }
                 });
 
                 const mergedArray = Array.from(mergedMap.values());
-                setCustodyDays(mergedArray);
+                if (newFromRemote > 0 || updatedFromRemote > 0) {
+                    setCustodyDays(mergedArray);
 
-                // 2. Push Merged -> Remote
-                // This ensures non-empty local data is sent to the empty server
+                    // Update recent changes (keep last 10)
+                    setRecentChanges(prev => [...detectedChanges, ...prev].slice(0, 10));
+                }
+
                 if (mergedArray.length > 0) {
                     const updates = mergedArray.map((d: any) => ({
                         date: d.date,
                         status: d.status,
                         activities: d.activities,
-                        user_id: currentUser.id, // Fixed: Use currentUser.id, not user.id
+                        user_id: currentUser.id,
+                        shared_calendar_id: sharedCalendarId,
                         updated_at: new Date().toISOString()
                     }));
 
                     const { error: upsertError } = await supabase.from('custody_days').upsert(updates, { onConflict: 'date,user_id' });
                     if (upsertError) {
                         console.error('Sync push failed:', upsertError);
-                        if (manual) alert("Sync Error: " + upsertError.message);
                     } else {
-                        // Success feedback
-                        if (manual) alert(`Synced! Merged ${data.length} remote days. Pushed ${updates.length} local days.`);
+                        const hasChanges = detectedChanges.length > 0;
+                        if (hasChanges) {
+                            // Send detailed notifications
+                            import('../services/notificationService').then(({ NotificationService }) => {
+                                NotificationService.sendDetailedCalendarNotification(detectedChanges);
+                            });
+
+                            // Legacy message for backwards compatibility
+                            let changeMsg = "";
+                            if (newFromRemote > 0 && updatedFromRemote > 0) {
+                                changeMsg = `Partner added ${newFromRemote} and updated ${updatedFromRemote} events`;
+                            } else if (newFromRemote > 0) {
+                                changeMsg = `Partner added ${newFromRemote} new event${newFromRemote > 1 ? 's' : ''}`;
+                            } else if (updatedFromRemote > 0) {
+                                changeMsg = `Partner updated ${updatedFromRemote} event${updatedFromRemote > 1 ? 's' : ''}`;
+                            }
+                            setLastPartnerChanges(changeMsg);
+                        }
                     }
-                } else {
-                    if (manual) alert(`Synced! Pulled ${data.length} remote days. No local changes to push.`);
                 }
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Custody sync failed:', err);
         }
     };
@@ -447,6 +644,114 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [isDataLoaded]);
 
     const updateCustodyDay = async (day: CustodyDay) => {
+        // Detect changes before updating
+        const existingDay = custodyDays.find(d => d.date === day.date);
+        const localChanges: CalendarChange[] = [];
+
+        if (existingDay) {
+            // Check for custody status change
+            if (existingDay.status !== day.status) {
+                localChanges.push({
+                    id: `${Date.now()}_${Math.random()}`,
+                    type: 'custody_changed',
+                    custodyStatus: day.status,
+                    date: day.date,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            // Check for activity changes
+            const oldActivities = existingDay.activities || [];
+            const newActivities = day.activities || [];
+            const oldActivityMap = new Map(oldActivities.map((a: any) => [a.id, a]));
+            const newActivityMap = new Map(newActivities.map((a: any) => [a.id, a]));
+
+            // Find new activities
+            newActivities.forEach((newActivity: any) => {
+                if (!oldActivityMap.has(newActivity.id)) {
+                    localChanges.push({
+                        id: `${Date.now()}_${Math.random()}`,
+                        type: 'added',
+                        eventTitle: newActivity.title,
+                        eventType: newActivity.type,
+                        date: day.date,
+                        startTime: newActivity.startTime,
+                        endTime: newActivity.endTime,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            });
+
+            // Find deleted activities
+            oldActivities.forEach((oldActivity: any) => {
+                if (!newActivityMap.has(oldActivity.id)) {
+                    localChanges.push({
+                        id: `${Date.now()}_${Math.random()}`,
+                        type: 'deleted',
+                        eventTitle: oldActivity.title,
+                        eventType: oldActivity.type,
+                        date: day.date,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            });
+
+            // Find modified activities
+            newActivities.forEach((newActivity: any) => {
+                const oldActivity = oldActivityMap.get(newActivity.id) as any;
+                if (oldActivity) {
+                    const titleChanged = oldActivity.title !== newActivity.title;
+                    const timeChanged = oldActivity.startTime !== newActivity.startTime ||
+                        oldActivity.endTime !== newActivity.endTime;
+
+                    if (titleChanged || timeChanged) {
+                        localChanges.push({
+                            id: `${Date.now()}_${Math.random()}`,
+                            type: 'modified',
+                            eventTitle: newActivity.title,
+                            eventType: newActivity.type,
+                            date: day.date,
+                            startTime: newActivity.startTime,
+                            endTime: newActivity.endTime,
+                            oldTime: oldActivity.startTime,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                }
+            });
+        } else {
+            // New day - track all activities as added
+            const newActivities = day.activities || [];
+            newActivities.forEach((activity: any) => {
+                localChanges.push({
+                    id: `${Date.now()}_${Math.random()}`,
+                    type: 'added',
+                    eventTitle: activity.title,
+                    eventType: activity.type,
+                    date: day.date,
+                    startTime: activity.startTime,
+                    endTime: activity.endTime,
+                    timestamp: new Date().toISOString()
+                });
+            });
+
+            // Track custody status if not 'none'
+            if (day.status !== 'none') {
+                localChanges.push({
+                    id: `${Date.now()}_${Math.random()}`,
+                    type: 'custody_changed',
+                    custodyStatus: day.status,
+                    date: day.date,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+
+        // Update recent changes if any detected
+        if (localChanges.length > 0) {
+            setRecentChanges(prev => [...localChanges, ...prev].slice(0, 10));
+        }
+
         // Optimistic UI Update
         setCustodyDays(prev => {
             const existing = prev.find(d => d.date === day.date);
@@ -467,28 +772,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     user_id: user.id,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'date,user_id' }).then(({ error }) => {
-                    if (error) console.error('Failed to save custody day:', error);
+                    if (error) {
+                        console.error('Failed to save custody day:', error);
+                    } else {
+                        // Send detailed notifications for local changes
+                        if (localChanges.length > 0) {
+                            import('../services/notificationService').then(({ NotificationService }) => {
+                                NotificationService.sendDetailedCalendarNotification(localChanges);
+                            });
+                        }
+                    }
                 });
             }
         }
     };
 
-    const generateDummyData = (scenario: 'good' | 'average' | 'bad' = 'average') => {
-        import('../utils/seedData').then(({ generateScenarioData }) => {
-            setReceipts([]);
-            setGoals([]);
-            setCustodyDays([]);
+    const generateDummyData = (scenario: 'good' | 'average' | 'bad' = 'average'): Promise<number> => {
+        return new Promise((resolve) => {
+            import('../utils/seedData').then(({ generateScenarioData }) => {
+                setReceipts([]);
+                setGoals([]);
+                setCustodyDays([]);
 
-            const { receipts: newReceipts, custodyDays: newCustodyDays, goals: newGoals, monthlyBudget: newBudget } = generateScenarioData(scenario, 3);
+                const { receipts: newReceipts, custodyDays: newCustodyDays, goals: newGoals, monthlyBudget: newBudget } = generateScenarioData(scenario, 3);
 
-            setTimeout(() => {
-                setReceipts(newReceipts);
-                setCustodyDays(newCustodyDays);
-                setGoals(newGoals);
-                setMonthlyBudget(newBudget);
-                alert(`Generated ${scenario} data: ${newReceipts.length} receipts.`);
-                setDataVersion(v => v + 1);
-            }, 50);
+                setTimeout(() => {
+                    setReceipts(newReceipts);
+                    setCustodyDays(newCustodyDays);
+                    setGoals(newGoals);
+                    setMonthlyBudget(newBudget);
+                    // alert removed - caller handles feedback
+                    setDataVersion(v => v + 1);
+                    resolve(newReceipts.length);
+                }, 50);
+            });
         });
     };
 
@@ -522,11 +839,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             showGlobalAmbient, setShowGlobalAmbient,
             helpEnabled, setHelpEnabled,
             isProMode, setIsProMode,
+            lastPartnerChanges,
+            setLastPartnerChanges,
             isDataLoaded,
             dataVersion,
             generateDummyData,
             spendRatio,
-            syncCustody
+            syncCustody,
+            recentChanges,
+            setRecentChanges
         }}>
             {children}
         </DataContext.Provider>

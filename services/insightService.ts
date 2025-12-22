@@ -9,12 +9,14 @@ export interface InsightMessage {
     subtext?: string;
     severity: InsightSeverity;
     icon: any;
-    category?: string; // If related to a specific category
+    category?: string;
 }
 
+// Translation function type
+type TranslateFunction = (key: string, params?: Record<string, string | number>) => string;
+
 /**
- * Generates a comprehensive list of AI insights based on current financial and calendar data.
- * Updated for "Meticulous" analysis: Time patterns, Category Drift, and Goal Checks.
+ * Generates translated AI insights based on financial data
  */
 export const generateInsights = (
     currentSpent: number,
@@ -22,7 +24,8 @@ export const generateInsights = (
     receipts: Receipt[],
     custodyDays: CustodyDay[] = [],
     previousMonthSpent: number = 0,
-    goals: Goal[] = []
+    goals: Goal[] = [],
+    t: TranslateFunction
 ): InsightMessage[] => {
     const insights: InsightMessage[] = [];
     const today = new Date();
@@ -30,8 +33,7 @@ export const generateInsights = (
     const dayOfMonth = today.getDate();
     const daysRemaining = daysInMonth - dayOfMonth;
 
-    // --- 1. Meticulous Time Analysis ---
-    // Late Night Spending (11PM - 5AM)
+    // Late Night Spending
     const lateNightReceipts = receipts.filter(r => {
         const h = new Date(r.date).getHours();
         return h >= 23 || h < 5;
@@ -41,14 +43,14 @@ export const generateInsights = (
     if (lateNightSpend > 50) {
         insights.push({
             id: 'late-night-habit',
-            text: `Critical: €${lateNightSpend.toFixed(0)} spent between 11PM and 5AM.`,
-            subtext: "Impulse control is lowest at night. Avoid late browsing.",
+            text: t('insights.lateNightTitle', { amount: lateNightSpend.toFixed(0) }),
+            subtext: t('insights.lateNightSubtext'),
             severity: 'danger',
             icon: Clock
         });
     }
 
-    // Weekend vs Weekday Ratio
+    // Weekend vs Weekday
     const weekendReceipts = receipts.filter(r => {
         const d = new Date(r.date).getDay();
         return d === 0 || d === 6;
@@ -58,9 +60,8 @@ export const generateInsights = (
         return d !== 0 && d !== 6;
     });
 
-    // Avg Spend
     const weekdayAvg = weekdayReceipts.length > 0
-        ? weekdayReceipts.reduce((s, r) => s + r.total, 0) / (dayOfMonth > 0 ? (dayOfMonth * 5 / 7) : 1) // Rough approx
+        ? weekdayReceipts.reduce((s, r) => s + r.total, 0) / (dayOfMonth > 0 ? (dayOfMonth * 5 / 7) : 1)
         : 0;
     const weekendAvg = weekendReceipts.length > 0
         ? weekendReceipts.reduce((s, r) => s + r.total, 0) / (dayOfMonth > 0 ? (dayOfMonth * 2 / 7) : 1)
@@ -69,21 +70,19 @@ export const generateInsights = (
     if (weekendAvg > weekdayAvg * 2.5 && weekendAvg > 50) {
         insights.push({
             id: 'weekend-splurge',
-            text: "Weekend spending is 2.5x higher than weekdays.",
-            subtext: "You are undoing your weekday discipline on Saturdays.",
+            text: t('insights.weekendSplurgeTitle'),
+            subtext: t('insights.weekendSplurgeSubtext'),
             severity: 'warning',
             icon: Calendar
         });
     }
 
-    // --- 2. Goal Adherence (Honesty) ---
-    // Check for "Junk Food" or "Alcohol" if goals deny them
+    // Goal Adherence
     goals.filter(g => g.isEnabled).forEach(g => {
-        // Find receipts matching strict keywords for this goal
         const violations = receipts.filter(r =>
             (g.keywords || []).some(k => r.storeName.toLowerCase().includes(k) || r.items.some(i => i.name.toLowerCase().includes(k)))
             || (r.categoryId === Category.ALCOHOL && g.type === 'ALCOHOL')
-            || (r.categoryId === Category.DINING && g.type === 'JUNK_FOOD' && r.storeName.toLowerCase().includes('mcd')) // hardcode heuristic for demo
+            || (r.categoryId === Category.DINING && g.type === 'JUNK_FOOD' && r.storeName.toLowerCase().includes('mcd'))
         );
 
         if (violations.length > 0) {
@@ -91,8 +90,8 @@ export const generateInsights = (
             if (violationTotal > 20) {
                 insights.push({
                     id: `goal-fail-${g.id}`,
-                    text: `You have broken your '${g.name}' goal.`,
-                    subtext: `Detected €${violationTotal.toFixed(0)} spent on restricted items this month.`,
+                    text: t('insights.goalFailTitle', { goalName: g.name }),
+                    subtext: t('insights.goalFailSubtext', { amount: violationTotal.toFixed(0) }),
                     severity: 'danger',
                     icon: Target
                 });
@@ -100,8 +99,7 @@ export const generateInsights = (
         }
     });
 
-    // --- 3. Category Drift (vs Previous Month Proxy) ---
-    // If no real history, we simulate 'drift' if category > 30% of budget
+    // Category Drift
     const categoryTotals: Record<string, number> = {};
     receipts.forEach(r => {
         const cat = r.categoryId || Category.OTHER;
@@ -112,38 +110,43 @@ export const generateInsights = (
         if (monthlyBudget > 0 && (amount / monthlyBudget) > 0.35 && cat !== Category.NECESSITY) {
             insights.push({
                 id: `cat-drift-${cat}`,
-                text: `${cat} consumes ${Math.round((amount / monthlyBudget) * 100)}% of your TOTAL budget.`,
-                subtext: "This is unsustainable. Cut back immediately.",
+                text: t('insights.categoryDriftTitle', {
+                    category: cat,
+                    percent: Math.round((amount / monthlyBudget) * 100)
+                }),
+                subtext: t('insights.categoryDriftSubtext'),
                 severity: 'warning',
                 icon: ShoppingBag
             });
         }
     });
 
-    // --- 4. Budget Health (Standard) ---
+    // Budget Health
     if (monthlyBudget > 0) {
         const ratio = currentSpent / monthlyBudget;
 
         if (ratio > 1) {
             insights.push({
                 id: 'budget-critical',
-                text: `BUDGET EXCEEDED BY €${(currentSpent - monthlyBudget).toFixed(0)}.`,
-                subtext: "Stop spending. You have 0 disposable income left.",
+                text: t('insights.budgetExceededTitle', { amount: (currentSpent - monthlyBudget).toFixed(0) }),
+                subtext: t('insights.budgetExceededSubtext'),
                 severity: 'danger',
                 icon: AlertTriangle
             });
         } else if (ratio > 0.85 && daysRemaining > 10) {
             insights.push({
                 id: 'budget-warning',
-                text: `Burning cash too fast (${Math.round(ratio * 100)}% used).`,
-                subtext: `You must average < €${((monthlyBudget - currentSpent) / daysRemaining).toFixed(0)}/day to survive the month.`,
+                text: t('insights.budgetWarningTitle', { percent: Math.round(ratio * 100) }),
+                subtext: t('insights.budgetWarningSubtext', {
+                    dailyLimit: ((monthlyBudget - currentSpent) / daysRemaining).toFixed(0)
+                }),
                 severity: 'warning',
                 icon: Wallet
             });
         }
     }
 
-    // --- 5. Custody Prep ---
+    // Custody Prep
     const upcomingCustody = custodyDays
         .filter(d => new Date(d.date) >= today && d.status === 'me')
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -155,20 +158,22 @@ export const generateInsights = (
         if (dayDiff <= 2 && dayDiff >= 0) {
             insights.push({
                 id: 'custody-next',
-                text: dayDiff === 0 ? "Custody: Kids are here today." : `Custody: Kids arrive in ${dayDiff} days.`,
-                subtext: "Ensure fridge is stocked and activities planned.",
+                text: dayDiff === 0
+                    ? t('insights.custodyTodayTitle')
+                    : t('insights.custodyUpcomingTitle', { days: dayDiff }),
+                subtext: t('insights.custodySubtext'),
                 severity: 'info',
                 icon: User
             });
         }
     }
 
-    // If still empty (rare with meticulous checks), fallback
+    // Fallback
     if (insights.length === 0) {
         insights.push({
             id: 'generic-clean',
-            text: "Financial health is optimal.",
-            subtext: "No spending anomalies or goal violations detected.",
+            text: t('insights.optimalTitle'),
+            subtext: t('insights.optimalSubtext'),
             severity: 'success',
             icon: CheckCircle2
         });

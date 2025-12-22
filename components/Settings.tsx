@@ -8,11 +8,15 @@ import { generateDemoData } from '../utils/demoData';
 import { exportService } from '../services/exportService';
 import { PDFService } from '../services/pdfService';
 import { HapticsService } from '../services/haptics';
+import { WidgetService } from '../services/widgetService';
 import { Preferences } from '@capacitor/preferences';
 import SubscriptionModal from './SubscriptionModal';
 
 import { useData } from '../contexts/DataContext';
 import { useUser } from '../contexts/UserContext';
+import { useToast } from '../contexts/ToastContext';
+import { biometricService } from '../services/biometricService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SettingsProps {
     // Most props removed.
@@ -38,6 +42,8 @@ const Settings: React.FC<SettingsProps> = () => {
         categories, setCategories,
         recurringExpenses, setRecurringExpenses,
         goals, setGoals,
+        receipts, // For widget update
+        custodyDays, // For widget update
         setReceipts, // For deleteAll
         generateDummyData,
         ambientMode, setAmbientMode,
@@ -48,6 +54,7 @@ const Settings: React.FC<SettingsProps> = () => {
     } = useData();
 
     const { user, updateUser, signOut: contextSignOut, upgradeToPro } = useUser();
+    const { language, setLanguage, t } = useLanguage();
 
     // Map context values to names used in the component
     const onSeedData = generateDummyData;
@@ -58,12 +65,65 @@ const Settings: React.FC<SettingsProps> = () => {
         await contextSignOut();
     };
 
+    const { showToast } = useToast();
+    const [showSeedConfirmModal, setShowSeedConfirmModal] = useState(false);
+    const [seedScenario, setSeedScenario] = useState<'good' | 'average' | 'bad'>('average');
+
 
     const [showPaywall, setShowPaywall] = useState(false);
     const [showAvatarModal, setShowAvatarModal] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6'); // Default Blue
+
+    const [biometricAvailable, setBiometricAvailable] = useState(false);
+    const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+    // Initial Biometric Check
+    React.useEffect(() => {
+        const checkBiometric = async () => {
+            const { available } = await biometricService.isAvailable();
+            setBiometricAvailable(available);
+            const enabled = await biometricService.isEnabled();
+            setBiometricEnabled(enabled);
+        };
+        checkBiometric();
+    }, []);
+
+    const handleToggleBiometric = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const shouldEnable = e.target.checked;
+        HapticsService.impactMedium();
+
+        if (shouldEnable) {
+            // To enable, we typically want to verify identity first
+            const verified = await biometricService.verifyIdentity();
+            if (verified) {
+                // If verified, we still need the password to store it.
+                // For now, we'll enable the toggle, and in AuthScreen we'll capture password on next login.
+                // Actually, let's ask for the password now if we want it to work immediately.
+                const pwd = prompt("Please enter your current password to enable Face ID login:");
+                if (pwd && user?.email) {
+                    try {
+                        await biometricService.saveCredentials(user.email, pwd);
+                        await biometricService.setEnabled(true);
+                        setBiometricEnabled(true);
+                        showToast("Face ID enabled successfully!", 'success');
+                    } catch (err) {
+                        showToast("Failed to save credentials.", 'error');
+                        setBiometricEnabled(false);
+                    }
+                } else {
+                    setBiometricEnabled(false);
+                }
+            } else {
+                setBiometricEnabled(false);
+            }
+        } else {
+            await biometricService.deleteCredentials();
+            setBiometricEnabled(false);
+            showToast("Face ID disabled.", 'info');
+        }
+    };
 
     // Temp state for Profile Editing
     const [tempNickname, setTempNickname] = useState(user?.nickname || user?.name || '');
@@ -210,7 +270,7 @@ const Settings: React.FC<SettingsProps> = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="flex-1 overflow-y-auto w-full max-w-md mx-auto relative pt-44 pb-24 px-4 custom-scrollbar"
+                className="flex-1 w-full max-w-md mx-auto relative pt-0 pb-8 px-4 custom-scrollbar"
             >
                 <div className="pb-4 px-6 text-center">
                     <p className="text-[10px] text-slate-500 font-mono">TrueTrack v1.8 (Build {new Date().toLocaleTimeString()})</p>
@@ -288,7 +348,7 @@ const Settings: React.FC<SettingsProps> = () => {
                 </div>
 
                 {/* Subscription Upsell (If Free) */}
-                {user?.tier === SubscriptionTier.FREE && (
+                {!isProMode && (
                     <button
                         onClick={() => setShowPaywall(true)}
                         className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 p-4 rounded-2xl shadow-lg mb-6 flex items-center justify-between group border border-white/10 transition-all duration-300 hover:shadow-[0_0_25px_rgba(79,70,229,0.25)]"
@@ -314,7 +374,7 @@ const Settings: React.FC<SettingsProps> = () => {
                             {user?.tier === SubscriptionTier.PRO && (
                                 <div className="flex items-center gap-1">
                                     <Shield size={10} className="text-amber-500" />
-                                    <span className="text-[10px] text-amber-500 font-bold tracking-wide">Active</span>
+                                    <span className="text-[10px] text-amber-500 font-bold tracking-wide">{t('settings.active')}</span>
                                 </div>
                             )}
                         </div>
@@ -327,8 +387,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Users size={18} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">Co-Parenting Features</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Enable provision analysis & support</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.coParentingFeatures')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.coParentingDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -352,8 +412,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Target size={18} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">Goal Tracking</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Monitor habits & limits (Pro)</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.goalTracking')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.goalTrackingDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -484,7 +544,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     </div>
                                     <div className={user?.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}>
                                         <span className="text-slate-200 text-sm font-bold block">Parental Control</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Omit restricted items (18+)</span>
+                                        <span className="text-xs text-slate-500 font-medium block">Hide 18+ from Dashboard & Export</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -493,6 +553,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         className="sr-only peer"
                                         checked={ageRestricted}
                                         onChange={(e) => {
+                                            if (user?.tier !== SubscriptionTier.PRO) {
+                                                setShowPaywall(true);
+                                                return;
+                                            }
                                             HapticsService.impactMedium();
                                             handleToggleRestricted(e);
                                         }}
@@ -645,9 +709,60 @@ const Settings: React.FC<SettingsProps> = () => {
                         </div>
                     </section>
 
+                    {/* Security Settings */}
+                    <section>
+                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.security')}</h4>
+                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                            {/* Face ID / Biometric Login */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${biometricEnabled ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
+                                        <Lock size={18} />
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-200 text-sm font-bold block">Biometric Login</span>
+                                        <span className="text-xs text-slate-500 font-medium block">Use Face ID or Touch ID</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={biometricEnabled}
+                                        onChange={handleToggleBiometric}
+                                        disabled={!biometricAvailable}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]"></div>
+                                </label>
+                            </div>
+
+                            {/* Remember Session */}
+                            <div className="w-full flex items-center justify-between p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
+                                        <RefreshCw size={18} />
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-200 text-sm font-bold block">Stay Logged In</span>
+                                        <span className="text-xs text-slate-500 font-medium block">Remember me on this device</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={true}
+                                        readOnly
+                                    />
+                                    <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
                     {/* Category Management */}
                     <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">Categories</h4>
+                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.categories')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             <button
                                 onClick={() => setShowCategoryModal(true)}
@@ -692,8 +807,49 @@ const Settings: React.FC<SettingsProps> = () => {
 
                     {/* General Settings */}
                     <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">General</h4>
+                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.general')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                            {/* Language Selector */}
+                            <div className="w-full p-4 border-b border-white/5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-blue-500/20 p-2 rounded-xl text-blue-400">
+                                            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                            </svg>
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="text-slate-200 text-sm font-bold block">{t('settings.language')}</span>
+                                            <span className="text-xs text-slate-500 font-medium">{t('settings.selectLanguage')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <select
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-slate-200 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 font-medium hover:border-white/20"
+                                    value={language}
+                                    onChange={async (e) => {
+                                        HapticsService.impactLight();
+                                        await setLanguage(e.target.value);
+                                        const languageNames: Record<string, string> = {
+                                            'en': 'English',
+                                            'hr': 'Hrvatski',
+                                            'es': 'Español',
+                                            'fr': 'Français',
+                                            'de': 'Deutsch',
+                                            'it': 'Italiano'
+                                        };
+                                        showToast(`Language changed to ${languageNames[e.target.value]}`, 'success');
+                                    }}
+                                >
+                                    <option value="en">🇬🇧 English</option>
+                                    <option value="hr">🇭🇷 Hrvatski</option>
+                                    <option value="es">🇪🇸 Español</option>
+                                    <option value="fr">🇫🇷 Français</option>
+                                    <option value="de">🇩🇪 Deutsch</option>
+                                    <option value="it">🇮🇹 Italiano</option>
+                                </select>
+                            </div>
+
                             <button className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5">
                                 <div className="flex items-center gap-3">
                                     <div className="bg-indigo-500/20 p-2 rounded-xl text-indigo-400">
@@ -750,11 +906,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                             <button
                                                 key={opt.type}
                                                 onClick={() => {
-                                                    if (confirm(`Overwrite data with "${opt.label}"?`)) {
-                                                        // Pass the scenario type to the callback
-                                                        // Note: We need to update the prop type in SettingsProps first, or cast it for now
-                                                        (onSeedData as any)(opt.type);
-                                                    }
+                                                    setSeedScenario(opt.type as any);
+                                                    setShowSeedConfirmModal(true);
                                                 }}
                                                 className={`w-full text-left p-3 rounded-lg hover:bg-white/5 text-xs font-bold uppercase tracking-wider ${opt.color}`}
                                             >
@@ -773,7 +926,20 @@ const Settings: React.FC<SettingsProps> = () => {
                                             alert('No data to export.');
                                             return;
                                         }
-                                        const receipts = JSON.parse(savedReceipts) as Receipt[];
+                                        let receipts = JSON.parse(savedReceipts) as Receipt[];
+
+                                        // 18+ Filter for Export
+                                        if (ageRestricted) {
+                                            receipts = receipts.map(r => ({
+                                                ...r,
+                                                items: r.items.filter(i => !i.isRestricted),
+                                                // Recalculate total if items were removed? 
+                                                // Ideally yes, but original total stands for reference. 
+                                                // But for "Hiding" purposes, maybe we just hide the line items?
+                                                // Let's filter items. The CSV usually iterates items.
+                                            })).filter(r => r.items.length > 0 || r.total > 0);
+                                        }
+
                                         const csv = exportService.generateCSV(receipts);
                                         const filename = `truetrack_export_${new Date().toISOString().split('T')[0]}.csv`;
                                         await exportService.downloadCSV(csv, filename);
@@ -827,6 +993,67 @@ const Settings: React.FC<SettingsProps> = () => {
                         </div>
                     </section>
 
+                    {/* Subscription Management Section */}
+                    <section className="mb-6">
+                        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <Crown size={16} className="text-purple-400" />
+                            Subscription
+                        </h2>
+
+                        <div className="bg-slate-800/30 rounded-2xl border border-white/5 p-4">
+                            {/* Current Status */}
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p className="text-xs text-slate-500 uppercase tracking-wide font-bold">Current Plan</p>
+                                    <p className="text-lg font-bold text-white mt-1">
+                                        {isProMode ? (
+                                            <span className="flex items-center gap-2">
+                                                <Crown size={18} className="text-purple-400" />
+                                                Pro
+                                            </span>
+                                        ) : (
+                                            'Free'
+                                        )}
+                                    </p>
+                                </div>
+                                {isProMode && (
+                                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-1">
+                                        <p className="text-xs font-bold text-purple-400">€4.99/mo</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            {isProMode ? (
+                                <button
+                                    onClick={() => {
+                                        HapticsService.impactMedium();
+                                        if (confirm('Are you sure you want to cancel your Pro subscription? You will lose access to all Pro features.')) {
+                                            setIsProMode(false);
+                                            updateUser({ tier: SubscriptionTier.FREE });
+                                            showToast('Subscription cancelled. You are now on the Free plan.', 'info');
+                                        }
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 transition-all font-medium text-sm"
+                                >
+                                    <XIcon size={16} />
+                                    Cancel Subscription
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => {
+                                        HapticsService.impactMedium();
+                                        setShowPaywall(true);
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold text-sm transition-all shadow-lg shadow-purple-500/20"
+                                >
+                                    <Crown size={16} />
+                                    Upgrade to Pro
+                                </button>
+                            )}
+                        </div>
+                    </section>
+
                 </div>
 
                 {/* Danger Zone - Main Page Footer */}
@@ -848,6 +1075,27 @@ const Settings: React.FC<SettingsProps> = () => {
 
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2 mt-8">Dev Tools</p>
 
+                    {/* Test Widget Button */}
+                    <button
+                        onClick={async () => {
+                            HapticsService.impactMedium();
+                            try {
+                                console.log('🧪 Test Widget button clicked');
+
+                                await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays);
+
+                                console.log('✅ Widget test completed successfully!');
+                                showToast('Widget data updated! Background the app to refresh widget.', 'success');
+                            } catch (error: any) {
+                                console.error('❌ Widget test failed:', error);
+                                showToast(`Widget test failed: ${error?.message || 'Unknown error'}`, 'error');
+                            }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-sm font-medium mb-3"
+                    >
+                        <Trophy size={16} />
+                        Update Widget Data
+                    </button>
 
 
                     <button
@@ -1083,7 +1331,15 @@ const Settings: React.FC<SettingsProps> = () => {
                                                 alert('No data to export.');
                                                 return;
                                             }
-                                            const receipts = JSON.parse(savedReceipts) as Receipt[];
+                                            let receipts = JSON.parse(savedReceipts) as Receipt[];
+
+                                            // 18+ Filter for Legal Export
+                                            if (ageRestricted) {
+                                                receipts = receipts.map(r => ({
+                                                    ...r,
+                                                    items: r.items.filter(i => !i.isRestricted)
+                                                }));
+                                            }
 
                                             PDFService.generateLegalReport(
                                                 receipts,
@@ -1257,6 +1513,48 @@ const Settings: React.FC<SettingsProps> = () => {
                                         Reset Avatar to Default
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
+
+            {/* Seed Data Confirmation Modal */}
+            {
+                showSeedConfirmModal && createPortal(
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-surface w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
+                            <h2 className="text-xl font-heading font-bold text-white mb-2">Overwrite Data?</h2>
+                            <p className="text-slate-400 text-sm mb-6">
+                                This will <strong>delete all existing receipts</strong> and generate new <span className="uppercase font-bold text-primary">{seedScenario}</span> scenario data. This cannot be undone.
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={async () => {
+                                        HapticsService.impactHeavy();
+                                        // Close modal immediately to feel responsive
+                                        setShowSeedConfirmModal(false);
+
+                                        // Show loading toast? Or just wait? 
+                                        // generateDummyData is fast (50ms in mock), but let's be safe.
+                                        const count = await generateDummyData(seedScenario);
+
+                                        showToast(`Generated ${seedScenario} scenario: ${count} receipts.`, 'success');
+                                    }}
+                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Database size={18} />
+                                    Overwrite Data
+                                </button>
+
+                                <button
+                                    onClick={() => setShowSeedConfirmModal(false)}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-slate-300 font-bold py-3.5 rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
                             </div>
                         </div>
                     </div>,

@@ -9,6 +9,7 @@ interface AnimatedSectionProps {
     variants?: Variants;
     threshold?: number;
     noSlide?: boolean;
+    layout?: boolean | "position" | "size";
 }
 
 const defaultVariants: Variants = {
@@ -48,7 +49,8 @@ export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     triggerOnce = false, // Default to false so it restarts when scrolling back/forth
     variants,
     threshold = 0.2,
-    noSlide = false
+    noSlide = false,
+    layout
 }) => {
     const ref = useRef(null);
     const isInView = useInView(ref, { once: triggerOnce, amount: threshold });
@@ -57,6 +59,7 @@ export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
 
     return (
         <motion.div
+            layout={layout}
             ref={ref}
             initial="hidden"
             animate={isInView ? "visible" : "hidden"}

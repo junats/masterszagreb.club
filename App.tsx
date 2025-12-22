@@ -6,14 +6,14 @@ import Navigation from './components/Navigation';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import ErrorBoundary from './components/ErrorBoundary';
-import ReceiptScanner from './components/ReceiptScanner';
-import HistoryView from './components/HistoryView';
+import ScanHistoryView from './components/ScanHistoryView';
 import Settings from './components/Settings';
 import SupportView from './components/SupportView';
 import AuthScreen from './components/AuthScreen';
 import ProvisionAnalysis from './components/ProvisionAnalysis';
 import SettlementView from './components/SettlementView';
 import CustodyCalendar from './components/CustodyCalendar';
+import NotificationsView from './components/NotificationsView';
 import IntroTour from './components/IntroTour';
 import { ViewState, Receipt, User, SubscriptionTier, CategoryDefinition, Category, RecurringExpense, CustodyDay, Goal, GoalType, CustodyStatus } from './types';
 import { authService, isMockMode } from './services/authService';
@@ -25,6 +25,7 @@ import { ImpactStyle } from '@capacitor/haptics';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 const RECEIPT_STORAGE_KEY = 'truetrack_receipts';
 const SETTINGS_STORAGE_KEY = 'truetrack_settings';
@@ -146,18 +147,13 @@ const ViewStateHandler: React.FC<{ currentView: ViewState, setCurrentView: (v: V
                 );
               case 'scan':
                 return (
-                  <ReceiptScanner
-                    onScanComplete={handleScanComplete}
-                    onCancel={() => setCurrentView('dashboard')}
-                  />
-                );
-              case 'history':
-                return (
-                  <HistoryView
+                  <ScanHistoryView
                     selectedReceipt={useData().selectedReceipt}
                     onSelectReceipt={setSelectedReceipt}
+                    initialTab="scan"
                   />
                 );
+
               case 'support':
                 return <SupportView />;
               case 'settlement':
@@ -173,6 +169,10 @@ const ViewStateHandler: React.FC<{ currentView: ViewState, setCurrentView: (v: V
               case 'settings':
                 return (
                   <Settings />
+                );
+              case 'notifications':
+                return (
+                  <NotificationsView />
                 );
               default:
                 return (
@@ -216,57 +216,36 @@ const AppContent: React.FC = () => {
 
 
 
+  // Check Tour & Request Permissions
   useEffect(() => {
-    const checkTour = async () => {
+    const init = async () => {
       const { value } = await Preferences.get({ key: 'has_seen_tour' });
       if (!value) {
         setTimeout(() => setShowTour(true), 1000);
       }
+
+      // Request Notification Permissions
+      import('./services/notificationService').then(({ NotificationService }) => {
+        NotificationService.requestPermissions();
+      });
     };
-    checkTour();
+    init();
+  }, []);
 
-    // Listen for Deep Links (Email Confirmation & OAuth)
-    // Listen for Deep Links (Email Confirmation & OAuth)
-    import('@capacitor/app').then(({ App }) => {
-      App.addListener('appUrlOpen', async (data) => {
+  // Reset to dashboard whenever user logs in
+  useEffect(() => {
+    if (user && !isAuthLoading) {
+      setCurrentView('dashboard');
+    }
+  }, [user, isAuthLoading]);
 
-
-        if (data.url.includes('access_token') ||
-          data.url.includes('refresh_token') ||
-          data.url.includes('type=signup') ||
-          data.url.includes('code=')) {
-
-
-          try {
-            // Let Supabase handle the URL (exchange code, etc.)
-            const svcResult = await authService.getSessionFromUrl(data.url);
-
-            if (!svcResult) {
-
-              throw new Error("Service returned null");
-            }
-
-
-
-            const session = svcResult.data?.session;
-            const error = svcResult.error;
-
-            if (session) {
-              if (user) {
-                // FORCE RELOAD: The most reliable way to clear all "Not Logged In" states
-                // and pick up the new session from LocalStorage/Supabase is to reload.
-                setUser(user);
-                window.location.reload();
-              }
-            } else {
-              alert("Login Failed: " + (typeof error === 'object' ? error?.message : error));
-              window.location.reload();
-            }
-          } catch (e: any) {
-          }
-        } else if (data.url.includes('error=')) {
-
-        }
+  // Listen for Notification Clicks
+  useEffect(() => {
+    import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
+      LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+        console.log('Notification action performed', notification);
+        // Default to Custody/Calendar view for now since most notifs are calendar updates
+        setCurrentView('custody');
       });
     });
   }, []);
@@ -278,7 +257,7 @@ const AppContent: React.FC = () => {
 
   const handleSetView = (newView: ViewState) => {
     HapticService.impact(ImpactStyle.Light);
-    const navOrder = ['dashboard', 'scan', 'history', ...(helpEnabled ? ['support'] : []), 'settings'];
+    const navOrder = ['dashboard', 'scan', 'history', 'notifications', ...(helpEnabled ? ['support'] : []), 'settings'];
     const currentIndex = navOrder.indexOf(currentView);
     const newIndex = navOrder.indexOf(newView);
 
@@ -325,7 +304,14 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`app-container h-full w-full overflow-hidden bg-background safe-area-top text-white relative flex flex-col pt-safe ${isMockMode ? 'border-2 border-amber-500' : ''}`}>
+    <div className={`app-container h-[100dvh] w-full overflow-hidden bg-background text-white relative flex flex-col ${isMockMode ? 'border-2 border-amber-500' : ''}`}
+      style={{
+        // Define layout constants for internal components to use via CSS
+        ['--header-height' as any]: '72px',
+        ['--nav-height' as any]: '84px',
+        ['--safe-area-top' as any]: 'env(safe-area-inset-top, 20px)', // Fallback for browsers
+      }}
+    >
       {ambientMode && showGlobalAmbient && <AmbientBackground spendRatio={spendRatio} />}
 
       {user && (
@@ -352,7 +338,18 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 w-full max-w-md mx-auto relative z-10 h-full overflow-y-auto custom-scrollbar">
+      {/* 
+          Main Layout Container:
+          Standardizes the scrolling area and accounts for fixed Header and Navigation.
+          Centralized padding logic allows removing all individual component padding.
+      */}
+      <main
+        className="flex-1 w-full max-w-lg mx-auto relative z-10 h-full overflow-y-auto overflow-x-hidden custom-scrollbar"
+        style={{
+          paddingTop: 'calc(var(--header-height) + var(--safe-area-top) + 12px)',
+          paddingBottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom, 20px) + 20px)',
+        }}
+      >
         <ViewStateHandler currentView={currentView} setCurrentView={setCurrentView} direction={direction} />
       </main>
 
@@ -369,7 +366,9 @@ const App: React.FC = () => {
     <ToastProvider>
       <UserProvider>
         <DataProvider>
-          <AppContent />
+          <LanguageProvider>
+            <AppContent />
+          </LanguageProvider>
         </DataProvider>
       </UserProvider>
     </ToastProvider>

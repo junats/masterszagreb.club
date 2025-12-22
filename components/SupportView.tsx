@@ -130,7 +130,7 @@ const SupportView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full px-4 pt-36 pb-40 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col h-full px-4 pt-0 pb-8 overflow-y-auto no-scrollbar">
 
 
       {/* Location Status */}

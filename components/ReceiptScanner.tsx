@@ -28,7 +28,8 @@ interface ReceiptScannerProps {
 const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCancel }) => {
   const {
     ageRestricted,
-    categories
+    categories,
+    isProMode
   } = useData();
   const { user } = useUser();
 
@@ -40,6 +41,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [scannedReceipts, setScannedReceipts] = useState<Receipt[]>([]);
+  const [currentReceiptIndex, setCurrentReceiptIndex] = useState(0);
 
   // Helper to compress image before sending/storing
   const optimizeImage = async (blob: Blob): Promise<Blob> => {
@@ -52,9 +54,9 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // Max dimensions - reduced to avoid memory issues
-          const MAX_WIDTH = 1024;
-          const MAX_HEIGHT = 1024;
+          // Max dimensions - increased to support long receipts without crushing text
+          const MAX_WIDTH = 1500;
+          const MAX_HEIGHT = 2500;
           let width = img.width;
           let height = img.height;
 
@@ -111,7 +113,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
     try {
       // Safety Timeout Promise
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Analysis timed out. Please try again.")), 20000)
+        setTimeout(() => reject(new Error("Analysis timed out. Please try again.")), 120000)
       );
 
       // The actual processing logic wrapped in a promise we can race against
@@ -179,6 +181,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
       if (image.webPath) {
         setIsAnalyzing(true);
+        // Reset state
+        setError(null);
         setProgress({ current: 1, total: 1 });
 
         const response = await fetch(image.webPath);
@@ -187,15 +191,16 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         try {
           const receipt = await processImage(blob, 'camera_capture.jpg');
           finishProcessing([receipt], []);
-        } catch (e) {
-          finishProcessing([], ['Camera Capture']);
+        } catch (e: any) {
+          console.error("Single camera processing failed:", e);
+          finishProcessing([], [e instanceof Error ? e.message : String(e)]);
         }
       }
     } catch (e) {
       console.log('Camera cancelled or failed', e);
       // Don't show error if user just cancelled
-      if (String(e).includes('cancelled')) return;
-      setError('Failed to launch camera. Please try again or use the gallery.');
+      if (String(e).includes('cancelled') || String(e).includes('User cancelled')) return;
+      setError('Failed to launch camera: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -247,6 +252,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       }
       // Save ALL receipts for review
       setScannedReceipts(newReceipts);
+      setCurrentReceiptIndex(0); // Reset to first receipt
       setShowReviewModal(true);
       setIsAnalyzing(false);
       setProgress(null);
@@ -315,9 +321,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
               type: 'receipt'
             });
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error(`Failed to process file ${file.name}`, e);
-          errors.push(file.name);
+          // Include actual error message for debugging
+          errors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
 
@@ -361,7 +368,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
 
   return (
-    <div className="flex flex-col h-full px-4 pt-44 pb-40 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col h-full px-4 pt-0 pb-8 overflow-y-auto no-scrollbar">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -460,7 +467,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         </div>
 
 
-        <p className="text-xs text-slate-500 max-w-[260px] text-center mt-2 font-medium">
+        <p className="text-xs text-slate-500 max-w-[260px] mx-auto text-center mt-2 font-medium">
           Supports Receipts, Invoices, and Kindergarten Bills.<br />
           Ensure text is clear and well-lit.
         </p>
@@ -475,93 +482,153 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         {/* Review Modal */}
         {
           showReviewModal && scannedReceipts.length > 0 && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className="bg-surface w-full max-w-lg max-h-[90vh] rounded-3xl border border-white/10 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+              {/* Position modal below header instead of centering */}
+              <div className="w-full h-full flex justify-center pt-[calc(var(--header-height)+var(--safe-area-top)+1rem)] pb-24 px-4">
+                <div className="bg-surface w-full max-w-lg h-fit max-h-[calc(100vh-var(--header-height)-var(--safe-area-top)-7rem)] rounded-3xl border border-white/10 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
 
-                <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl font-heading font-bold text-white">Review Scan</h2>
-                    {scannedReceipts.length > 1 && (
-                      <p className="text-xs text-slate-400 mt-1">{scannedReceipts.length} receipts scanned</p>
-                    )}
-                  </div>
-                  <button onClick={() => setShowReviewModal(false)} className="text-slate-400 hover:text-white">
-                    <X size={24} />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                  {/* Store & Date */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Header - Fixed */}
+                  <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">
                     <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
-                      <input
-                        type="text"
-                        value={scannedReceipts[0]?.storeName || ''}
-                        onChange={(e) => updateFirstReceipt({ storeName: e.target.value })}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
-                      />
+                      <h2 className="text-xl font-heading font-bold text-white">Review Scan</h2>
+                      {scannedReceipts.length > 1 && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Receipt {currentReceiptIndex + 1} of {scannedReceipts.length}
+                        </p>
+                      )}
                     </div>
+                    <button onClick={() => setShowReviewModal(false)} className="text-slate-400 hover:text-white">
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  {/* Scrollable Content Area */}
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
+                    {/* Store & Date */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
+                        <input
+                          type="text"
+                          value={scannedReceipts[0]?.storeName || ''}
+                          onChange={(e) => updateFirstReceipt({ storeName: e.target.value })}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
+                        <input
+                          type="date"
+                          value={scannedReceipts[0]?.date || ''}
+                          onChange={(e) => updateFirstReceipt({ date: e.target.value })}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Total */}
                     <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
-                      <input
-                        type="date"
-                        value={scannedReceipts[0]?.date || ''}
-                        onChange={(e) => updateFirstReceipt({ date: e.target.value })}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
-                      />
+                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Total Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-slate-400">€</span>
+                        <input
+                          type="number"
+                          value={scannedReceipts[0]?.total || 0}
+                          onChange={(e) => updateFirstReceipt({ total: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Total */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Total Amount</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-400">€</span>
-                      <input
-                        type="number"
-                        value={scannedReceipts[0]?.total || 0}
-                        onChange={(e) => updateFirstReceipt({ total: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Items Preview */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
-                      <span>Items ({scannedReceipts[0]?.items.length || 0})</span>
-                      <span className="text-primary text-[10px]">Tap to edit details</span>
-                    </label>
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                      {(scannedReceipts[0]?.items || []).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                          <div className="flex-1 min-w-0 pr-3">
-                            <p className="text-sm text-white font-medium truncate">{item.name}</p>
-                            <div className="flex gap-2 mt-1">
-                              <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
-                              {item.isChildRelated && (
-                                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                  <CheckCircle size={8} /> Child
-                                </span>
-                              )}
+                    {/* Items Preview */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
+                        <span>Items ({scannedReceipts[0]?.items.length || 0})</span>
+                        <span className="text-primary text-[10px]">Tap to edit details</span>
+                      </label>
+                      <div className="space-y-2">
+                        {(scannedReceipts[0]?.items || []).map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                            <div className="flex-1 min-w-0 pr-3">
+                              <p className="text-sm text-white font-medium truncate">{item.name}</p>
+                              <div className="flex gap-2 mt-1">
+                                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
+                                {item.isChildRelated && (
+                                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <CheckCircle size={8} /> Child
+                                  </span>
+                                )}
+                              </div>
                             </div>
+                            <span className="text-sm font-mono text-slate-300">€{item.price.toFixed(2)}</span>
                           </div>
-                          <span className="text-sm font-mono text-slate-300">€{item.price.toFixed(2)}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="p-6 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl">
-                  <button
-                    onClick={handleSave}
-                    className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Save size={20} />
-                    Save {scannedReceipts.length > 1 ? `${scannedReceipts.length} Receipts` : 'Receipt'}
-                  </button>
+                    {/* Extra spacing at bottom to ensure last fields are accessible */}
+                    <div className="h-4"></div>
+                  </div>
+
+                  {/* Multi-Receipt Navigation - Only show if multiple receipts */}
+                  {scannedReceipts.length > 1 && (
+                    <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between shrink-0">
+                      <button
+                        onClick={() => {
+                          // Go to previous receipt
+                          const newIndex = (currentReceiptIndex - 1 + scannedReceipts.length) % scannedReceipts.length;
+                          setCurrentReceiptIndex(newIndex);
+                          const reordered = [...scannedReceipts.slice(newIndex), ...scannedReceipts.slice(0, newIndex)];
+                          setScannedReceipts(reordered);
+                        }}
+                        disabled={scannedReceipts.length <= 1}
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      >
+                        ← Previous
+                      </button>
+
+                      {/* Pagination Dots - Now properly tracking current index */}
+                      <div className="flex gap-2">
+                        {Array.from({ length: scannedReceipts.length }).map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setCurrentReceiptIndex(idx);
+                              const reordered = [...scannedReceipts.slice(idx), ...scannedReceipts.slice(0, idx)];
+                              setScannedReceipts(reordered);
+                            }}
+                            className={`w-2 h-2 rounded-full transition-all ${idx === currentReceiptIndex ? 'bg-primary w-6' : 'bg-slate-600 hover:bg-slate-500'
+                              }`}
+                          />
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          // Go to next receipt
+                          const newIndex = (currentReceiptIndex + 1) % scannedReceipts.length;
+                          setCurrentReceiptIndex(newIndex);
+                          const reordered = [...scannedReceipts.slice(1), scannedReceipts[0]];
+                          setScannedReceipts(reordered);
+                        }}
+                        disabled={scannedReceipts.length <= 1}
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Footer - Fixed at bottom with extra padding */}
+                  <div className="p-6 pb-8 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl shrink-0">
+                    <button
+                      onClick={handleSave}
+                      className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Save size={20} />
+                      Save {scannedReceipts.length > 1 ? `${scannedReceipts.length} Receipts` : 'Receipt'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

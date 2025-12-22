@@ -20,8 +20,10 @@ export const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 // Extracted TrendsChart Component
-export const TrendsChart = ({ activeData, categories, isVisible, chartView }: { activeData: any[], categories: CategoryDefinition[], isVisible: boolean, chartView: string }) => {
-    const [animationReady, setAnimationReady] = useState(false);
+export const TrendsChart = ({ activeData, categories, isVisible, chartView, layoutId }: { activeData: any[], categories: CategoryDefinition[], isVisible: boolean, chartView: string, layoutId?: string }) => {
+    // Simplified animation logic: Direct control via Props
+    // We rely on the parent (AnimatedSection) to tell us when to be visible
+    // Recharts will animate when 'isAnimationActive' becomes true or on mount
 
     // Calculate max value for stable axis
     const chartMax = useMemo(() => {
@@ -32,57 +34,41 @@ export const TrendsChart = ({ activeData, categories, isVisible, chartView }: { 
         return Math.ceil(maxVal * 1.1);
     }, [activeData, categories]);
 
-    // Force delay for animation trigger
-    useEffect(() => {
-        if (isVisible) {
-            const t = setTimeout(() => setAnimationReady(true), 150);
-            return () => clearTimeout(t);
-        } else {
-            setAnimationReady(false);
-        }
-    }, [isVisible]);
-
-    const displayData = useMemo(() => {
-        if (isVisible && animationReady) return activeData;
-        return activeData.map(d => {
-            const zeroed: any = { ...d };
-            categories.forEach(c => zeroed[c.name] = 0);
-            return zeroed;
-        });
-    }, [activeData, isVisible, animationReady, categories]);
-
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-                data={displayData}
-                key={chartView}
-                margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
-            >
-                <defs>
+            {isVisible ? (
+                <AreaChart
+                    data={activeData}
+                    key={chartView + (layoutId || '')} // Force re-render when view or layout changes
+                    margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                >
+                    <defs>
+                        {categories.map((cat) => (
+                            <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
+                            </linearGradient>
+                        ))}
+                    </defs>
+                    <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} domain={[0, chartMax]} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                     {categories.map((cat) => (
-                        <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
-                        </linearGradient>
+                        <Area
+                            key={cat.id}
+                            type="monotone"
+                            dataKey={cat.name}
+                            stackId="1"
+                            stroke={cat.color}
+                            fill={`url(#gradient-trend-${cat.name})`}
+                            strokeWidth={2}
+                            animationDuration={1500}
+                            isAnimationActive={true}
+                        />
                     ))}
-                </defs>
-                <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} domain={[0, chartMax]} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
-                <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                {categories.map((cat) => (
-                    <Area
-                        key={cat.id}
-                        type="monotone"
-                        dataKey={cat.name}
-                        stackId="1"
-                        stroke={cat.color}
-                        fill={`url(#gradient-trend-${cat.name})`}
-                        strokeWidth={2}
-                        animationDuration={1000}
-                    />
-                ))}
-            </AreaChart>
+                </AreaChart>
+            ) : null}
         </ResponsiveContainer>
     );
 };

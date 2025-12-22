@@ -39,7 +39,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         <ToastContext.Provider value={{ showToast }}>
             {children}
             {/* Toast Container */}
-            <div className="fixed top-safe z-[100] left-0 right-0 p-4 pointer-events-none flex flex-col items-center gap-2">
+            <div className="fixed top-2 z-[200] left-0 right-0 px-3 pointer-events-none flex flex-col items-center gap-2">
                 <AnimatePresence>
                     {toasts.map(toast => (
                         <ToastItem key={toast.id} toast={toast} onDismiss={() => removeToast(toast.id)} />
@@ -52,10 +52,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
 const ToastItem: React.FC<{ toast: Toast, onDismiss: () => void }> = ({ toast, onDismiss }) => {
     const icons = {
-        success: <CheckCircle size={18} className="text-emerald-400" />,
-        error: <AlertCircle size={18} className="text-red-400" />,
-        warning: <AlertTriangle size={18} className="text-amber-400" />,
-        info: <Info size={18} className="text-blue-400" />
+        success: <CheckCircle size={16} className="text-emerald-400" />,
+        error: <AlertCircle size={16} className="text-red-400" />,
+        warning: <AlertTriangle size={16} className="text-amber-400" />,
+        info: <Info size={16} className="text-blue-400" />
     };
 
     const bgColors = {
@@ -71,12 +71,12 @@ const ToastItem: React.FC<{ toast: Toast, onDismiss: () => void }> = ({ toast, o
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
             layout
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-lg min-w-[300px] max-w-sm ${bgColors[toast.type]} bg-black/80`}
+            className={`pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-lg border backdrop-blur-md shadow-lg max-w-sm ${bgColors[toast.type]} bg-black/80`}
         >
             {icons[toast.type]}
-            <p className="flex-1 text-sm font-medium text-white">{toast.message}</p>
+            <p className="flex-1 text-xs font-medium text-white">{toast.message}</p>
             <button onClick={onDismiss} className="text-slate-400 hover:text-white transition-colors">
-                <X size={14} />
+                <X size={12} />
             </button>
         </motion.div>
     );

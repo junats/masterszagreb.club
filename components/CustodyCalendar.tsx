@@ -38,19 +38,28 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
             return;
         }
         setIsInviting(true);
-        try {
-            // Lazy import to avoid circular dependencies if any
-            const { authService } = await import('../services/authService');
-            await authService.inviteCoParent(inviteEmail);
 
-            alert(`Invite sent to ${inviteEmail}!`);
+        try {
+            // Use mailto: directly - most reliable method
+            const inviteMessage = `Hi there!\n\nI'd like to invite you to share our co-parenting calendar on TrueTrack.\n\nTrueTrack helps us manage custody schedules, track expenses, and stay organized.\n\nTo join:\n1. Download TrueTrack from the App Store\n2. Create an account with this email: ${inviteEmail}\n3. We'll be automatically connected!\n\nLooking forward to better co-parenting together!\n\nBest regards`;
+
+            // Open email client with pre-filled message
+            window.location.href = `mailto:${inviteEmail}?subject=Join me on TrueTrack&body=${encodeURIComponent(inviteMessage)}`;
+
+            // Also try to save to database if possible
+            try {
+                const { authService } = await import('../services/authService');
+                await authService.inviteCoParent(inviteEmail);
+            } catch (dbError) {
+                console.log("Database save failed (non-critical):", dbError);
+            }
+
+            alert(`Email client opened! Send the invitation to ${inviteEmail}`);
             setShowInviteModal(false);
             setInviteEmail('');
         } catch (e: any) {
             console.error("Invite failed:", e);
-            alert("Invite Failed: " + (e.message || e));
-            // Fallback: If edge function fails (not deployed), suggest mailto?
-            // For now, simple error is better than confusion.
+            alert("Failed to open email client. Please invite manually.");
         } finally {
             setIsInviting(false);
         }
@@ -59,10 +68,9 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
     const handleSync = async () => {
         setIsSyncing(true);
         try {
-            await syncCustody(true); // Forces manual mode (alerts enabled)
+            await syncCustody(true); // Forces manual mode (toasts enabled)
         } catch (e) {
             console.error("Sync failed:", e);
-            alert("Sync Failed: " + e);
         } finally {
             setTimeout(() => setIsSyncing(false), 500); // Visual feedback
         }
@@ -185,7 +193,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
     }, [custodyDays, currentDate]);
 
     return (
-        <div className="flex flex-col h-full bg-background text-white relative pt-24">
+        <div className="flex flex-col h-full bg-background text-white relative pt-0">
             {/* Toolbar (Visible below Global Header) */}
             <div className="px-4 py-4 flex flex-col gap-3 border-b border-white/5 bg-background/95 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/20">
                 {/* Row 1: Nav & Title */}
@@ -274,7 +282,27 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                     disabled={isInviting}
                                     className="flex-1 bg-primary py-3 rounded-xl font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-50"
                                 >
-                                    {isInviting ? 'Sending...' : 'Send Invite'}
+                                    {isInviting ? 'Sending...' : 'Share Invite'}
+                                </button>
+                            </div>
+
+                            <div className="mt-4 flex justify-center">
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const link = `truetrack://invite?email=${encodeURIComponent(inviteEmail)}`;
+                                            await import('@capacitor/clipboard').then(({ Clipboard }) => {
+                                                Clipboard.write({ string: link });
+                                            });
+                                            alert('Link copied! Send it via iMessage or WhatsApp for best results.');
+                                        } catch (e) {
+                                            console.error("Clipboard error:", e);
+                                            prompt("Copy this link manually:", `truetrack://invite?email=${encodeURIComponent(inviteEmail)}`);
+                                        }
+                                    }}
+                                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                                >
+                                    <Copy size={12} /> Copy Link manually
                                 </button>
                             </div>
                         </motion.div>
@@ -285,7 +313,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
             {/* ... Rest of existing UI ... */}
 
 
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 pb-32">
 
                 {/* Month Navigation */}
                 <div className="flex items-center justify-between mb-6 bg-surface p-4 rounded-2xl border border-white/5">

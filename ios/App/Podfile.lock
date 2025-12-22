@@ -1,24 +1,30 @@
 PODS:
   - Capacitor (7.4.4):
     - CapacitorCordova
-  - CapacitorApp (8.0.0):
+  - CapacitorApp (7.1.1):
     - Capacitor
   - CapacitorCamera (7.0.3):
     - Capacitor
+  - CapacitorClipboard (7.0.3):
+    - Capacitor
   - CapacitorCordova (7.4.4)
-  - CapacitorFilesystem (7.1.5):
+  - CapacitorFilesystem (7.1.6):
     - Capacitor
     - IONFilesystemLib (~> 1.0.1)
-  - CapacitorGeolocation (7.1.6):
+  - CapacitorGeolocation (7.1.7):
     - Capacitor
     - IONGeolocationLib (= 1.0.1)
   - CapacitorHaptics (7.0.3):
+    - Capacitor
+  - CapacitorLocalNotifications (7.0.4):
     - Capacitor
   - CapacitorPreferences (7.0.3):
     - Capacitor
   - CapacitorShare (7.0.3):
     - Capacitor
   - CapacitorSplashScreen (7.0.4):
+    - Capacitor
+  - CapgoCapacitorNativeBiometric (7.1.13):
     - Capacitor
   - IONFilesystemLib (1.0.1)
   - IONGeolocationLib (1.0.1)
@@ -27,13 +33,16 @@ DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
+  - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorGeolocation (from `../../node_modules/@capacitor/geolocation`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
+  - "CapgoCapacitorNativeBiometric (from `../../node_modules/@capgo/capacitor-native-biometric`)"
 
 SPEC REPOS:
   trunk:
@@ -47,6 +56,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/app"
   CapacitorCamera:
     :path: "../../node_modules/@capacitor/camera"
+  CapacitorClipboard:
+    :path: "../../node_modules/@capacitor/clipboard"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
@@ -55,27 +66,34 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/geolocation"
   CapacitorHaptics:
     :path: "../../node_modules/@capacitor/haptics"
+  CapacitorLocalNotifications:
+    :path: "../../node_modules/@capacitor/local-notifications"
   CapacitorPreferences:
     :path: "../../node_modules/@capacitor/preferences"
   CapacitorShare:
     :path: "../../node_modules/@capacitor/share"
   CapacitorSplashScreen:
     :path: "../../node_modules/@capacitor/splash-screen"
+  CapgoCapacitorNativeBiometric:
+    :path: "../../node_modules/@capgo/capacitor-native-biometric"
 
 SPEC CHECKSUMS:
   Capacitor: 358dd1c3fdd71d969547b17e159fd8a7736cb45f
-  CapacitorApp: a4e7463be6361c71631c5fdb1fb00fd038a842c8
+  CapacitorApp: 1da74825e6be0c4f04c4865363a40d5cad8f8377
   CapacitorCamera: 5f650ddbb7562b1cd23c0d8a590aa61822cde32d
+  CapacitorClipboard: 9993a93dfa2ddf0c175ba72fc45ec25abc829526
   CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
-  CapacitorFilesystem: 9d0290157e93a0a2e083f562ed30dfaf9a0ad2a7
-  CapacitorGeolocation: ef1ee288dfb82edbd0a2be16a0164537cd6bf0ee
+  CapacitorFilesystem: ecdcfc08f539fb9a3201a5c7ab28bc78a8584a37
+  CapacitorGeolocation: 81a3fce9e2594c3d332001c96a2ddcc2a53576f6
   CapacitorHaptics: 031ff8120c37f93325b4da1f474d3c3686bb224b
+  CapacitorLocalNotifications: fd4ea800078c5b4fb6e0261e58b37724febb9b86
   CapacitorPreferences: 755df52f9e46122a04318fa6a4a4bd58bc9ac19e
   CapacitorShare: 9d39e30a620ff31851c7d8bf94f33cd682a63691
   CapacitorSplashScreen: 17c866bd5f1537797ae6711b0f249dd279f2230b
+  CapgoCapacitorNativeBiometric: ede2c497c810fcad523b4e3d1895f989d33fe72b
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   IONGeolocationLib: 20f9d0248a0b5264511fb57a37e25dd2badf797a
 
-PODFILE CHECKSUM: 5ff1f0cd975cb649cffd15f360b559a3cea3905b
+PODFILE CHECKSUM: 2f932aad10058bfabb47f607cc1dbac37e3197e4
 
 COCOAPODS: 1.16.2

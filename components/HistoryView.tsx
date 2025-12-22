@@ -8,6 +8,7 @@ import AnimatedSection from './AnimatedSection';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface HistoryViewProps {
     // Only keeping UI-specific props that coordinate with parent view state
@@ -29,6 +30,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({
         childSupportMode,
         categories
     } = useData();
+
+    const { t } = useLanguage();
 
     // Map context functions to local names if needed or use directly
     const onDelete = deleteReceipt;
@@ -126,9 +129,9 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     };
 
     const getFormattedDateRange = () => {
-        if (viewMode === 'all') return 'All Time';
+        if (viewMode === 'all') return t('history.allTime');
         if (viewMode === 'day') {
-            if (isToday(currentDate)) return 'Today';
+            if (isToday(currentDate)) return t('history.today');
             return currentDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
         }
         if (viewMode === 'month') {
@@ -142,11 +145,10 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
     const filteredReceipts = useMemo(() => {
         return receipts.filter(r => {
-            // 0. Co-Parenting Filter (Strict)
-            if (childSupportMode) {
-                const hasChildItems = r.items.some(i => i.isChildRelated || i.category === Category.EDUCATION || i.category === 'Child');
-                if (!hasChildItems) return false;
-            }
+            // 0. Co-Parenting Filter (Strict -> Relaxed)
+            // User Request: "show all items in coparenting mode"
+            // We do NOT filter out non-child receipts anymore.
+            // if (childSupportMode) { ... } -> REMOVED
 
             // 1. Search Term
             const matchesSearch = r.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -279,7 +281,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
         return (
 
             <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out">
-                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-32 pb-24">
+                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-0 pb-24">
                     <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
                         &larr; Back to History
                     </button>
@@ -305,248 +307,255 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                         </button>
                                     </div>
                                 )}
-
-                                <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
-                                    <MapPin size={12} />
-                                    <span>{isBill ? 'Provider Address' : 'Main St. Branch'}</span>
-                                </div>
-                                {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
-                                    <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-medium">
-                                        <span>Restricted items hidden from totals</span>
+                                {selectedReceipt.location ? (
+                                    <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
+                                        <MapPin size={12} />
+                                        <span>{selectedReceipt.location}</span>
                                     </div>
-                                )}
-                            </div>
-                            <div className="text-right flex flex-col items-end gap-2">
-                                <div className="flex gap-2 mb-1">
-                                    <button onClick={handleShare} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                                        <Share2 size={16} />
-                                    </button>
-                                    {onDelete && (
-                                        <button onClick={handleDelete} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
-                                    <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {displayImageUrl && (
-                            <div className="mb-6">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Original Scan</p>
-                                <div
-                                    className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
-                                    onClick={() => setShowFullImage(true)}
-                                >
-                                    <img
-                                        src={displayImageUrl}
-                                        alt="Receipt Scan"
-                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                                    />
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
-                                        <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
-                                            <ImageIcon size={14} /> View Full Image
-                                        </span>
+                                ) : isBill ? (
+                                    <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
+                                        <MapPin size={12} />
+                                        <span>Provider Address</span>
                                     </div>
-                                </div>
+                                ) : null}
                             </div>
-                        )}
-
-                        <div className="space-y-3 mb-6 pr-1">
-                            {visibleItems.map((item, idx) => {
-                                const isHidden = ageRestricted && item.isRestricted;
-                                if (isHidden) return null;
-
-                                const handleDeleteItem = () => {
-                                    if (onUpdate) {
-                                        const newItems = [...selectedReceipt.items];
-                                        newItems.splice(idx, 1);
-                                        // Recalculate total
-                                        const newTotal = newItems.reduce((sum, i) => sum + i.price, 0);
-                                        onUpdate({ ...selectedReceipt, items: newItems, total: newTotal });
-                                        onSelectReceipt({ ...selectedReceipt, items: newItems, total: newTotal });
-                                        // Haptic feedback
-                                        import('../services/haptics').then(({ HapticsService }) => {
-                                            HapticsService.notificationSuccess();
-                                        });
-                                    }
-                                };
-
-                                return (
-                                    <motion.div
-                                        key={idx}
-                                        className="relative overflow-hidden rounded-lg mb-2"
-                                    >
-                                        <motion.div
-                                            className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-4 rounded-lg"
-                                            initial={{ opacity: 0 }}
-                                            whileHover={{ opacity: 1 }}
-                                        >
-                                            <Trash2 size={18} className="text-red-400" />
-                                        </motion.div>
-                                        <motion.div
-                                            className={`relative bg-surfaceHighlight flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}
-                                            drag="x"
-                                            dragConstraints={{ left: -100, right: 0 }}
-                                            onDragEnd={(e, info) => {
-                                                if (info.offset.x < -60) {
-                                                    handleDeleteItem();
-                                                }
-                                            }}
-                                            whileDrag={{ scale: 0.98 }}
-                                        >
-                                            <div>
-                                                <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
-                                                        item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
-                                                            item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                                                item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                                                                    item.category === Category.DINING ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
-                                                                        'bg-slate-800 border-slate-700 text-slate-400'
-                                                        }`}>
-                                                        {item.category}
-                                                    </span>
-                                                    {item.isRestricted && !ageRestricted && (
-                                                        <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
-                                                    )}
-                                                    {item.isChildRelated && childSupportMode && (
-                                                        <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
-                                                            <Baby size={10} /> Child
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
-                                                    €{item.price.toFixed(2)}
-                                                </span>
-                                                {onUpdate && childSupportMode && (
-                                                    <button
-                                                        onClick={() => handleToggleChildRelated(idx)}
-                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
-                                                        title="Toggle Child Related"
-                                                    >
-                                                        <Baby size={14} />
-                                                    </button>
-                                                )}
-                                                {onUpdate && !ageRestricted && (
-                                                    <button
-                                                        onClick={() => handleToggleRestriction(idx)}
-                                                        className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
-                                                        title="Toggle Restriction (18+)"
-                                                    >
-                                                        <X size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-
-                        <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                            {isEditingDate ? (
-                                <div className="flex items-center gap-2 w-full">
-                                    <input
-                                        type="date"
-                                        value={new Date(selectedReceipt.date).toISOString().split('T')[0]}
-                                        onChange={(e) => {
-                                            if (onUpdate && e.target.value) {
-                                                onUpdate({ ...selectedReceipt, date: e.target.value });
-                                                onSelectReceipt({ ...selectedReceipt, date: e.target.value });
-                                            }
-                                        }}
-                                        className="bg-surfaceHighlight border border-white/20 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-primary"
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            const today = new Date().toISOString().split('T')[0];
-                                            if (onUpdate) {
-                                                onUpdate({ ...selectedReceipt, date: today });
-                                                onSelectReceipt({ ...selectedReceipt, date: today });
-                                            }
-                                        }}
-                                        className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-bold hover:bg-primary/30"
-                                    >
-                                        Today
-                                    </button>
-                                    <button
-                                        onClick={() => setIsEditingDate(false)}
-                                        className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold hover:bg-white/20"
-                                    >
-                                        Done
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
-                                    {onUpdate && (
-                                        <button
-                                            onClick={() => setIsEditingDate(true)}
-                                            className="text-[10px] text-primary hover:text-primary/80 font-medium underline"
-                                        >
-                                            Edit Date
-                                        </button>
-                                    )}
+                            {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
+                                <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-medium">
+                                    <span>Restricted items hidden from totals</span>
                                 </div>
                             )}
                         </div>
+                        <div className="text-right flex flex-col items-end gap-2">
+                            <div className="flex gap-2 mb-1">
+                                <button onClick={handleShare} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                    <Share2 size={16} />
+                                </button>
+                                {onDelete && (
+                                    <button onClick={handleDelete} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
+                                <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
+                            </div>
+                        </div>
                     </div>
 
-                    {showFullImage && displayImageUrl && (
-                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-sm">
-                            <button
-                                onClick={() => {
-                                    setShowFullImage(false);
-                                    setZoomLevel(1);
-                                    setPanPosition({ x: 0, y: 0 });
-                                }}
-                                className="absolute top-6 right-6 z-[110] text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
-                            >
-                                <X size={24} />
-                            </button>
-
+                    {displayImageUrl && (
+                        <div className="mb-6">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Original Scan</p>
                             <div
-                                className="relative w-full h-full flex items-center justify-center touch-none"
-                                onMouseDown={handleMouseDown}
-                                onMouseMove={handleMouseMove}
-                                onMouseUp={handleMouseUp}
-                                onMouseLeave={handleMouseUp}
-                                onTouchStart={handleTouchStart}
-                                onTouchMove={handleTouchMove}
-                                onTouchEnd={handleMouseUp}
+                                className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
+                                onClick={() => setShowFullImage(true)}
                             >
                                 <img
                                     src={displayImageUrl}
-                                    alt="Full Receipt"
-                                    draggable={false}
-                                    style={{
-                                        transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
-                                        cursor: zoomLevel > 1 ? 'grab' : 'zoom-in',
-                                        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
-                                    }}
-                                    onClick={handleImageClick}
-                                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
+                                    alt="Receipt Scan"
+                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
                                 />
-                            </div>
-
-                            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-medium border border-white/10 pointer-events-none">
-                                {zoomLevel === 1 ? 'Tap to Zoom' : 'Drag to Pan • Tap to Reset'}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
+                                    <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
+                                        <ImageIcon size={14} /> View Full Image
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     )}
+
+                    <div className="space-y-3 mb-6 pr-1">
+                        {visibleItems.map((item, idx) => {
+                            const isHidden = ageRestricted && item.isRestricted;
+                            if (isHidden) return null;
+
+                            const handleDeleteItem = () => {
+                                if (onUpdate) {
+                                    const newItems = [...selectedReceipt.items];
+                                    newItems.splice(idx, 1);
+                                    // Recalculate total
+                                    const newTotal = newItems.reduce((sum, i) => sum + i.price, 0);
+                                    onUpdate({ ...selectedReceipt, items: newItems, total: newTotal });
+                                    onSelectReceipt({ ...selectedReceipt, items: newItems, total: newTotal });
+                                    // Haptic feedback
+                                    import('../services/haptics').then(({ HapticsService }) => {
+                                        HapticsService.notificationSuccess();
+                                    });
+                                }
+                            };
+
+                            return (
+                                <motion.div
+                                    key={idx}
+                                    className="relative overflow-hidden rounded-lg mb-2"
+                                >
+                                    <motion.div
+                                        className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-4 rounded-lg"
+                                        initial={{ opacity: 0 }}
+                                        whileHover={{ opacity: 1 }}
+                                    >
+                                        <Trash2 size={18} className="text-red-400" />
+                                    </motion.div>
+                                    <motion.div
+                                        className={`relative bg-surfaceHighlight flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}
+                                        drag="x"
+                                        dragConstraints={{ left: -100, right: 0 }}
+                                        onDragEnd={(e, info) => {
+                                            if (info.offset.x < -60) {
+                                                handleDeleteItem();
+                                            }
+                                        }}
+                                        whileDrag={{ scale: 0.98 }}
+                                    >
+                                        <div>
+                                            <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                    item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                        item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                                            item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                                                item.category === Category.DINING ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
+                                                                    'bg-slate-800 border-slate-700 text-slate-400'
+                                                    }`}>
+                                                    {item.category}
+                                                </span>
+                                                {item.isRestricted && !ageRestricted && (
+                                                    <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
+                                                )}
+                                                {item.isChildRelated && childSupportMode && (
+                                                    <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
+                                                        <Baby size={10} /> Child
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
+                                                €{item.price.toFixed(2)}
+                                            </span>
+                                            {onUpdate && childSupportMode && (
+                                                <button
+                                                    onClick={() => handleToggleChildRelated(idx)}
+                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
+                                                    title="Toggle Child Related"
+                                                >
+                                                    <Baby size={14} />
+                                                </button>
+                                            )}
+                                            {onUpdate && !ageRestricted && (
+                                                <button
+                                                    onClick={() => handleToggleRestriction(idx)}
+                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
+                                                    title="Toggle Restriction (18+)"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                        {isEditingDate ? (
+                            <div className="flex items-center gap-2 w-full">
+                                <input
+                                    type="date"
+                                    value={new Date(selectedReceipt.date).toISOString().split('T')[0]}
+                                    onChange={(e) => {
+                                        if (onUpdate && e.target.value) {
+                                            onUpdate({ ...selectedReceipt, date: e.target.value });
+                                            onSelectReceipt({ ...selectedReceipt, date: e.target.value });
+                                        }
+                                    }}
+                                    className="bg-surfaceHighlight border border-white/20 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-primary"
+                                />
+                                <button
+                                    onClick={() => {
+                                        const today = new Date().toISOString().split('T')[0];
+                                        if (onUpdate) {
+                                            onUpdate({ ...selectedReceipt, date: today });
+                                            onSelectReceipt({ ...selectedReceipt, date: today });
+                                        }
+                                    }}
+                                    className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-bold hover:bg-primary/30"
+                                >
+                                    Today
+                                </button>
+                                <button
+                                    onClick={() => setIsEditingDate(false)}
+                                    className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold hover:bg-white/20"
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
+                                {onUpdate && (
+                                    <button
+                                        onClick={() => setIsEditingDate(true)}
+                                        className="text-[10px] text-primary hover:text-primary/80 font-medium underline"
+                                    >
+                                        Edit Date
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {showFullImage && displayImageUrl && (
+                    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-sm">
+                        <button
+                            onClick={() => {
+                                setShowFullImage(false);
+                                setZoomLevel(1);
+                                setPanPosition({ x: 0, y: 0 });
+                            }}
+                            className="absolute top-6 right-6 z-[110] text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div
+                            className="relative w-full h-full flex items-center justify-center touch-none"
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleMouseUp}
+                        >
+                            <img
+                                src={displayImageUrl}
+                                alt="Full Receipt"
+                                draggable={false}
+                                style={{
+                                    transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
+                                    cursor: zoomLevel > 1 ? 'grab' : 'zoom-in',
+                                    transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                                }}
+                                onClick={handleImageClick}
+                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
+                            />
+                        </div>
+
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-medium border border-white/10 pointer-events-none">
+                            {zoomLevel === 1 ? 'Tap to Zoom' : 'Drag to Pan • Tap to Reset'}
+                        </div>
+                    </div>
+                )}
             </div>
+
         );
     }
 
     return (
-        <div className="flex flex-col h-full px-4 pt-36 pb-32 bg-background">
+        <div className="flex flex-col h-full px-4 pt-0 pb-4 bg-background">
 
 
             {/* Filters */}
@@ -557,7 +566,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-hover:text-slate-300 transition-colors duration-300" />
                         <input
                             type="text"
-                            placeholder="Search store or reference..."
+                            placeholder={t('history.search')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-surface border border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-200 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 placeholder:text-slate-600 font-medium hover:border-white/20 hover:shadow-sm"
@@ -626,13 +635,18 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar pt-2 pb-24 relative z-10">
+            <div className="flex-1 overflow-y-auto no-scrollbar pt-2 pb-32 relative z-10">
                 {showStats && filteredReceipts.length > 0 && (
                     <HistoryAnalytics receipts={filteredReceipts} ageRestricted={ageRestricted} categoryBudgets={categoryBudgets} childSupportMode={childSupportMode} />
                 )}
                 {filteredReceipts.length === 0 ? (
                     <div className="text-center py-10">
                         <p className="text-slate-600 font-medium">No records found.</p>
+                        {childSupportMode && receipts.length > 0 && (
+                            <p className="text-xs text-emerald-500/80 mt-2 bg-emerald-500/10 inline-block px-3 py-1 rounded-full border border-emerald-500/20">
+                                Some receipts hidden by Co-Parenting Mode
+                            </p>
+                        )}
                     </div>
                 ) : (
                     filteredReceipts.map((receipt, index) => {
@@ -643,40 +657,78 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
                         return (
                             <div key={receipt.id} className="relative mb-3">
-                                {/* Delete Background */}
-                                <div className="absolute inset-0 bg-red-500/20 rounded-2xl flex items-center justify-end px-6 z-0">
-                                    <Trash2 className="text-red-400" size={20} />
-                                </div>
+                                {/* Delete Background with gradient */}
+                                <motion.div
+                                    className="absolute inset-0 bg-gradient-to-l from-red-500/30 via-red-500/20 to-transparent rounded-2xl flex items-center justify-end px-6 z-0"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Trash2 className="text-red-400" size={20} />
+                                        <span className="text-red-400 font-bold text-sm">Delete</span>
+                                    </div>
+                                </motion.div>
 
                                 <motion.div
                                     drag="x"
-                                    dragConstraints={{ left: -100, right: 0 }}
-                                    dragElastic={0.1}
+                                    dragConstraints={{ left: -120, right: 0 }}
+                                    dragElastic={{ left: 0.2, right: 0.8 }}
+                                    dragTransition={{
+                                        bounceStiffness: 300,
+                                        bounceDamping: 25,
+                                        power: 0.2
+                                    }}
+                                    onDrag={(e, info) => {
+                                        // Progressive haptic feedback as user drags
+                                        if (Math.abs(info.offset.x) > 40 && Math.abs(info.offset.x) < 45) {
+                                            import('../services/haptics').then(({ HapticsService }) => {
+                                                HapticsService.selection();
+                                            });
+                                        }
+                                    }}
                                     onDragEnd={(e, info) => {
                                         if (info.offset.x < -80 && onDelete) {
-                                            // Small vibration
-                                            if (navigator.vibrate) navigator.vibrate(50);
+                                            // Strong haptic for delete threshold
+                                            import('../services/haptics').then(({ HapticsService }) => {
+                                                HapticsService.impactMedium();
+                                            });
 
-                                            if (confirm("Are you sure you want to delete this receipt?")) {
+                                            if (confirm("Delete this receipt?")) {
+                                                // Success haptic
+                                                import('../services/haptics').then(({ HapticsService }) => {
+                                                    HapticsService.notificationSuccess();
+                                                });
                                                 onDelete(receipt.id);
                                             }
                                         }
                                     }}
                                     onTap={() => {
                                         onSelectReceipt(receipt);
+                                        import('../services/haptics').then(({ HapticsService }) => {
+                                            HapticsService.selection();
+                                        });
                                     }}
                                     whileTap={{ scale: 0.98 }}
-                                    className={`relative z-10 w-full transition-colors duration-300 p-3 rounded-2xl border flex items-center gap-4 group cursor-pointer ${isBill
-                                        ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-500/20'
-                                        : 'bg-surface border-white/5 hover:bg-surfaceHighlight'
-                                        }`}
+                                    whileDrag={{
+                                        scale: 0.98,
+                                        transition: { type: "spring", stiffness: 400, damping: 30 }
+                                    }}
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 30
+                                    }}
+                                    className={`relative z-10 w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group cursor-pointer ${isBill
+                                        ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-500/20 hover:border-indigo-500/40'
+                                        : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/10'
+                                        } shadow-lg hover:shadow-xl`}
                                 >
-                                    <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 transition-colors duration-300">
+                                    <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 group-hover:shadow-lg transition-all duration-300">
                                         {thumbUrl ? (
                                             <img
                                                 src={thumbUrl}
                                                 alt="Receipt"
-                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-slate-700">

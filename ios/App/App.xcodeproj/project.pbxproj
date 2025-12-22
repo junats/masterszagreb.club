@@ -8,8 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
-		4DADD2A52EE44FBE0024F470 /* TrueTrackWidgetPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DADD2A42EE44FBE0024F470 /* TrueTrackWidgetPlugin.swift */; };
-		4DADD2A62EE44FBE0024F470 /* TrueTrackWidgetPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DADD2A32EE44FBE0024F470 /* TrueTrackWidgetPlugin.m */; };
 		4DB8E4532EDD9388003AC006 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DB8E4522EDD9387003AC006 /* WidgetKit.framework */; };
 		4DB8E4552EDD9388003AC006 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DB8E4542EDD9388003AC006 /* SwiftUI.framework */; };
 		4DB8E4642EDD9389003AC006 /* TrueTrackWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4DB8E4512EDD9387003AC006 /* TrueTrackWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -51,8 +49,6 @@
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
-		4DADD2A32EE44FBE0024F470 /* TrueTrackWidgetPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TrueTrackWidgetPlugin.m; sourceTree = "<group>"; };
-		4DADD2A42EE44FBE0024F470 /* TrueTrackWidgetPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrueTrackWidgetPlugin.swift; sourceTree = "<group>"; };
 		4DB8E44C2EDD931C003AC006 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		4DB8E4512EDD9387003AC006 /* TrueTrackWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TrueTrackWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4DB8E4522EDD9387003AC006 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -119,8 +115,6 @@
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
-				4DADD2A32EE44FBE0024F470 /* TrueTrackWidgetPlugin.m */,
-				4DADD2A42EE44FBE0024F470 /* TrueTrackWidgetPlugin.swift */,
 				4DB8E46A2EDD93A5003AC006 /* TrueTrackWidgetExtension.entitlements */,
 				504EC3061FED79650016851F /* App */,
 				4DB8E4562EDD9388003AC006 /* TrueTrackWidget */,
@@ -331,8 +325,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4DADD2A52EE44FBE0024F470 /* TrueTrackWidgetPlugin.swift in Sources */,
-				4DADD2A62EE44FBE0024F470 /* TrueTrackWidgetPlugin.m in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

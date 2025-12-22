@@ -79,7 +79,7 @@ export interface User {
   nickname?: string;
 }
 
-export type ViewState = 'dashboard' | 'scan' | 'history' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody';
+export type ViewState = 'dashboard' | 'scan' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody' | 'notifications';
 
 export type CustodyStatus = 'me' | 'partner' | 'split' | 'none';
 
