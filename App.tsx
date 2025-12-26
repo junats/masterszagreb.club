@@ -151,6 +151,19 @@ const ViewStateHandler: React.FC<{ currentView: ViewState, setCurrentView: (v: V
                     selectedReceipt={useData().selectedReceipt}
                     onSelectReceipt={setSelectedReceipt}
                     initialTab="scan"
+                    onScanComplete={handleScanComplete}
+                    onScanCancel={() => setCurrentView('history')}
+                  />
+                );
+
+              case 'history':
+                return (
+                  <ScanHistoryView
+                    selectedReceipt={useData().selectedReceipt}
+                    onSelectReceipt={setSelectedReceipt}
+                    initialTab="history"
+                    onScanComplete={handleScanComplete}
+                    onScanCancel={() => setCurrentView('history')}
                   />
                 );
 
@@ -232,10 +245,13 @@ const AppContent: React.FC = () => {
     init();
   }, []);
 
-  // Reset to dashboard whenever user logs in
+  // Reset to dashboard whenever user logs in (but not if on scan/history)
   useEffect(() => {
     if (user && !isAuthLoading) {
-      setCurrentView('dashboard');
+      // Don't reset if user is actively scanning receipts
+      if (currentView !== 'scan' && currentView !== 'history') {
+        setCurrentView('dashboard');
+      }
     }
   }, [user, isAuthLoading]);
 

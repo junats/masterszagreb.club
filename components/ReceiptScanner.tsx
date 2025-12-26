@@ -246,16 +246,20 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
 
   const finishProcessing = (newReceipts: Receipt[], errors: string[]) => {
+    console.log('🔍 finishProcessing:', { receiptsCount: newReceipts.length, errors });
+
     if (newReceipts.length > 0) {
       if (errors.length > 0) {
         console.warn("Some files failed to process:", errors);
       }
       // Save ALL receipts for review
+      console.log('📝 Setting receipts and showing modal');
       setScannedReceipts(newReceipts);
       setCurrentReceiptIndex(0); // Reset to first receipt
       setShowReviewModal(true);
       setIsAnalyzing(false);
       setProgress(null);
+      console.log('✅ Modal should now be visible');
     } else {
       setError("Failed to analyze images. " + (errors.length > 0 ? `Error with: ${errors[0]}` : "Please try again."));
       setIsAnalyzing(false);
@@ -270,9 +274,16 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         ...receipt,
         date: receipt.date || new Date().toISOString().split('T')[0]
       }));
-      onScanComplete(finalReceipts);
+
+      // Close modal and clear state FIRST
       setShowReviewModal(false);
       setScannedReceipts([]);
+
+      // THEN call the callback (which may trigger navigation)
+      // Use setTimeout to ensure modal closes before navigation
+      setTimeout(() => {
+        onScanComplete(finalReceipts);
+      }, 50);
     }
   };
 

@@ -9,12 +9,16 @@ interface ScanHistoryViewProps {
     selectedReceipt: Receipt | null;
     onSelectReceipt: (receipt: Receipt | null) => void;
     initialTab?: 'scan' | 'history';
+    onScanComplete?: (receipts: Receipt[]) => void;
+    onScanCancel?: () => void;
 }
 
 const ScanHistoryView: React.FC<ScanHistoryViewProps> = ({
     selectedReceipt,
     onSelectReceipt,
-    initialTab = 'scan'
+    initialTab = 'scan',
+    onScanComplete,
+    onScanCancel
 }) => {
     const [activeTab, setActiveTab] = useState<'scan' | 'history'>(initialTab);
 
@@ -48,7 +52,10 @@ const ScanHistoryView: React.FC<ScanHistoryViewProps> = ({
             {/* Content */}
             <div className="flex-1 overflow-hidden">
                 {activeTab === 'scan' ? (
-                    <ReceiptScanner />
+                    <ReceiptScanner
+                        onScanComplete={onScanComplete || (() => { })}
+                        onCancel={onScanCancel || (() => { })}
+                    />
                 ) : (
                     <HistoryView
                         selectedReceipt={selectedReceipt}
