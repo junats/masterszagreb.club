@@ -2,6 +2,7 @@ import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import { DashboardMetrics } from '../hooks/useDashboardMetrics';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SpendingDistributionProps {
     metrics: DashboardMetrics;
@@ -24,10 +25,12 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
     childSupportMode,
     isVisible = true
 }) => {
+    const { t } = useLanguage();
+
     // Derive Chart Data
     const activeCharts = [
         {
-            title: "Expenses",
+            title: t('chartLegends.expenses'),
             data: pieView === 'daily' ? metrics.todayCategoryData : pieView === 'weekly' ? metrics.thisWeekCategoryData : metrics.thisMonthCategoryData,
             total: pieView === 'daily' ? metrics.todayTotal : pieView === 'weekly' ? metrics.thisWeekTotal : metrics.thisMonthTotal,
             id: 'expenses',
@@ -35,7 +38,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
             isEmpty: false
         },
         ...(childSupportMode ? [{
-            title: "Child Spend",
+            title: t('chartLegends.childSpend'),
             data: pieView === 'daily' ? metrics.todayChildCategoryData : pieView === 'weekly' ? metrics.thisWeekChildCategoryData : metrics.thisMonthChildCategoryData,
             total: pieView === 'daily' ? metrics.todayChildTotal : pieView === 'weekly' ? metrics.thisWeekChildTotal : metrics.thisMonthChildTotal,
             id: 'child',
@@ -53,7 +56,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                     <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300">
                         <PieChartIcon size={14} />
                     </div>
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Distribution</span>
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t('labels.distribution')}</span>
                 </div>
                 <div className="flex bg-white/5 rounded-lg p-0.5">
                     {['daily', 'weekly', 'monthly'].map((v) => (
@@ -64,7 +67,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                                 pieView === v ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
                             )}
                         >
-                            {v === 'daily' ? 'Day' : v === 'weekly' ? 'Week' : 'Mo'}
+                            {v === 'daily' ? t('days.day') : v === 'weekly' ? t('days.week') : t('days.mo')}
                         </button>
                     ))}
                 </div>
@@ -88,7 +91,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                                                 if (active && payload && payload.length) {
                                                     return (
                                                         <div className="bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl z-50">
-                                                            <p className="text-[10px] font-bold text-white mb-0.5">{payload[0].name}</p>
+                                                            <p className="text-[10px] font-bold text-white mb-0.5">{t(`categories.${payload[0].name.toLowerCase()}`, { defaultValue: payload[0].name })}</p>
                                                             <p className="text-[10px] text-slate-300">€{(payload[0].value as number).toFixed(2)}</p>
                                                         </div>
                                                     );
@@ -124,7 +127,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                                 </ResponsiveContainer>
                                 {/* Center Label */}
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <p className="text-[8px] text-slate-500 font-medium uppercase leading-none">Total</p>
+                                    <p className="text-[8px] text-slate-500 font-medium uppercase leading-none">{t('common.total')}</p>
                                     <p className={"font-bold text-white leading-none mt-0.5 " + (childSupportMode ? "text-[10px]" : "text-sm")}>€{chartConfig.total.toFixed(0)}</p>
                                 </div>
                             </div>
@@ -135,7 +138,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                                     <div key={i} className="flex justify-between items-center text-[9px]">
                                         <div className="flex items-center gap-1 min-w-0">
                                             <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: chartConfig.id === 'child' ? chartConfig.colors[i % chartConfig.colors.length] : getCategoryColor(entry.name) }}></div>
-                                            <span className="text-slate-400 truncate max-w-[50px]">{entry.name}</span>
+                                            <span className="text-slate-400 truncate max-w-[50px]">{t(`categories.${entry.name.toLowerCase()}`, { defaultValue: entry.name })}</span>
                                         </div>
                                         <span className="text-slate-500 tabular-nums">€{entry.value.toFixed(0)}</span>
                                     </div>

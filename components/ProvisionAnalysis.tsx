@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ProvisionAnalysisProps {
     onBack: () => void;
@@ -20,6 +21,7 @@ const COLORS = CATEGORY_COLORS;
 
 const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
     const { receipts } = useData();
+    const { t } = useLanguage();
     const data = useMemo(() => {
         const today = new Date();
         const currentMonth = today.getMonth();
@@ -231,10 +233,10 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                 });
 
                 await Share.share({
-                    title: 'Expense Report',
-                    text: `Here is my expense report for ${data.currentMonthName} ${data.currentYear}`,
+                    title: t('provision.shareTitle'),
+                    text: t('provision.shareText', { month: data.currentMonthName, year: data.currentYear }),
                     url: uriResult.uri,
-                    dialogTitle: 'Share Expense Report'
+                    dialogTitle: t('provision.shareTitle')
                 });
 
             } catch (fsError) {
@@ -244,7 +246,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            alert('Failed to generate PDF. Please try again.');
+            alert(t('provision.errorPdf'));
         }
     };
 
@@ -261,13 +263,13 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold text-white tracking-tight">Expense Report #{data.currentYear}-00{new Date().getMonth() + 1}</h1>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Generated on {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                        <h1 className="text-xl font-bold text-white tracking-tight">{t('provision.title', { year: data.currentYear, month: new Date().getMonth() + 1 })}</h1>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">{t('provision.generatedOn', { date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) })}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 bg-[#131B2C] border border-emerald-500/20 px-3 py-1.5 rounded-full">
                     <CheckCircle2 size={14} className="text-emerald-500" />
-                    <span className="text-xs font-bold text-emerald-500 tracking-wide uppercase">Verified</span>
+                    <span className="text-xs font-bold text-emerald-500 tracking-wide uppercase">{t('provision.verified')}</span>
                 </div>
             </div>
 
@@ -277,7 +279,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                 <AnimatedSection className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-2xl relative overflow-hidden" animateContainer={true}>
                     <div className="flex items-center gap-2 mb-4">
                         <TrendingUp className="text-blue-400 w-5 h-5" />
-                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Monthly Trend</h3>
+                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">{t('provision.monthlyTrend')}</h3>
                     </div>
                     <div className="h-64 w-full relative z-10">
                         <ResponsiveContainer width="100%" height="100%">
@@ -371,7 +373,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-xs text-slate-500 text-center py-4">No data</div>
+                                <div className="text-xs text-slate-500 text-center py-4">{t('provision.noData')}</div>
                             )}
                         </div>
                     </AnimatedSection>
@@ -381,7 +383,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                 <AnimatedSection className="bg-[#131B2C] rounded-3xl p-6 border border-white/5 shadow-lg" animateContainer={true} delay={300}>
                     <div className="flex items-center gap-2 mb-4">
                         <ShoppingBag className="text-emerald-400 w-5 h-5" />
-                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Spending Breakdown</h3>
+                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">{t('provision.spendingBreakdown')}</h3>
                     </div>
                     <div className="space-y-5">
                         {(data.categoryData || []).map((d, i) => (
@@ -389,7 +391,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                                 <div className="flex justify-between items-center text-xs">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: COLORS[d.name] || '#94a3b8', color: COLORS[d.name] || '#94a3b8' }}></div>
-                                        <span className="text-slate-200 font-medium">{d.name}</span>
+                                        <span className="text-slate-200 font-medium">{t(`categories.${d.name.toLowerCase()}`)}</span>
                                     </div>
                                     <span className="text-slate-400 font-mono tabular-nums">€{d.value.toFixed(0)}</span>
                                 </div>
@@ -402,7 +404,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                             </div>
                         ))}
                         {data.categoryData.length === 0 && (
-                            <p className="text-slate-500 text-xs text-center py-2">No spending data yet.</p>
+                            <p className="text-slate-500 text-xs text-center py-2">{t('provision.noSpending')}</p>
                         )}
                     </div>
                 </AnimatedSection>
@@ -414,7 +416,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
                     className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm tracking-wide transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
                 >
                     <Download size={18} />
-                    Download PDF Report
+                    {t('provision.downloadPdf')}
                 </button>
 
             </div>

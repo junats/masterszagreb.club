@@ -1,51 +1,134 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Calendar, TrendingUp, Users, X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { motion, PanInfo } from 'framer-motion';
+import { useData } from '../contexts/DataContext';
+
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface NotificationsViewProps { }
 
 const NotificationsView: React.FC<NotificationsViewProps> = () => {
-    // Mock recent alerts (toast-style notifications)
-    const [recentAlerts, setRecentAlerts] = useState([
-        { id: 1, message: 'Widget data updated successfully', type: 'success', time: '1m ago' },
-        { id: 2, message: 'Pro mode activated', type: 'success', time: '5m ago' },
-        { id: 3, message: 'Budget exceeded by €891', type: 'error', time: '2h ago' },
-        { id: 4, message: 'Custody calendar synced', type: 'info', time: '3h ago' },
-    ]);
+    const { markAllNotificationsAsRead } = useData();
+    const { t } = useLanguage();
 
-    // Mock notifications data
-    const notifications = [
-        {
-            id: 1,
-            type: 'custody',
-            title: 'Custody Transition Tomorrow',
-            message: 'Child will be with co-parent starting tomorrow',
-            time: '2 hours ago',
-            icon: Calendar,
-            color: 'text-blue-400',
-            bgColor: 'bg-blue-500/10'
-        },
-        {
-            id: 2,
-            type: 'budget',
-            title: 'Budget Alert',
-            message: 'You\'ve exceeded your monthly budget by €891',
-            time: '5 hours ago',
-            icon: TrendingUp,
-            color: 'text-red-400',
-            bgColor: 'bg-red-500/10'
-        },
-        {
-            id: 3,
-            type: 'coparent',
-            title: 'Co-parent Invite',
-            message: 'Sarah invited you to share custody calendar',
-            time: '1 day ago',
-            icon: Users,
-            color: 'text-emerald-400',
-            bgColor: 'bg-emerald-500/10'
-        },
-    ];
+    // Mark all notifications as read when viewing this screen
+    useEffect(() => {
+        markAllNotificationsAsRead();
+    }, [markAllNotificationsAsRead]);
+
+    // Recent alerts with persistence
+    const [recentAlerts, setRecentAlerts] = useState<Array<{ id: number, message: string, type: string, time: string }>>([]);
+
+    // Notifications with persistence
+    const [notifications, setNotifications] = useState<Array<any>>([]);
+
+    // Load from storage on mount
+    useEffect(() => {
+        const loadNotifications = async () => {
+            try {
+                const { Preferences } = await import('@capacitor/preferences');
+
+                // Load recent alerts
+                const { value: savedAlerts } = await Preferences.get({ key: 'truetrack_recent_alerts' });
+                if (savedAlerts) {
+                    setRecentAlerts(JSON.parse(savedAlerts));
+                } else {
+                    // Default mock data only if nothing saved
+                    setRecentAlerts([
+                        { id: 1, message: t('notificationsView.widgetSuccess'), type: 'success', time: '1m ago' },
+                        { id: 2, message: t('notificationsView.proActivated'), type: 'success', time: '5m ago' },
+                        { id: 3, message: t('notificationsView.budgetExceeded', { amount: 891 }), type: 'error', time: '2h ago' },
+                        { id: 4, message: t('notificationsView.custodySynced'), type: 'info', time: '3h ago' },
+                    ]);
+                }
+
+                // Load notifications
+                const { value: savedNotifications } = await Preferences.get({ key: 'truetrack_notifications' });
+                if (savedNotifications) {
+                    const parsed = JSON.parse(savedNotifications);
+                    // Restore icon references
+                    const withIcons = parsed.map((n: any) => ({
+                        ...n,
+                        icon: n.type === 'custody' ? Calendar : n.type === 'budget' ? TrendingUp : Users
+                    }));
+                    setNotifications(withIcons);
+                } else {
+                    // Default mock data only if nothing saved
+                    setNotifications([
+                        {
+                            id: 1,
+                            type: 'custody',
+                            title: t('notificationsView.custodyTransition'),
+                            message: t('notificationsView.custodyDesc'),
+                            time: '2 hours ago',
+                            icon: Calendar,
+                            color: 'text-blue-400',
+                            bgColor: 'bg-blue-500/10'
+                        },
+                        {
+                            id: 2,
+                            type: 'budget',
+                            title: t('notificationsView.budgetAlert'),
+                            message: t('notificationsView.budgetDesc', { amount: 891 }),
+                            time: '5 hours ago',
+                            icon: TrendingUp,
+                            color: 'text-red-400',
+                            bgColor: 'bg-red-500/10'
+                        },
+                        {
+                            id: 3,
+                            type: 'coparent',
+                            title: t('notificationsView.coparentInvite'),
+                            message: t('notificationsView.inviteDesc'),
+                            time: '1 day ago',
+                            icon: Users,
+                            color: 'text-emerald-400',
+                            bgColor: 'bg-emerald-500/10'
+                        },
+                    ]);
+                }
+            } catch (e) {
+                console.error('Failed to load notifications:', e);
+            }
+        };
+        loadNotifications();
+    }, []);
+
+    // Save to storage when notifications change
+    useEffect(() => {
+        const saveNotifications = async () => {
+            try {
+                const { Preferences } = await import('@capacitor/preferences');
+
+                // Save recent alerts
+                await Preferences.set({
+                    key: 'truetrack_recent_alerts',
+                    value: JSON.stringify(recentAlerts)
+                });
+
+                // Save notifications (without icon functions)
+                const toSave = notifications.map(n => ({
+                    id: n.id,
+                    type: n.type,
+                    title: n.title,
+                    message: n.message,
+                    time: n.time,
+                    color: n.color,
+                    bgColor: n.bgColor
+                }));
+                await Preferences.set({
+                    key: 'truetrack_notifications',
+                    value: JSON.stringify(toSave)
+                });
+            } catch (e) {
+                console.error('Failed to save notifications:', e);
+            }
+        };
+
+        if (notifications.length > 0 || recentAlerts.length > 0) {
+            saveNotifications();
+        }
+    }, [notifications, recentAlerts]);
 
     const getAlertIcon = (type: string) => {
         switch (type) {
@@ -69,17 +152,21 @@ const NotificationsView: React.FC<NotificationsViewProps> = () => {
         setRecentAlerts(prev => prev.filter(alert => alert.id !== id));
     };
 
+    const handleDismissNotification = (id: number) => {
+        setNotifications(prev => prev.filter(notification => notification.id !== id));
+    };
+
     return (
         <div className="flex flex-col h-full px-4">
             {/* Header */}
             <div className="mb-4">
-                <h1 className="text-2xl font-bold text-white mb-1">Notifications</h1>
-                <p className="text-sm text-slate-400">Stay updated with important alerts</p>
+                <h1 className="text-2xl font-bold text-white mb-1">{t('notificationsView.title')}</h1>
+                <p className="text-sm text-slate-400">{t('notificationsView.subtitle')}</p>
             </div>
 
             {/* Recent Alerts (Toast-style with swipe to delete) */}
             <div className="mb-6">
-                <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Recent Activity</h2>
+                <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('notificationsView.recent')}</h2>
                 <div className="space-y-2">
                     {recentAlerts.map((alert) => (
                         <motion.div
@@ -107,7 +194,7 @@ const NotificationsView: React.FC<NotificationsViewProps> = () => {
 
             {/* Main Notifications List */}
             <div className="flex-1 overflow-y-auto">
-                <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">All Notifications</h2>
+                <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('notificationsView.all')}</h2>
                 <div className="space-y-3">
                     {notifications.map((notification) => {
                         const Icon = notification.icon;
@@ -136,7 +223,10 @@ const NotificationsView: React.FC<NotificationsViewProps> = () => {
                                     </div>
 
                                     {/* Dismiss */}
-                                    <button className="text-slate-500 hover:text-white transition-colors p-1">
+                                    <button
+                                        onClick={() => handleDismissNotification(notification.id)}
+                                        className="text-slate-500 hover:text-white transition-colors p-1"
+                                    >
                                         <X size={16} />
                                     </button>
                                 </div>
@@ -152,9 +242,9 @@ const NotificationsView: React.FC<NotificationsViewProps> = () => {
                     <div className="bg-white/5 p-4 rounded-full mb-4">
                         <Bell size={32} className="text-slate-500" />
                     </div>
-                    <h3 className="text-white font-semibold mb-2">No notifications</h3>
+                    <h3 className="text-white font-semibold mb-2">{t('notificationsView.noNotifications')}</h3>
                     <p className="text-slate-400 text-sm max-w-xs">
-                        You're all caught up! We'll notify you of important updates.
+                        {t('notificationsView.caughtUp')}
                     </p>
                 </div>
             )}

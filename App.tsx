@@ -25,7 +25,7 @@ import { ImpactStyle } from '@capacitor/haptics';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { LanguageProvider } from './contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
 const RECEIPT_STORAGE_KEY = 'truetrack_receipts';
 const SETTINGS_STORAGE_KEY = 'truetrack_settings';
@@ -215,6 +215,7 @@ const AppContent: React.FC = () => {
   const [showTour, setShowTour] = useState(false);
 
   const { user, isAuthLoading, showDevBanner, setShowDevBanner, isMockMode, setUser, signOut } = useUser();
+  const { t } = useLanguage();
   const {
     isDataLoaded,
     ambientMode,
@@ -222,7 +223,8 @@ const AppContent: React.FC = () => {
     spendRatio,
     generateDummyData,
     ageRestricted,
-    helpEnabled
+    helpEnabled,
+    unreadNotificationCount
   } = useData();
 
 
@@ -245,15 +247,7 @@ const AppContent: React.FC = () => {
     init();
   }, []);
 
-  // Reset to dashboard whenever user logs in (but not if on scan/history)
-  useEffect(() => {
-    if (user && !isAuthLoading) {
-      // Don't reset if user is actively scanning receipts
-      if (currentView !== 'scan' && currentView !== 'history') {
-        setCurrentView('dashboard');
-      }
-    }
-  }, [user, isAuthLoading]);
+
 
   // Listen for Notification Clicks
   useEffect(() => {
@@ -343,9 +337,9 @@ const AppContent: React.FC = () => {
         <div className="bg-indigo-900/90 text-indigo-100 text-[10px] py-1 px-3 text-center border-b border-indigo-500/30 flex items-center justify-between relative z-50 backdrop-blur-sm">
           <div className="flex items-center gap-2 mx-auto">
             <Database size={12} className="text-indigo-400" />
-            <span>Running in <strong>Mock Mode</strong>.</span>
+            <span>{t('misc.mockMode')}</span>
             <button onClick={() => generateDummyData()} className="ml-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-2 py-0.5 rounded text-[9px] font-bold border border-indigo-500/30 transition-colors">
-              SEED DATA
+              {t('misc.seedData')}
             </button>
           </div>
           <button onClick={() => setShowDevBanner(false)} className="absolute right-2 p-1 hover:text-white">
@@ -362,14 +356,14 @@ const AppContent: React.FC = () => {
       <main
         className="flex-1 w-full max-w-lg mx-auto relative z-10 h-full overflow-y-auto overflow-x-hidden custom-scrollbar"
         style={{
-          paddingTop: 'calc(var(--header-height) + var(--safe-area-top) + 12px)',
+          paddingTop: 'calc(var(--header-height) + var(--safe-area-top))',
           paddingBottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom, 20px) + 20px)',
         }}
       >
         <ViewStateHandler currentView={currentView} setCurrentView={setCurrentView} direction={direction} />
       </main>
 
-      <Navigation currentView={currentView} setView={handleSetView} isVisible={true} childSupportMode={useData().childSupportMode} helpEnabled={helpEnabled} />
+      <Navigation currentView={currentView} setView={handleSetView} isVisible={true} childSupportMode={useData().childSupportMode} helpEnabled={helpEnabled} unreadCount={unreadNotificationCount} />
       {showTour && <IntroTour onComplete={handleTourComplete} />}
     </div>
   );

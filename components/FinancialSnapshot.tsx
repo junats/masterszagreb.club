@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import {
     TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
     CalendarDays, ShoppingBag, ArrowUpRight, Calendar, Activity,
-    MoreHorizontal
+    MoreHorizontal, Heart, Sparkles, CreditCard
 } from 'lucide-react';
 import { DashboardMetrics } from '../hooks/useDashboardMetrics';
+import { useLanguage } from '../contexts/LanguageContext';
+import { AreaChart, Area, ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 
 interface FinancialSnapshotProps {
     metrics: DashboardMetrics;
@@ -20,26 +22,9 @@ export const FinancialSnapshot: React.FC<FinancialSnapshotProps> = ({
     daysInMonth,
     onViewDetail
 }) => {
+    const { t } = useLanguage();
 
-    // Helper logic to map metrics to snapshot items 
-    // (This logic was previously in Dashboard.tsx inside the return of aiMetrics, but we can re-derive or map here 
-    // OR we can update the hook to return this exact shape. 
-    // The hook returns `aiMetrics` as an empty array currently in my last edit?
-    // Wait, in my last edit to useDashboardMetrics, I left `aiMetrics: []`. 
-    // So passing `metrics` here might not be enough if I don't calculate the UI-specific array.
-
-    // However, Dashboard.tsx previously had logic to construct `aiMetrics` using `useMemo`.
-    // I replaced that logic with the hook call.
-    // BUT the hook explicitly returned `aiMetrics: []`.
-    // So Dashboard.tsx is receiving empty aiMetrics!
-
-    // I need to either:
-    // 1. Move the `aiMetrics` construction logic into this component (FinancialSnapshot).
-    // 2. Or move it into the hook.
-
-    // Moving it into this component is better for "View Logic".
-
-    // Let's reconstruct the items here using `metrics` data.
+    // --- DATA PREP ---
 
     const daysPassed = new Date().getDate();
     const dailyAvg = metrics.dailyAverage;
@@ -57,205 +42,228 @@ export const FinancialSnapshot: React.FC<FinancialSnapshotProps> = ({
 
     // Top Category
     const topCategory = metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-';
+    // Translated Top Category (Logic derived from Dashboard)
+    const topCatRaw = metrics.categoryData.length > 0 ? metrics.categoryData[0].name : null;
+    const topCategoryLabel = topCatRaw ? t(`categories.${topCatRaw.toLowerCase()}`, { defaultValue: topCatRaw }) : '-';
+
 
     // Helper for Top 3 Cats
     const top3Cats = metrics.categoryData.slice(0, 3).map(c => ({
-        label: c.name,
+        label: t(`categories.${c.name.toLowerCase()}`, { defaultValue: c.name }),
         value: c.percentage.toFixed(0) + "% ",
         subtext: "€" + c.value.toFixed(0) + " "
     }));
 
     // Status Logic
-    let statusLabel = 'Forecast';
+    let statusLabel = t('status.forecast');
     let statusValue = "€" + projected.toFixed(0);
     let statusTrend = projected > monthlyBudget ? 'down' : 'up';
     let statusIcon: any = projected > monthlyBudget ? TrendingDown : TrendingUp;
     let statusDetail = metrics.spendingInsight;
     let statusPopup: any = {
-        title: 'Budget Forecast',
-        description: "Based on your current spending velocity, we project a Month End total of €" + projected.toFixed(0) + ".",
-        insight: projected > monthlyBudget ? "You are on track to exceed your budget by €" + (projected - monthlyBudget).toFixed(0) + "." : 'You are comfortably on track to stay under budget.',
+        title: t('popups.budgetForecast.title'),
+        description: t('popups.budgetForecast.description', { projected: projected.toFixed(0) }),
+        insight: projected > monthlyBudget ? t('popups.budgetForecast.insightOver', { overage: (projected - monthlyBudget).toFixed(0) }) : t('popups.budgetForecast.insightUnder'),
         items: [
-            { label: 'Current Spend', value: "€" + totalSpent.toFixed(0) },
-            { label: 'Remaining Budget', value: "€" + Math.max(0, monthlyBudget - totalSpent).toFixed(0) },
-            { label: 'Projected Total', value: "€" + projected.toFixed(0) }
+            { label: t('dashboard.currentSpend'), value: "€" + totalSpent.toFixed(0) },
+            { label: t('dashboard.remainingBudget'), value: "€" + Math.max(0, monthlyBudget - totalSpent).toFixed(0) },
+            { label: t('charts.target'), value: "€" + projected.toFixed(0) }
         ]
     };
 
     // Priority 1: Just Added (Last 5 mins)
     const latestReceipt = metrics.latestReceipt;
     if (latestReceipt && (new Date().getTime() - new Date(latestReceipt.date).getTime() < 5 * 60 * 1000)) {
-        statusLabel = 'Just Added';
-        statusValue = "Receipt Added";
+        statusLabel = t('status.justAdded');
+        statusValue = t('status.receiptAdded');
         statusTrend = 'up';
         statusIcon = CheckCircle2;
         statusDetail = `+€${latestReceipt.total.toFixed(2)} at ${latestReceipt.storeName}`;
         statusPopup = {
-            title: 'Receipt Processed',
-            description: `We just added a receipt from ${latestReceipt.storeName} for €${latestReceipt.total.toFixed(2)}.`,
-            insight: 'Your dashboard has been updated with the latest figures.',
+            title: t('popups.receiptProcessed.title'),
+            description: t('popups.receiptProcessed.description', { storeName: latestReceipt.storeName, amount: latestReceipt.total.toFixed(2) }),
+            insight: t('popups.receiptProcessed.insight'),
             items: [
-                { label: 'Store', value: latestReceipt.storeName },
-                { label: 'Amount', value: "€" + latestReceipt.total.toFixed(2) },
-                { label: 'Time', value: new Date(latestReceipt.date).toLocaleTimeString() }
+                { label: t('popups.receiptProcessed.store'), value: latestReceipt.storeName },
+                { label: t('popups.receiptProcessed.amount'), value: "€" + latestReceipt.total.toFixed(2) },
+                { label: t('popups.receiptProcessed.time'), value: new Date(latestReceipt.date).toLocaleTimeString() }
             ]
         };
     }
     // Priority 2: Critical Alerts
     else if (metrics.thisMonthTotal > monthlyBudget) {
-        statusLabel = 'Alert';
-        statusValue = 'Over Budget';
+        statusLabel = t('status.alert');
+        statusValue = t('status.overBudget');
         statusTrend = 'down';
         statusIcon = AlertTriangle;
         statusDetail = `Exceeded by €${(metrics.thisMonthTotal - monthlyBudget).toFixed(0)}`;
         statusPopup = {
-            title: 'Budget Alert',
-            description: `You have exceeded your monthly budget of €${monthlyBudget}.`,
-            insight: 'Consider pausing non-essential spending for the rest of the month.',
+            title: t('popups.budgetAlert.title'),
+            description: t('popups.budgetAlert.description', { budget: monthlyBudget.toString() }),
+            insight: t('popups.budgetAlert.insight'),
             items: [
-                { label: 'Total Spent', value: "€" + metrics.thisMonthTotal.toFixed(0) },
-                { label: 'Budget', value: "€" + monthlyBudget.toFixed(0) },
-                { label: 'Overage', value: "€" + (metrics.thisMonthTotal - monthlyBudget).toFixed(0) }
+                { label: t('dashboard.totalSpent'), value: "€" + metrics.thisMonthTotal.toFixed(0) },
+                { label: t('popups.budgetAlert.budget'), value: "€" + monthlyBudget.toFixed(0) },
+                { label: t('popups.budgetAlert.overage'), value: "€" + (metrics.thisMonthTotal - monthlyBudget).toFixed(0) }
             ]
         };
     }
 
-    // Daily Trend
-    const dailyTarget = monthlyBudget / 30; // Approx
-    const dailyTrendDiff = dailyAvg - dailyTarget;
+    // --- CHART DATA PREP ---
 
-    const snapshotItems = [
-        {
-            label: 'Daily Avg',
-            value: "€" + dailyAvg.toFixed(0) + " ",
-            trend: dailyTrendDiff > 0 ? 'up' : 'down',
-            trendLabel: dailyTrendDiff > 0 ? 'Above Target' : 'On Track',
-            icon: CalendarDays,
-            detail: "Target: €" + dailyTarget.toFixed(0),
-            popup: {
-                title: 'Daily Spending Average',
-                description: "You are spending an average of €" + dailyAvg.toFixed(0) + " every day this month. To stay within your €" + monthlyBudget + " budget, try to keep this under €" + (monthlyBudget / daysInMonth).toFixed(0) + ".",
-                insight: dailyAvg > (monthlyBudget / daysInMonth) ? 'You are pacing to overspend. Try having one "No Spend Day" this week.' : 'Great job! Your daily pacing is sustainable.',
-                items: [
-                    { label: 'Today', value: "€" + metrics.todayTotal.toFixed(0) },
-                    { label: 'Yesterday', value: "€" + (metrics.yesterdayTotal || 0).toFixed(0) }, // Approx
-                    { label: 'Target', value: "€" + (monthlyBudget / daysInMonth).toFixed(0) }
-                ]
-            }
-        },
-        {
-            label: statusLabel,
-            value: statusValue,
-            trend: statusTrend,
-            trendLabel: statusTrend === 'down' ? 'Improving' : 'Attention',
-            icon: statusIcon,
-            detail: statusDetail,
-            popup: statusPopup
-        },
-        {
-            label: 'Top Cat',
-            value: topCategory,
-            trend: 'neutral',
-            trendLabel: 'Dominant',
-            icon: ShoppingBag,
-            detail: (top3Cats[0]?.value || '0%') + " of total",
-            popup: {
-                title: 'Top Categories',
-                description: "Your spending is heavily concentrated in " + topCategory + ". Diversifying or reducing this category is the fastest way to save.",
-                insight: 'Check if these are essential or discretionary expenses.',
-                items: top3Cats
-            }
-        },
-        {
-            label: 'Big Buy',
-            value: "€" + biggestPurchase.toFixed(0),
-            trend: 'neutral',
-            trendLabel: 'One-off',
-            icon: ArrowUpRight,
-            detail: biggestReceipt?.storeName || '-',
-            popup: {
-                title: 'Biggest Purchase',
-                description: biggestReceipt ? "Your largest single transaction was at " + biggestReceipt.storeName + " on " + new Date(biggestReceipt.date).toLocaleDateString() + "." : 'No large purchases yet.',
-                insight: 'Large one-off purchases can derail a budget quickly. Plan for these in advance.',
-                items: biggestReceipt ? [{ label: biggestReceipt.storeName, value: "€" + biggestReceipt.total.toFixed(2), subtext: new Date(biggestReceipt.date).toLocaleTimeString() }] : []
-            }
-        },
-        // Frequency and Weekend logic could be added here similar to Dashboard.tsx
-    ];
+    // Sparkline Data for Hero (Last 30 Days or simple trend)
+    const sparklineData = metrics.monthData.map(d => ({ value: d.total }));
+    const isAlert = statusTrend === 'down' || metrics.thisMonthTotal > monthlyBudget;
 
-    // Render
-    const heroMetric = snapshotItems[1]; // Forecast/Status is hero
-    const subMetrics = [snapshotItems[0], snapshotItems[2], snapshotItems[3]]; // Daily, Top Cat, Big Buy
+    // Health Score Data
+    const healthScore = Math.min(100, Math.max(0, metrics.avgNutritionScore || 0));
+    const healthData = [{ name: 'Health', value: healthScore, fill: healthScore > 70 ? '#10b981' : healthScore < 40 ? '#ef4444' : '#eab308' }];
+
+    // Top Category Progress
+    const topCatPercent = metrics.categoryData.length > 0 ? metrics.categoryData[0].percentage : 0;
+    const topCatColor = metrics.categoryData.length > 0 ? (metrics.categoryData[0] as any).color || '#818cf8' : '#818cf8'; // Fallback color logic handled in CSS/Inline usually, we'll assume solid color for now
+
+    // --- RENDER ---
 
     return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/* Main Hero Card (Forecast/Status) */}
-            <button
-                onClick={() => onViewDetail(heroMetric)}
-                className={"flex-1 md:max-w-[40%] relative p-3 rounded-xl border transition-all duration-300 group/hero overflow-hidden flex flex-col justify-between gap-3 " + (
-                    heroMetric.label === 'Alert' ?
-                        'bg-red-500/10 border-red-500/20 hover:bg-red-500/15 hover:border-red-500/30' :
-                        'bg-white/[0.03] border-white/10 hover:bg-white/[0.05] hover:border-white/20 backdrop-blur-xl'
-                )}>
+        <div className="flex flex-col md:flex-row gap-4 h-full min-h-[300px]">
+            {/* HERO CARD (Left Side / Top) */}
+            <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onViewDetail({ popup: statusPopup })}
+                className={`group relative flex-1 md:flex-[1.4] rounded-3xl overflow-hidden border transition-all duration-500 shadow-xl ${isAlert
+                    ? 'bg-gradient-to-br from-red-900/40 via-slate-900/60 to-black border-red-500/30 shadow-red-900/20'
+                    : 'bg-gradient-to-br from-indigo-900/40 via-slate-900/60 to-black border-indigo-500/30 shadow-indigo-900/20'
+                    }`}
+            >
+                {/* Background Glow */}
+                <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[100px] opacity-20 ${isAlert ? 'bg-red-500' : 'bg-blue-500'}`} />
 
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                        <div className={"p-1.5 rounded-lg " + (
-                            heroMetric.label === 'Alert' ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-300'
-                        )}>
-                            <heroMetric.icon size={14} />
+                {/* Content Container */}
+                <div className="relative z-10 h-full flex flex-col justify-between p-6">
+                    <div className="flex justify-between items-start">
+                        <div className={`p-2 rounded-2xl border backdrop-blur-md ${isAlert
+                            ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                            : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                            }`}>
+                            <statusIcon.icon size={20} />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Status</span>
+                        <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border backdrop-blur-sm ${isAlert
+                            ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            }`}>
+                            {t('financial.currentStatus')}
+                        </div>
+                    </div>
+
+                    <div className="mt-8">
+                        <h4 className="text-slate-400 text-xs font-medium uppercase tracking-widest mb-1">{statusLabel}</h4>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-heading font-light text-white tracking-tight">{statusValue}</span>
+                        </div>
+                        <p className={`text-xs mt-2 font-medium leading-relaxed max-w-[90%] ${isAlert ? 'text-red-300' : 'text-slate-400'}`}>
+                            {statusDetail}
+                        </p>
                     </div>
                 </div>
 
-                <div>
-                    <div className="flex items-baseline gap-2 mb-1">
-                        <div className={"text-2xl font-heading font-light tracking-tight leading-none " + (
-                            heroMetric.label === 'Alert' ? 'text-red-400' : 'text-white'
-                        )}>
-                            {heroMetric.value}
-                        </div>
-                        {(heroMetric as any).trend && (heroMetric as any).trend !== 'neutral' && (
-                            <div className={"flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border " + (
-                                (heroMetric as any).trend === 'up' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
-                            )}>
-                                {(heroMetric as any).trendLabel || ((heroMetric as any).trend === 'up' ? 'Safe' : 'Risk')}
-                            </div>
-                        )}
-                    </div>
-                    {(heroMetric as any).detail && (
-                        <p className="text-[9px] text-slate-500 leading-tight opacity-70 line-clamp-1 text-left">{(heroMetric as any).detail}</p>
-                    )}
+                {/* Sparkline Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 h-32 opacity-20 pointer-events-none fade-b-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={sparklineData}>
+                            <defs>
+                                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={isAlert ? '#ef4444' : '#6366f1'} stopOpacity={0.5} />
+                                    <stop offset="100%" stopColor={isAlert ? '#ef4444' : '#6366f1'} stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <Area
+                                type="monotone"
+                                dataKey="value"
+                                stroke={isAlert ? '#ef4444' : '#6366f1'}
+                                strokeWidth={2}
+                                fill="url(#chartGradient)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
                 </div>
-            </button>
+            </motion.button>
 
-            {/* 2x2 Grid of Sub Metrics */}
-            <div className="flex-1 grid grid-cols-2 gap-2">
-                {subMetrics.map((item, idx) => (
-                    <button
-                        key={idx}
-                        onClick={() => onViewDetail(item)}
-                        className="relative p-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between gap-2 group"
-                    >
-                        <div className="flex items-start justify-between w-full">
-                            <span className="text-[9px] font-medium text-slate-500 uppercase tracking-wider">{item.label}</span>
-                            <div className={"text-xs transition-colors duration-300 " + (
-                                (item as any).trend === 'up' ? 'text-emerald-400' : (item as any).trend === 'down' ? 'text-red-400' : 'text-slate-600 group-hover:text-slate-400'
-                            )}>
-                                <item.icon size={12} />
-                            </div>
+            {/* GRID (Right Side / Bottom) */}
+            <div className="flex-1 grid grid-cols-2 gap-3 md:gap-4">
+                {/* HEALTH SCORE */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onViewDetail({ popup: { title: t('financial.healthScore'), items: [] } })}
+                    className="relative bg-slate-900/50 border border-white/5 rounded-3xl p-4 flex flex-col items-center justify-center overflow-hidden hover:bg-slate-800/50 transition-colors"
+                >
+                    <div className="relative w-24 h-24 flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadialBarChart innerRadius="70%" outerRadius="100%" data={healthData} startAngle={90} endAngle={-270}>
+                                <RadialBar background dataKey="value" cornerRadius={10} />
+                            </RadialBarChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                            <Heart size={18} className={`${healthScore > 70 ? 'text-emerald-400' : 'text-amber-400'} fill-current animate-pulse`} />
+                            <span className="text-xs font-bold text-white mt-0.5">{healthScore}</span>
                         </div>
-                        <div>
-                            <div className="text-sm font-semibold text-slate-200 tracking-tight leading-none mb-0.5">
-                                {item.value}
-                            </div>
-                            <div className="text-[9px] text-slate-500 truncate text-left opacity-60 group-hover:opacity-100 transition-opacity">
-                                {(item as any).detail}
-                            </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">{t('financial.healthScore')}</span>
+                </motion.button>
+
+                {/* TOP CATEGORY */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onViewDetail({ popup: { title: t('labels.topCat'), items: top3Cats } })}
+                    className="relative bg-slate-900/50 border border-white/5 rounded-3xl p-4 flex flex-col justify-between hover:bg-slate-800/50 transition-colors"
+                >
+                    <div className="flex justify-between items-start w-full">
+                        <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                            <ShoppingBag size={16} />
                         </div>
-                    </button>
-                ))}
+                        <span className="text-[10px] text-slate-500 tabular-nums">{topCatPercent.toFixed(0)}%</span>
+                    </div>
+                    <div>
+                        <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{t('labels.topCat')}</h5>
+                        <p className="text-sm font-bold text-white truncate mb-2">{topCategoryLabel}</p>
+                        {/* Progress Bar */}
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${topCatPercent}%` }}
+                                className="h-full bg-blue-500 rounded-full"
+                            />
+                        </div>
+                    </div>
+                </motion.button>
+
+                {/* BIG PURCHASE */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onViewDetail({ popup: { title: t('labels.bigBuy'), items: [] } })} // Simplified handler
+                    className="col-span-2 relative bg-slate-900/50 border border-white/5 rounded-3xl p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors group"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                            <CreditCard size={20} />
+                        </div>
+                        <div className="text-left">
+                            <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{t('labels.bigBuy')}</h5>
+                            <p className="text-sm font-bold text-white">{biggestReceipt?.storeName || '-'}</p>
+                            <p className="text-[10px] text-slate-400">{biggestReceipt ? new Date(biggestReceipt.date).toLocaleDateString() : ''}</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-lg font-bold text-white block">€{biggestPurchase.toFixed(0)}</span>
+                        <div className="flex items-center justify-end gap-1 text-[10px] text-purple-400 font-medium">
+                            {t('labels.oneOff')} <ArrowUpRight size={10} />
+                        </div>
+                    </div>
+                </motion.button>
             </div>
         </div>
     );

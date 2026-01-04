@@ -50,7 +50,8 @@ const Settings: React.FC<SettingsProps> = () => {
         showGlobalAmbient, setShowGlobalAmbient,
         setCustodyDays,
         deleteAllReceipts,
-        isProMode, setIsProMode
+        isProMode, setIsProMode,
+        proActivatedAt
     } = useData();
 
     const { user, updateUser, signOut: contextSignOut, upgradeToPro } = useUser();
@@ -312,15 +313,15 @@ const Settings: React.FC<SettingsProps> = () => {
                             <div className="flex items-center gap-2 mb-0.5">
                                 <h3 className="text-white font-heading font-bold tracking-tight text-lg truncate group-hover:text-primary transition-colors">{user?.nickname || user?.name}</h3>
                                 {user?.tier === SubscriptionTier.PRO ? (
-                                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide shrink-0">PRO</span>
+                                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide shrink-0">{t('settings.profile.pro')}</span>
                                 ) : (
-                                    <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide shrink-0">FREE</span>
+                                    <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide shrink-0">{t('settings.profile.free')}</span>
                                 )}
                             </div>
                             <p className="text-slate-400 text-xs truncate font-medium opacity-80">{user?.email}</p>
 
                             <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                                <span className="text-[10px] text-primary font-bold uppercase tracking-wider">Edit Profile</span>
+                                <span className="text-[10px] text-primary font-bold uppercase tracking-wider">{t('settings.profile.edit')}</span>
                                 <ChevronRight size={10} className="text-primary" />
                             </div>
                         </div>
@@ -331,7 +332,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                                 <Wallet size={12} className="text-emerald-400" />
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Monthly Budget</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{t('settings.budget.monthly')}</span>
                             </div>
                             <span className="text-white font-mono font-bold text-xs tabular-nums">€{monthlyBudget}</span>
                         </div>
@@ -356,9 +357,9 @@ const Settings: React.FC<SettingsProps> = () => {
                         <div className="text-left">
                             <p className="text-white font-heading font-bold text-sm flex items-center gap-1.5">
                                 <Star size={14} className="fill-yellow-400 text-yellow-400 animate-pulse" />
-                                Upgrade to Pro
+                                {t('settings.proFeatures.upgrade')}
                             </p>
-                            <p className="text-indigo-100 text-xs mt-0.5 font-medium">Unlock Ambient, Co-Parenting, Category Budgets, Goals & Habits</p>
+                            <p className="text-indigo-100 text-xs mt-0.5 font-medium">{t('settings.proFeatures.unlockDesc')}</p>
                         </div>
                         <div className="bg-white/20 p-2 rounded-xl text-white group-hover:bg-white/30 transition-colors duration-300">
                             <ChevronRight size={16} />
@@ -370,11 +371,11 @@ const Settings: React.FC<SettingsProps> = () => {
                     {/* Pro Controls (Moved to Top & Consolidated) */}
                     <section>
                         <div className="flex items-center justify-between mb-3 ml-1">
-                            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">Pro Controls</h4>
+                            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">{t('settings.proFeatures.title')}</h4>
                             {user?.tier === SubscriptionTier.PRO && (
                                 <div className="flex items-center gap-1">
                                     <Shield size={10} className="text-amber-500" />
-                                    <span className="text-[10px] text-amber-500 font-bold tracking-wide">{t('settings.active')}</span>
+                                    <span className="text-[10px] text-amber-500 font-bold tracking-wide">{t('settings.proFeatures.active')}</span>
                                 </div>
                             )}
                         </div>
@@ -387,8 +388,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Users size={18} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.coParentingFeatures')}</span>
-                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.coParentingDesc')}</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.coParentingFeatures')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.coParentingDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -412,8 +413,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Target size={18} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.goalTracking')}</span>
-                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.goalTrackingDesc')}</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.goals')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.goalsDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -443,10 +444,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">Life Support</span>
+                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.lifeSupport')}</span>
                                                 {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
                                             </div>
-                                            <span className="text-xs text-slate-500 font-medium block">Crisis resources & aid</span>
+                                            <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.lifeSupportDesc')}</span>
                                         </div>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -477,10 +478,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">Ambient Effects</span>
+                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.ambient')}</span>
                                                 {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
                                             </div>
-                                            <span className="text-xs text-slate-500 font-medium block">Enable dynamic lighting effects</span>
+                                            <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.ambientDesc')}</span>
                                         </div>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -511,10 +512,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">App Background</span>
+                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.appBg')}</span>
                                                 {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
                                             </div>
-                                            <span className="text-xs text-slate-500 font-medium block">Show effect on main screens</span>
+                                            <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.appBgDesc')}</span>
                                         </div>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -543,8 +544,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Lock size={18} />
                                     </div>
                                     <div className={user?.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}>
-                                        <span className="text-slate-200 text-sm font-bold block">Parental Control</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Hide 18+ from Dashboard & Export</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.parental')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.parentalDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -575,8 +576,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <FileDown size={18} />
                                     </div>
                                     <div className={`text-left ${user?.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}`}>
-                                        <span className="text-slate-200 text-sm font-bold block">Export Data</span>
-                                        <span className="text-xs text-slate-500 font-medium">Download CSV for proof</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.export')}</span>
+                                        <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.exportDesc')}</span>
                                     </div>
                                 </div>
                             </button>
@@ -600,10 +601,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         </div>
                                         <div className="text-left">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">Category Budgets</span>
+                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.categoryBudgets')}</span>
                                                 {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
                                             </div>
-                                            <span className="text-xs text-slate-500 font-medium">Set limits per category</span>
+                                            <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.categoryBudgetsDesc')}</span>
                                         </div>
                                     </div>
                                     {user?.tier !== SubscriptionTier.PRO ? <Lock size={14} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-600" />}
@@ -642,10 +643,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         </div>
                                         <div className="text-left">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">Goals & Habits</span>
+                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.goals')}</span>
                                                 {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
                                             </div>
-                                            <span className="text-xs text-slate-500 font-medium">Track lifestyle habits</span>
+                                            <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.goalsDesc')}</span>
                                         </div>
                                     </div>
                                     {user?.tier !== SubscriptionTier.PRO && <Lock size={14} className="text-slate-500" />}
@@ -686,7 +687,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                                 <div>
                                                     <p className={`text-sm font-bold ${goal.isEnabled ? 'text-white' : 'text-slate-400'}`}>{goal.name}</p>
                                                     <p className="text-[10px] text-slate-500">
-                                                        {goal.isEnabled ? `Tracking ${goal.streak} day streak` : 'Enable to track habits'}
+                                                        {goal.isEnabled ? t('settings.proFeatures.trackingStreak', { streak: goal.streak }) : t('settings.proFeatures.enableGoals')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -711,7 +712,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                     {/* Security Settings */}
                     <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.security')}</h4>
+                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.security.title')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             {/* Face ID / Biometric Login */}
                             <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
@@ -720,8 +721,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Lock size={18} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">Biometric Login</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Use Face ID or Touch ID</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.security.biometric')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.security.biometricDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -743,8 +744,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <RefreshCw size={18} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">Stay Logged In</span>
-                                        <span className="text-xs text-slate-500 font-medium block">Remember me on this device</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.security.stayLoggedIn')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.security.stayLoggedInDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -762,7 +763,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                     {/* Category Management */}
                     <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.categories')}</h4>
+                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.categories.title')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             <button
                                 onClick={() => setShowCategoryModal(true)}
@@ -773,8 +774,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Tag size={18} />
                                     </div>
                                     <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Manage Categories</span>
-                                        <span className="text-xs text-slate-500 font-medium">Add or remove custom tags</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.categories.manage')}</span>
+                                        <span className="text-xs text-slate-500 font-medium">{t('settings.categories.manageDesc')}</span>
                                     </div>
                                 </div>
                                 <div className="bg-slate-800 p-1.5 rounded-lg text-slate-400">
@@ -807,7 +808,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                     {/* General Settings */}
                     <section>
-                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.general')}</h4>
+                        <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.general.title')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             {/* Language Selector */}
                             <div className="w-full p-4 border-b border-white/5">
@@ -819,8 +820,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                             </svg>
                                         </div>
                                         <div className="text-left">
-                                            <span className="text-slate-200 text-sm font-bold block">{t('settings.language')}</span>
-                                            <span className="text-xs text-slate-500 font-medium">{t('settings.selectLanguage')}</span>
+                                            <span className="text-slate-200 text-sm font-bold block">{t('settings.language.title')}</span>
+                                            <span className="text-xs text-slate-500 font-medium">{t('settings.language.desc')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -836,7 +837,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                             'es': 'Español',
                                             'fr': 'Français',
                                             'de': 'Deutsch',
-                                            'it': 'Italiano'
+                                            'it': 'Italiano',
+                                            'sv': 'Svenska',
+                                            'no': 'Norsk',
+                                            'da': 'Dansk'
                                         };
                                         showToast(`Language changed to ${languageNames[e.target.value]}`, 'success');
                                     }}
@@ -847,6 +851,9 @@ const Settings: React.FC<SettingsProps> = () => {
                                     <option value="fr">🇫🇷 Français</option>
                                     <option value="de">🇩🇪 Deutsch</option>
                                     <option value="it">🇮🇹 Italiano</option>
+                                    <option value="sv">🇸🇪 Svenska</option>
+                                    <option value="no">🇳🇴 Norsk</option>
+                                    <option value="da">🇩🇰 Dansk</option>
                                 </select>
                             </div>
 
@@ -856,11 +863,11 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Users size={18} />
                                     </div>
                                     <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Family Group</span>
-                                        <span className="text-xs text-slate-500 font-medium">Manage members</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.general.family')}</span>
+                                        <span className="text-xs text-slate-500 font-medium">{t('settings.general.familyDesc')}</span>
                                     </div>
                                 </div>
-                                <span className="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">Soon</span>
+                                <span className="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">{t('settings.general.soon')}</span>
                             </button>
                             <button className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5">
                                 <div className="flex items-center gap-3">
@@ -868,7 +875,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Database size={18} />
                                     </div>
                                     <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Privacy & Data</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.general.privacy')}</span>
                                     </div>
                                 </div>
                                 <ChevronRight className="text-slate-600" size={16} />
@@ -890,8 +897,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                                 <Database size={18} />
                                             </div>
                                             <div className="text-left">
-                                                <span className="text-slate-200 text-sm font-bold block">Seed Data (Dev)</span>
-                                                <span className="text-xs text-slate-500 font-medium">Generate scenario data</span>
+                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.data.seed')}</span>
+                                                <span className="text-xs text-slate-500 font-medium">{t('settings.data.seedDesc', { scenario: '' }).replace('()', '')}</span>
                                             </div>
                                         </div>
                                         <ChevronRight className="text-slate-600" size={16} />
@@ -955,8 +962,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <FileDown size={18} />
                                     </div>
                                     <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Export Data</span>
-                                        <span className="text-xs text-slate-500 font-medium">Download CSV backup</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.export')}</span>
+                                        <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.exportDesc')}</span>
                                     </div>
                                 </div>
                                 <ChevronRight className="text-slate-600" size={16} />
@@ -971,7 +978,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <FileText size={18} />
                                     </div>
                                     <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">Legal Export (PDF)</span>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.modals.legalExport')}</span>
                                         <span className="text-xs text-slate-500 font-medium">Generate formal report</span>
                                     </div>
                                 </div>
@@ -997,14 +1004,14 @@ const Settings: React.FC<SettingsProps> = () => {
                     <section className="mb-6">
                         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                             <Crown size={16} className="text-purple-400" />
-                            Subscription
+                            {t('settings.subscription.title')}
                         </h2>
 
                         <div className="bg-slate-800/30 rounded-2xl border border-white/5 p-4">
                             {/* Current Status */}
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <p className="text-xs text-slate-500 uppercase tracking-wide font-bold">Current Plan</p>
+                                    <p className="text-xs text-slate-500 uppercase tracking-wide font-bold">{t('settings.subscription.currentPlan')}</p>
                                     <p className="text-lg font-bold text-white mt-1">
                                         {isProMode ? (
                                             <span className="flex items-center gap-2">
@@ -1015,6 +1022,11 @@ const Settings: React.FC<SettingsProps> = () => {
                                             'Free'
                                         )}
                                     </p>
+                                    {isProMode && proActivatedAt && (
+                                        <p className="text-[10px] text-slate-500 mt-1">
+                                            {t('settings.subscription.activeSince')} {new Date(proActivatedAt).toLocaleDateString()}
+                                        </p>
+                                    )}
                                 </div>
                                 {isProMode && (
                                     <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-1">
@@ -1037,7 +1049,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 transition-all font-medium text-sm"
                                 >
                                     <XIcon size={16} />
-                                    Cancel Subscription
+                                    {t('settings.subscription.cancel')}
                                 </button>
                             ) : (
                                 <button
@@ -1048,7 +1060,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold text-sm transition-all shadow-lg shadow-purple-500/20"
                                 >
                                     <Crown size={16} />
-                                    Upgrade to Pro
+                                    {t('settings.subscription.upgrade')}
                                 </button>
                             )}
                         </div>
@@ -1070,10 +1082,10 @@ const Settings: React.FC<SettingsProps> = () => {
                         className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-400 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all font-bold text-sm shadow-sm mb-8"
                     >
                         <LogOut size={16} />
-                        Sign Out
+                        {t('settings.account.signOut')}
                     </button>
 
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2 mt-8">Dev Tools</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2 mt-8">{t('settings.uicalc.devTools')}</p>
 
                     {/* Test Widget Button */}
                     <button
@@ -1094,7 +1106,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-sm font-medium mb-3"
                     >
                         <Trophy size={16} />
-                        Update Widget Data
+                        {t('settings.uicalc.testWidget')}
                     </button>
 
 
@@ -1117,7 +1129,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mb-4"
                     >
                         <Database size={18} />
-                        Debug Storage (List Keys)
+                        {t('settings.uicalc.debugStorage')}
                     </button>
 
                     <button
@@ -1125,7 +1137,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
                     >
                         <Trash2 size={18} />
-                        Delete All Data
+                        {t('settings.data.delete')}
                     </button>
                 </div>
             </motion.div >
@@ -1153,11 +1165,11 @@ const Settings: React.FC<SettingsProps> = () => {
                                 <XIcon size={24} />
                             </button>
 
-                            <h2 className="text-xl font-heading font-bold text-white mb-6">Add New Category</h2>
+                            <h2 className="text-xl font-heading font-bold text-white mb-6">{t('settings.modals.addCategory')}</h2>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category Name</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.modals.categoryName')}</label>
                                     <input
                                         type="text"
                                         value={newCategoryName}
@@ -1169,7 +1181,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Color Tag</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.modals.colorTag')}</label>
                                     <div className="flex gap-3 flex-wrap">
                                         {['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'].map(color => (
                                             <button
@@ -1187,7 +1199,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     disabled={!newCategoryName.trim()}
                                     className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all mt-4"
                                 >
-                                    Create Category
+                                    {t('settings.modals.createCategory')}
                                 </button>
                             </div>
                         </div>
@@ -1207,11 +1219,11 @@ const Settings: React.FC<SettingsProps> = () => {
                                 <XIcon size={24} />
                             </button>
 
-                            <h2 className="text-xl font-heading font-bold text-white mb-6">Add Subscription</h2>
+                            <h2 className="text-xl font-heading font-bold text-white mb-6">{t('settings.modals.addSubscription')}</h2>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Name</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.recurring.name')}</label>
                                     <input
                                         type="text"
                                         value={newExpenseName}
@@ -1223,7 +1235,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Amount (€)</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.recurring.amount')} (€)</label>
                                         <input
                                             type="number"
                                             value={newExpenseAmount}
@@ -1233,7 +1245,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Frequency</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.recurring.frequency')}</label>
                                         <select
                                             value={newExpenseFrequency}
                                             onChange={(e) => setNewExpenseFrequency(e.target.value as any)}
@@ -1247,7 +1259,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('charts.category')}</label>
                                     <select
                                         value={newExpenseCategory}
                                         onChange={(e) => setNewExpenseCategory(e.target.value)}
@@ -1261,7 +1273,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Next Due Date</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.modals.nextDueDate')}</label>
                                     <input
                                         type="date"
                                         value={newExpenseDate}
@@ -1275,7 +1287,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     disabled={!newExpenseName || !newExpenseAmount || !newExpenseCategory}
                                     className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all mt-4"
                                 >
-                                    Add Subscription
+                                    {t('settings.modals.addSubscription')}
                                 </button>
                             </div>
                         </div>
@@ -1298,14 +1310,14 @@ const Settings: React.FC<SettingsProps> = () => {
                             <div className="mb-6">
                                 <h2 className="text-xl font-heading font-bold text-white flex items-center gap-2">
                                     <FileText className="text-blue-400" />
-                                    Legal Export
+                                    {t('settings.modals.legalExport')}
                                 </h2>
-                                <p className="text-slate-400 text-sm mt-1">Generate a PDF report for legal/custody purposes.</p>
+                                <p className="text-slate-400 text-sm mt-1">{t('settings.modals.generatePdf')}</p>
                             </div>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('settings.modals.startDate')}</label>
                                     <input
                                         type="date"
                                         value={exportStartDate}
@@ -1314,7 +1326,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('settings.modals.endDate')}</label>
                                     <input
                                         type="date"
                                         value={exportEndDate}
@@ -1355,7 +1367,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all mt-4 flex items-center justify-center gap-2"
                                 >
                                     <FileDown size={18} />
-                                    Generate PDF
+                                    {t('settings.modals.generatePdf')}
                                 </button>
                             </div>
                         </div>
@@ -1376,14 +1388,14 @@ const Settings: React.FC<SettingsProps> = () => {
                             </button>
 
                             <div className="mb-6">
-                                <h2 className="text-xl font-heading font-bold text-white">Edit Profile</h2>
-                                <p className="text-slate-400 text-sm mt-1">Customize your appearance</p>
+                                <h2 className="text-xl font-heading font-bold text-white">{t('settings.profile.edit')}</h2>
+                                <p className="text-slate-400 text-sm mt-1">{t('settings.profile.customize')}</p>
                             </div>
 
                             <div className="space-y-6">
                                 {/* Nickname Input */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nickname</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('settings.profile.nickname')}</label>
                                     <input
                                         type="text"
                                         value={tempNickname}
@@ -1406,7 +1418,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         </div>
                                     </div>
 
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Choose Avatar</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">{t('settings.profile.chooseAvatar')}</label>
 
                                     {/* Create generic avatar list for selection if not using emojis */}
                                     {/* Emoji Grid */}
@@ -1455,7 +1467,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             <div className="bg-slate-700 p-2 rounded-full text-slate-300 group-hover:bg-slate-600 transition-colors">
                                                 <Plus size={20} />
                                             </div>
-                                            <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200">Upload Custom Image</span>
+                                            <span className="text-xs font-bold text-slate-400 group-hover:text-slate-200">{t('settings.profile.upload')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1463,7 +1475,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 {/* Monthly Budget Setting */}
                                 <div className="pt-2 border-t border-white/10">
                                     <div className="flex justify-between items-center mb-2">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Monthly Budget</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">{t('settings.budget.monthly')}</label>
                                         <span className="text-white font-mono font-bold tabular-nums">€{monthlyBudget}</span>
                                     </div>
                                     <input
@@ -1501,7 +1513,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Check size={18} />
-                                        Save Changes
+                                        {t('settings.profile.save')}
                                     </button>
 
                                     <button
@@ -1510,7 +1522,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         }}
                                         className="w-full text-slate-500 text-xs font-bold hover:text-red-400 transition-colors py-2"
                                     >
-                                        Reset Avatar to Default
+                                        {t('settings.profile.reset')}
                                     </button>
                                 </div>
                             </div>
@@ -1525,9 +1537,9 @@ const Settings: React.FC<SettingsProps> = () => {
                 showSeedConfirmModal && createPortal(
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
                         <div className="bg-surface w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-                            <h2 className="text-xl font-heading font-bold text-white mb-2">Overwrite Data?</h2>
+                            <h2 className="text-xl font-heading font-bold text-white mb-2">{t('settings.modals.overwriteTitle')}</h2>
                             <p className="text-slate-400 text-sm mb-6">
-                                This will <strong>delete all existing receipts</strong> and generate new <span className="uppercase font-bold text-primary">{seedScenario}</span> scenario data. This cannot be undone.
+                                {t('settings.modals.overwriteDesc', { scenario: seedScenario }).replace('()', '')}
                             </p>
 
                             <div className="flex flex-col gap-3">
@@ -1546,14 +1558,14 @@ const Settings: React.FC<SettingsProps> = () => {
                                     className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Database size={18} />
-                                    Overwrite Data
+                                    {t('settings.modals.overwriteData')}
                                 </button>
 
                                 <button
                                     onClick={() => setShowSeedConfirmModal(false)}
                                     className="w-full bg-white/5 hover:bg-white/10 text-slate-300 font-bold py-3.5 rounded-xl transition-all"
                                 >
-                                    Cancel
+                                    {t('settings.modals.cancel')}
                                 </button>
                             </div>
                         </div>

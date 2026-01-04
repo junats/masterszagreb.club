@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Camera as CameraIcon, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine, Edit2, Save, X } from 'lucide-react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { analyzeReceiptImage } from '../services/geminiService';
 import { storageService } from '../services/storageService';
 import { Receipt, AnalysisResult } from '../types';
@@ -127,7 +128,27 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         // 3. Analyze with Unified Smart Service
         const result: AnalysisResult = await analyzeReceiptImage(base64ForAI, categories);
 
-        // 4. Upload Image via Storage Service (Cloud or Mock)
+        // 4. AI Insights Analysis (Pro feature only)
+        let itemsWithInsights = result.items || [];
+        if (isProMode && itemsWithInsights.length > 0) {
+          try {
+            console.log('✨ Analyzing items for AI insights (Pro feature)...');
+            const { analyzeItemInsights } = await import('../services/geminiService');
+            const insights = await analyzeItemInsights(itemsWithInsights);
+
+            // Attach insights to items
+            itemsWithInsights = itemsWithInsights.map((item, idx) => ({
+              ...item,
+              insights: insights[idx] || undefined
+            }));
+            console.log('✅ AI insights added to', itemsWithInsights.filter(i => i.insights).length, 'items');
+          } catch (insightsError) {
+            console.warn('⚠️ Failed to get AI insights:', insightsError);
+            // Continue without insights - not critical
+          }
+        }
+
+        // 5. Upload Image via Storage Service (Cloud or Mock)
         let storagePath = '';
         let imageUrl = '';
         try {
@@ -148,8 +169,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           id: generateId(),
           storeName: result.storeName || 'Unknown Store',
           date: result.date || new Date().toISOString().split('T')[0],
-          total: result.total || (result.items || []).reduce((sum, item) => sum + item.price, 0) || 0,
-          items: result.items || [],
+          total: result.total || (itemsWithInsights).reduce((sum, item) => sum + item.price, 0) || 0,
+          items: itemsWithInsights,
           scannedAt: new Date().toISOString(),
           type: result.type || 'receipt',
           referenceCode: result.referenceCode,
@@ -242,6 +263,85 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       console.log('Gallery cancelled or failed', e);
       if (String(e).includes('cancelled')) return;
       setError('Failed to pick images. Please try again.');
+    }
+  };
+
+  const handleBarcodeScan = async () => {
+    try {
+      // Check permissions first usually, but plugin handles it nicely
+      const { barcodes } = await BarcodeScanner.scan({
+        formats: [], // ALL formats (includes QR, DataMatrix for meds)
+      });
+
+      if (barcodes.length > 0) {
+        const code = barcodes[0].rawValue;
+        console.log('Barcode Scanned:', code);
+        setIsAnalyzing(true);
+
+        // --- 1. Fetch Real Product Data ---
+        let productData: any = null;
+        try {
+          const { fetchProductByBarcode } = await import('../services/productService');
+          productData = await fetchProductByBarcode(code);
+        } catch (e) {
+          console.warn('Product lookup failed', e);
+        }
+
+        // --- 2. Create Receipt Item ---
+        // If unknown, prompt for package photo
+        const isUnknown = !productData;
+        const mockItem = {
+          name: productData ? (productData.brand ? `${productData.brand} ${productData.name}` : productData.name) : `Unknown Product (${code})`,
+          price: 0,
+          category: productData?.category || 'Health', // Default to Health/Other
+          quantity: 1,
+          barcode: code,
+          imageUrl: productData?.imageUrl,
+          isRestricted: (productData?.category?.toLowerCase().includes('alcohol') || productData?.category?.toLowerCase().includes('tobacco')) || false,
+
+          // Pre-inject insight for unknown items to guide user
+          insights: isUnknown ? {
+            nutritionScore: -1,
+            valueRating: 3,
+            childFriendly: 1,
+            insight: "⚠️ Unrecognized. Please take a photo of the package for safety analysis.",
+            warnings: ["Verify item details"]
+          } : undefined
+        };
+
+        // --- 3. Create Receipt ---
+        const newReceipt: Receipt = {
+          id: generateId(),
+          storeName: productData?.brand || 'Quick Scan',
+          date: new Date().toISOString().split('T')[0],
+          total: 0,
+          items: [{ ...mockItem }], // Insights might be pre-filled if unknown
+          scannedAt: new Date().toISOString(),
+          type: 'receipt',
+          storagePath: '',
+          imageUrl: productData?.imageUrl || ''
+        };
+
+        // --- 4. AI Insights Analysis ---
+        if (isProMode) {
+          try {
+            // We can pass the barcode to the AI service if we updated it, or just use the name
+            const { analyzeItemInsights } = await import('../services/geminiService');
+            // We'd ideally want to pass the barcode here directly
+            const insights = await analyzeItemInsights([newReceipt.items[0]], [code]);
+            if (insights[0]) {
+              newReceipt.items[0].insights = insights[0];
+            }
+          } catch (e) {
+            console.warn('Barcode AI lookup failed', e);
+          }
+        }
+
+        finishProcessing([newReceipt], []);
+      }
+    } catch (e) {
+      console.log('Barcode scan failed/cancelled', e);
+      // Quiet fail on cancel
     }
   };
 
@@ -386,7 +486,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         transition={{ duration: 0.5, delay: 0.2 }}
         className="flex flex-col h-full"
       >
-        <div className="mb-6 text-center">
+        <div className="mb-3 text-center">
           <div className="w-16 h-16 bg-surfaceHighlight rounded-2xl mx-auto flex items-center justify-center mb-4 ring-1 ring-white/10 shadow-lg shadow-black/50">
             <ScanLine size={32} className="text-primary" />
           </div>
@@ -465,15 +565,26 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             <span className="text-slate-300 font-medium">Upload File</span>
           </button>
 
-          {/* Manual Entry */}
+          {/* Barcode Scan (New) */}
+          <button
+            onClick={handleBarcodeScan}
+            className="aspect-square bg-slate-900 rounded-3xl border border-slate-800 flex flex-col items-center justify-center gap-4 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-black/50"
+          >
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
+              <ScanLine size={32} className="text-amber-400" />
+            </div>
+            <span className="text-slate-300 font-medium">Scan Item</span>
+          </button>
+
+          {/* Manual Entry - Adjusted grid */}
           <button
             onClick={() => setShowManualModal(true)}
-            className="col-span-2 h-20 bg-slate-900 rounded-3xl border border-slate-800 flex flex-row items-center justify-center gap-4 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-black/50"
+            className="aspect-square bg-slate-900 rounded-3xl border border-slate-800 flex flex-col items-center justify-center gap-4 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-black/50"
           >
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
-              <Edit2 size={20} className="text-emerald-400" />
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
+              <Edit2 size={32} className="text-emerald-400" />
             </div>
-            <span className="text-slate-300 font-medium">Enter Manually</span>
+            <span className="text-slate-300 font-medium">Manual</span>
           </button>
         </div>
 
@@ -514,7 +625,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                   </div>
 
                   {/* Scrollable Content Area */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 overscroll-contain">
                     {/* Store & Date */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -559,19 +670,53 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                       </label>
                       <div className="space-y-2">
                         {(scannedReceipts[0]?.items || []).map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                            <div className="flex-1 min-w-0 pr-3">
-                              <p className="text-sm text-white font-medium truncate">{item.name}</p>
-                              <div className="flex gap-2 mt-1">
-                                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
-                                {item.isChildRelated && (
-                                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                    <CheckCircle size={8} /> Child
-                                  </span>
-                                )}
+                          <div key={idx} className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0 pr-3">
+                                <p className="text-sm text-white font-medium truncate">{item.name}</p>
+                                <div className="flex gap-2 mt-1">
+                                  <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
+                                  {item.isChildRelated && (
+                                    <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                      <CheckCircle size={8} /> Child
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+                              <span className="text-sm font-mono text-slate-300">€{item.price.toFixed(2)}</span>
                             </div>
-                            <span className="text-sm font-mono text-slate-300">€{item.price.toFixed(2)}</span>
+
+                            {/* AI Insights Display */}
+                            {item.insights && (
+                              <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-2">
+                                <div className="col-span-2 text-[10px] text-slate-400 italic">
+                                  ✨ {item.insights.insight}
+                                </div>
+                                <div className="flex items-center gap-2 bg-black/20 rounded p-1.5">
+                                  {item.insights.nutritionScore === -1 ? (
+                                    <span className="text-[9px] text-slate-500 w-full text-center font-medium tracking-wide">UTILITY ITEM</span>
+                                  ) : (
+                                    <>
+                                      <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full ${item.insights.nutritionScore > 70 ? 'bg-emerald-500' : item.insights.nutritionScore > 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                          style={{ width: `${item.insights.nutritionScore}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-[9px] font-bold text-slate-400 w-8 text-right">Nutri {item.insights.nutritionScore}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 bg-black/20 rounded p-1.5 justify-center">
+                                  <span className="text-[9px] text-slate-400">Value:</span>
+                                  <div className="flex">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                      <span key={star} className={`text-[10px] ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Receipt, Category } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
     PieChart, Pie, Cell, AreaChart, Area
@@ -19,6 +20,7 @@ import { CATEGORY_COLORS } from '../constants/colors';
 const COLORS = CATEGORY_COLORS;
 
 const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestricted, categoryBudgets, childSupportMode }) => {
+    const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<'trend' | 'child' | 'dist' | 'sources' | 'budgets'>('trend');
 
     React.useEffect(() => {
@@ -170,33 +172,33 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                     onClick={() => setActiveTab('trend')}
                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'trend' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                 >
-                    <TrendingUp size={14} /> Trend
+                    <TrendingUp size={14} /> {t('analytics.trend')}
                 </button>
                 {childSupportMode && (
                     <button
                         onClick={() => setActiveTab('child')}
                         className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'child' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                     >
-                        <Baby size={14} /> Child
+                        <Baby size={14} /> {t('analytics.child')}
                     </button>
                 )}
                 <button
                     onClick={() => setActiveTab('dist')}
                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'dist' ? 'bg-pink-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                 >
-                    <PieIcon size={14} /> Dist
+                    <PieIcon size={14} /> {t('analytics.dist')}
                 </button>
                 <button
                     onClick={() => setActiveTab('sources')}
                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'sources' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                 >
-                    <Activity size={14} /> Sources
+                    <Activity size={14} /> {t('analytics.sources')}
                 </button>
                 <button
                     onClick={() => setActiveTab('budgets')}
                     className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === 'budgets' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                 >
-                    <Wallet size={14} /> Budgets
+                    <Wallet size={14} /> {t('analytics.budgets')}
                 </button>
             </div>
 
@@ -206,7 +208,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'trend' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Spending Composition</h4>
+                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.spendingComposition')}</h4>
                         </div>
                         <div className="h-[85%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -224,8 +226,8 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
 
                                     <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                    <Area type="monotone" dataKey="discretionary" name="Wants" stackId="1" stroke="#f472b6" fill="url(#colorDiscretionary)" />
-                                    <Area type="monotone" dataKey="essentials" name="Needs" stackId="1" stroke="#34d399" fill="url(#colorEssentials)" />
+                                    <Area type="monotone" dataKey="discretionary" name={t('analytics.wants')} stackId="1" stroke="#f472b6" fill="url(#colorDiscretionary)" />
+                                    <Area type="monotone" dataKey="essentials" name={t('analytics.needs')} stackId="1" stroke="#34d399" fill="url(#colorEssentials)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -235,7 +237,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'child' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Child Spending Trend</h4>
+                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.childTrend')}</h4>
                         </div>
                         <div className="h-[85%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -249,7 +251,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
 
                                     <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                    <Area type="monotone" dataKey="child" name="Child Expenses" stroke="#10b981" fill="url(#colorChild)" />
+                                    <Area type="monotone" dataKey="child" name={t('analytics.childExpenses')} stroke="#10b981" fill="url(#colorChild)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -259,7 +261,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'dist' && (
                     <AnimatedSection className="h-64 w-full relative" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Category Breakdown</h4>
+                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.categoryBreakdown')}</h4>
                         </div>
                         <div className="h-[90%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -282,7 +284,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-4 pr-20">
-                                <span className="text-[10px] text-slate-500 font-medium uppercase">Total</span>
+                                <span className="text-[10px] text-slate-500 font-medium uppercase">{t('analytics.total')}</span>
                                 <span className="text-lg font-heading font-bold text-white tabular-nums">€{categoryData.total.toFixed(0)}</span>
                             </div>
                         </div>
@@ -292,7 +294,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'sources' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Top Merchants</h4>
+                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.topMerchants')}</h4>
                         </div>
                         <div className="h-[90%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -307,7 +309,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                     <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
 
                                     <Legend wrapperStyle={{ fontSize: '10px' }} />
-                                    <Bar dataKey="value" name="Spend (€)" fill="url(#colorSource)" radius={[0, 4, 4, 0]} barSize={20} />
+                                    <Bar dataKey="value" name={t('analytics.spendCurrency')} fill="url(#colorSource)" radius={[0, 4, 4, 0]} barSize={20} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -317,8 +319,8 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'budgets' && (
                     <AnimatedSection className="h-full w-full overflow-y-auto no-scrollbar pb-2" animateContainer={true}>
                         <div className="flex justify-between items-center mb-4 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Budget vs Actual</h4>
-                            <span className="text-[10px] text-slate-500 font-medium">Set limits in Settings</span>
+                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.budgetActual')}</h4>
+                            <span className="text-[10px] text-slate-500 font-medium">{t('analytics.setLimits')}</span>
                         </div>
                         <div className="space-y-4">
                             {(budgetData || []).map((item) => {
@@ -329,7 +331,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 return (
                                     <div key={item.name} className="space-y-1.5">
                                         <div className="flex justify-between items-end text-xs">
-                                            <span className="font-bold text-slate-300">{item.name}</span>
+                                            <span className="font-bold text-slate-300">{t(`categories.${item.name.toLowerCase()}`)}</span>
                                             <div className="flex items-center gap-1.5">
                                                 <span className={`font-mono font-bold ${isOverBudget ? 'text-red-400' : 'text-white'}`}>€{item.actual.toFixed(0)}</span>
                                                 <span className="text-slate-500">/</span>
@@ -346,7 +348,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 );
                             })}
                             {budgetData.length === 0 && (
-                                <p className="text-center text-slate-500 text-xs py-8">No spending data or budgets set.</p>
+                                <p className="text-center text-slate-500 text-xs py-8">{t('analytics.noBudget')}</p>
                             )}
                         </div>
                     </AnimatedSection>

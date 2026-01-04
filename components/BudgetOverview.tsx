@@ -2,6 +2,7 @@ import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ChevronRight, AlertTriangle, Wallet } from 'lucide-react';
 import { DashboardMetrics } from '../hooks/useDashboardMetrics';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface BudgetOverviewProps {
     metrics: DashboardMetrics;
@@ -16,6 +17,7 @@ export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
     setBudgetView,
     monthlyBudget
 }) => {
+    const { t } = useLanguage();
 
     // Logic for progress bar and chart data
     const progressValue = budgetView === 'daily' ? metrics.todayTotal
@@ -46,7 +48,7 @@ export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
                     <div className={"p-1.5 rounded-lg " + (isOverBudget ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-300')}>
                         <Wallet size={14} />
                     </div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Budget</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('charts.budget')}</span>
                 </div>
                 <div className="flex bg-white/5 rounded-lg p-0.5">
                     {['daily', 'weekly', 'monthly'].map((v) => (
@@ -57,7 +59,7 @@ export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
                                 budgetView === v ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                             )}
                         >
-                            {v === 'daily' ? 'Day' : v === 'weekly' ? 'Week' : 'Mo'}
+                            {v === 'daily' ? t('days.day') : v === 'weekly' ? t('days.week') : t('days.mo')}
                         </button>
                     ))}
                 </div>
@@ -89,12 +91,12 @@ export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
                 {isOverBudget ? (
                     <div className="flex items-start gap-2 text-[10px] font-medium text-red-400 bg-red-500/10 p-2 rounded-lg border border-red-500/10">
                         <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-                        <p>You have exceeded your {budgetView} budget by €{overSpend.toFixed(0)}.</p>
+                        <p>{t('insights.budgetExceededSubtext', { amount: overSpend.toFixed(0) })}</p>
                     </div>
                 ) : (
                     <div className="flex justify-between text-[10px] text-slate-500">
-                        <span>{progressRatio.toFixed(0)}% Used</span>
-                        <span>€{Math.max(0, progressTarget - progressValue).toFixed(0)} Left</span>
+                        <span>{t('dashboard.currentSpend')}</span>
+                        <span>{t('dashboard.remainingBudget')}</span>
                     </div>
                 )}
             </div>

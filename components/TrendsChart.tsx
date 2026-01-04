@@ -19,8 +19,12 @@ export const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 // Extracted TrendsChart Component
 export const TrendsChart = ({ activeData, categories, isVisible, chartView, layoutId }: { activeData: any[], categories: CategoryDefinition[], isVisible: boolean, chartView: string, layoutId?: string }) => {
+    const { t } = useLanguage();
+
     // Simplified animation logic: Direct control via Props
     // We rely on the parent (AnimatedSection) to tell us when to be visible
     // Recharts will animate when 'isAnimationActive' becomes true or on mount
@@ -59,6 +63,7 @@ export const TrendsChart = ({ activeData, categories, isVisible, chartView, layo
                             key={cat.id}
                             type="monotone"
                             dataKey={cat.name}
+                            name={t(`categories.${cat.id}`)}
                             stackId="1"
                             stroke={cat.color}
                             fill={`url(#gradient-trend-${cat.name})`}

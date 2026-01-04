@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import { CountUp } from './CountUp'; // Assuming CountUp is in the same directory
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface InsightsGaugesProps {
     insightView: 'daily' | 'weekly' | 'monthly';
@@ -10,6 +11,7 @@ interface InsightsGaugesProps {
 }
 
 export const InsightsGauges: React.FC<InsightsGaugesProps> = ({ insightView, metrics, isVisible }) => {
+    const { t } = useLanguage();
     const [animationReady, setAnimationReady] = useState(false);
 
     // Force delay for animation trigger to allow layout to settle
@@ -23,11 +25,11 @@ export const InsightsGauges: React.FC<InsightsGaugesProps> = ({ insightView, met
     }, [isVisible]);
 
     const gauges = useMemo(() => [
-        { label: 'Education', value: insightView === 'monthly' ? metrics.educationRatio : insightView === 'weekly' ? metrics.weeklyRatios.education : metrics.dailyRatios.education, color: '#818cf8' }, // Indigo
-        { label: 'Food', value: insightView === 'monthly' ? metrics.foodRatio : insightView === 'weekly' ? metrics.weeklyRatios.food : metrics.dailyRatios.food, color: '#fbbf24' }, // Amber
-        { label: 'Activities', value: insightView === 'monthly' ? metrics.luxuryRatio : insightView === 'weekly' ? metrics.weeklyRatios.activities : metrics.dailyRatios.activities, color: '#f472b6' }, // Pink
-        { label: 'Health', value: insightView === 'monthly' ? metrics.healthRatio : insightView === 'weekly' ? metrics.weeklyRatios.health : metrics.dailyRatios.health, color: '#34d399' } // Emerald
-    ], [insightView, metrics]);
+        { label: t('misc.education'), value: insightView === 'monthly' ? metrics.educationRatio : insightView === 'weekly' ? metrics.weeklyRatios.education : metrics.dailyRatios.education, color: '#818cf8' }, // Indigo
+        { label: t('misc.food'), value: insightView === 'monthly' ? metrics.foodRatio : insightView === 'weekly' ? metrics.weeklyRatios.food : metrics.dailyRatios.food, color: '#fbbf24' }, // Amber
+        { label: t('misc.activities'), value: insightView === 'monthly' ? metrics.luxuryRatio : insightView === 'weekly' ? metrics.weeklyRatios.activities : metrics.dailyRatios.activities, color: '#f472b6' }, // Pink
+        { label: t('misc.health'), value: insightView === 'monthly' ? metrics.healthRatio : insightView === 'weekly' ? metrics.weeklyRatios.health : metrics.dailyRatios.health, color: '#34d399' } // Emerald
+    ], [insightView, metrics, t]);
 
     return (
         <div className="grid grid-cols-4 gap-4">

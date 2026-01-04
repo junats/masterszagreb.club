@@ -30,6 +30,10 @@ interface WidgetData {
     daysWithCoparent: number;
     nextTransition: string;
 
+    // Premium / Insights
+    latestInsight?: string;
+    proStatus?: boolean;
+
     lastUpdated: number;
 }
 
@@ -45,17 +49,30 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const WidgetService = {
-    async updateWidgetData(receipts: Receipt[], monthlyBudget: number, custodyDays: any[] = []) {
+    async updateWidgetData(receipts: Receipt[], monthlyBudget: number, custodyDays: any[] = [], isProMode: boolean = false) {
         console.log('🔵 WidgetService: updateWidgetData called');
         console.log('📊 WidgetService: Receipts count:', receipts.length);
-        console.log('💰 WidgetService: Monthly budget:', monthlyBudget);
-        console.log('👨‍👧 WidgetService: Custody days count:', custodyDays.length);
-        console.log('👨‍👧 WidgetService: Custody days sample:', custodyDays.slice(0, 3));
+        console.log('✨ Pro Mode:', isProMode);
 
         try {
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
+
+            // Find Latest Insight (Premium)
+            let latestInsight: string | undefined = undefined;
+            if (isProMode) {
+                const recentReceiptWithInsight = receipts
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .find(r => r.items.some(i => i.insights && i.insights.insight));
+
+                if (recentReceiptWithInsight) {
+                    const item = recentReceiptWithInsight.items.find(i => i.insights?.insight);
+                    if (item && item.insights) {
+                        latestInsight = `${item.name}: ${item.insights.insight}`;
+                    }
+                }
+            }
 
             // Calculate Monthly Spend
             const monthlySpend = receipts.reduce((total, r) => {
@@ -108,19 +125,15 @@ export const WidgetService = {
 
             // Calculate budget percentage
             const budgetPercentage = monthlyBudget > 0 ? (monthlySpend / monthlyBudget) * 100 : 0;
-
-            // Calculate additional metrics
             const remainingBudget = monthlyBudget - monthlySpend;
 
-            // Days left in month
+            // Days left
             const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
             const currentDay = now.getDate();
             const daysLeftInMonth = lastDayOfMonth - currentDay;
-
-            // Average daily spend (based on days elapsed)
             const averageDailySpend = currentDay > 0 ? monthlySpend / currentDay : 0;
 
-            // Calculate Category Breakdown
+            // Calculate Category Breakdown CORRECTLY
             const categoryTotals: Record<string, number> = {};
 
             receipts.forEach(r => {
@@ -131,10 +144,21 @@ export const WidgetService = {
                 }
 
                 if (rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear) {
-                    const category = r.categoryId || 'Other';
-                    categoryTotals[category] = (categoryTotals[category] || 0) + r.total;
+                    if (r.items && r.items.length > 0) {
+                        r.items.forEach(item => {
+                            const cat = item.category || 'Other';
+                            // Accumulate amounts properly
+                            categoryTotals[cat] = (categoryTotals[cat] || 0) + item.price;
+                        });
+                    } else {
+                        // Fallback
+                        const category = r.categoryId || 'Other';
+                        categoryTotals[category] = (categoryTotals[category] || 0) + r.total;
+                    }
                 }
             });
+
+            console.log("📊 Debug Category Totals:", categoryTotals);
 
             // Get top 5 categories
             const topCategories: CategorySpend[] = Object.entries(categoryTotals)
@@ -151,17 +175,15 @@ export const WidgetService = {
                 const dayDate = new Date(day.date);
                 return dayDate.getMonth() === currentMonth &&
                     dayDate.getFullYear() === currentYear &&
-                    day.withYou;
+                    day.status === 'me';
             }).length;
 
             const daysWithCoparent = custodyDays.filter(day => {
                 const dayDate = new Date(day.date);
                 return dayDate.getMonth() === currentMonth &&
                     dayDate.getFullYear() === currentYear &&
-                    !day.withYou;
+                    day.status === 'partner';
             }).length;
-
-            console.log('📊 WidgetService: Calculated custody -', { daysWithYou, daysWithCoparent, currentMonth, currentYear });
 
             // Find next transition
             const today = new Date();
@@ -201,6 +223,8 @@ export const WidgetService = {
                 daysWithYou,
                 daysWithCoparent,
                 nextTransition,
+                latestInsight,
+                proStatus: isProMode,
                 lastUpdated: Date.now()
             };
 

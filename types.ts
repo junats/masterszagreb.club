@@ -12,6 +12,14 @@ export enum Category {
   OTHER = 'Other'
 }
 
+export interface ItemInsight {
+  nutritionScore: number; // 0-100
+  valueRating: number; // 1-5
+  childFriendly: number; // 1-5
+  insight: string; // Brief tip (max 50 chars)
+  warnings?: string[]; // Optional warnings (allergens, high sugar, etc.)
+}
+
 export interface ReceiptItem {
   name: string;
   price: number;
@@ -20,6 +28,8 @@ export interface ReceiptItem {
   isRestricted?: boolean;
   isChildRelated?: boolean;
   goalType?: string; // e.g. 'junk_food', 'alcohol'
+  barcode?: string; // Scanned barcode for product lookup
+  insights?: ItemInsight; // AI-powered insights (Pro feature)
 }
 
 export interface CategoryDefinition {
@@ -79,7 +89,7 @@ export interface User {
   nickname?: string;
 }
 
-export type ViewState = 'dashboard' | 'scan' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody' | 'notifications';
+export type ViewState = 'dashboard' | 'scan' | 'settings' | 'support' | 'auth' | 'provision' | 'settlement' | 'custody' | 'notifications' | 'history';
 
 export type CustodyStatus = 'me' | 'partner' | 'split' | 'none';
 

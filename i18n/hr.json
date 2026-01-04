@@ -1,9 +1,21 @@
 {
     "navigation": {
         "dashboard": "Nadzorna ploča",
+        "dashboardSubtitle": "Vaš financijski pregled",
         "scan": "Skeniraj",
+        "scanSubtitle": "Digitaliziraj račune",
         "history": "Povijest",
-        "settings": "Postavke"
+        "historySubtitle": "Evidencija potrošnje",
+        "settings": "Postavke",
+        "settingsSubtitle": "Postavke aplikacije",
+        "helpTitle": "Podrška",
+        "helpSubtitle": "Pomoć i resursi",
+        "provision": "Analiza",
+        "provisionSubtitle": "Detaljna izvješća",
+        "custody": "Skrbništvo",
+        "custodySubtitle": "Kalendar i raspored",
+        "settlement": "Nagodba",
+        "settlementSubtitle": "Podjela troškova"
     },
     "dashboard": {
         "title": "Nadzorna ploča",
@@ -68,45 +80,112 @@
     },
     "settings": {
         "title": "Postavke",
-        "language": "Jezik",
-        "selectLanguage": "Odaberite željeni jezik",
-        "proControls": "Pro kontrole",
-        "active": "Aktivno",
-        "coParentingFeatures": "Funkcije zajedničkog roditeljstva",
-        "coParentingDesc": "Omogući analizu i podršku",
-        "goalTracking": "Praćenje ciljeva",
-        "goalTrackingDesc": "Praćenje navika i ograničenja (Pro)",
-        "lifeSupport": "Životna podrška",
-        "lifeSupportDesc": "Resursi za krizne situacije",
-        "ambientEffects": "Ambijentalni efekti",
-        "ambientEffectsDesc": "Omogući dinamičke svjetlosne efekte",
-        "appBackground": "Pozadina aplikacije",
-        "appBackgroundDesc": "Prikaži efekte na glavnim ekranima",
-        "parentalControl": "Roditeljska kontrola",
-        "parentalControlDesc": "Sakrij 18+ sadržaj",
-        "exportData": "Izvezi podatke",
-        "exportDataDesc": "Preuzmi CSV za dokaz",
-        "categoryBudgets": "Proračuni po kategorijama",
-        "categoryBudgetsDesc": "Postavi limite po kategoriji",
-        "goalsHabits": "Ciljevi i navike",
-        "goalsHabitsDesc": "Prati životne navike",
-        "security": "Sigurnost",
-        "biometricLogin": "Biometrijska prijava",
-        "biometricLoginDesc": "Koristi Face ID ili Touch ID",
-        "stayLoggedIn": "Ostani prijavljen",
-        "stayLoggedInDesc": "Zapamti me na ovom uređaju",
-        "categories": "Kategorije",
-        "manageCategories": "Upravljaj kategorijama",
-        "manageCategoriesDesc": "Dodaj ili ukloni prilagođene oznake",
-        "general": "Općenito",
-        "familyGroup": "Obiteljska grupa",
-        "familyGroupDesc": "Upravljaj članovima",
-        "privacyData": "Privatnost i podaci",
-        "signOut": "Odjavi se",
-        "upgradeToPro": "Nadogradi na Pro",
-        "upgradeDesc": "Otključaj Ambient, zajedničko roditeljstvo, proračune i ciljeve",
-        "editProfile": "Uredi profil",
-        "soon": "Uskoro"
+        "profile": {
+            "pro": "PRO",
+            "free": "BESPLATNO",
+            "edit": "Uredi"
+        },
+        "budget": {
+            "monthly": "Mjesečni proračun"
+        },
+        "proFeatures": {
+            "title": "Pro kontrole",
+            "active": "Aktivno",
+            "upgrade": "Nadogradi na Pro",
+            "unlockDesc": "Otključaj sve značajke",
+            "coParentingFeatures": "Funkcije zajedničkog roditeljstva",
+            "coParentingDesc": "Omogući analizu i podršku",
+            "goals": "Ciljevi i navike",
+            "goalsDesc": "Prati životne navike",
+            "lifeSupport": "Životna podrška",
+            "lifeSupportDesc": "Resursi za krizne situacije",
+            "ambient": "Ambijentalni efekti",
+            "ambientDesc": "Omogući dinamičke svjetlosne efekte",
+            "appBg": "Pozadina aplikacije",
+            "appBgDesc": "Prikaži efekte na glavnim ekranima",
+            "parental": "Roditeljska kontrola",
+            "parentalDesc": "Sakrij 18+ sadržaj",
+            "export": "Izvezi podatke",
+            "exportDesc": "Preuzmi CSV za dokaz",
+            "categoryBudgets": "Proračuni po kategorijama",
+            "categoryBudgetsDesc": "Postavi limite po kategoriji",
+            "enableGoals": "Omogući praćenje",
+            "trackingStreak": "{{streak}} dana u nizu!"
+        },
+        "security": {
+            "title": "Sigurnost",
+            "biometric": "Biometrijska prijava",
+            "biometricDesc": "Koristi Face ID ili Touch ID",
+            "stayLoggedIn": "Ostani prijavljen",
+            "stayLoggedInDesc": "Zapamti me na ovom uređaju"
+        },
+        "categories": {
+            "title": "Kategorije",
+            "manage": "Upravljaj kategorijama",
+            "manageDesc": "Dodaj ili ukloni prilagođene oznake"
+        },
+        "recurring": {
+            "title": "Ponavljajući troškovi",
+            "manage": "Ponavljajući troškovi",
+            "manageDesc": "Upravljaj fiksnim troškovima",
+            "add": "Dodaj trošak",
+            "name": "Naziv",
+            "amount": "Iznos",
+            "frequency": "Učestalost",
+            "date": "Datum"
+        },
+        "language": {
+            "title": "Jezik",
+            "desc": "Odaberite željeni jezik"
+        },
+        "general": {
+            "title": "Općenito",
+            "family": "Obiteljska grupa",
+            "familyDesc": "Upravljaj članovima",
+            "privacy": "Privatnost i podaci",
+            "soon": "Uskoro"
+        },
+        "data": {
+            "title": "Upravljanje podacima",
+            "seed": "Generiraj demo podatke",
+            "seedDesc": "Ispuni testnim podacima ({{scenario}})",
+            "delete": "Obriši sve podatke",
+            "deleteDesc": "Nepovratna radnja"
+        },
+        "account": {
+            "signOut": "Odjavi se",
+            "signOutDesc": "Završi sesiju"
+        },
+        "uicalc": {
+            "devTools": "Razvojni alati",
+            "testWidget": "Ažuriraj Widget",
+            "debugStorage": "Debug Pohrana"
+        },
+        "modals": {
+            "addCategory": "Dodaj novu kategoriju",
+            "categoryName": "Naziv kategorije",
+            "colorTag": "Oznaka boje",
+            "createCategory": "Kreiraj kategoriju",
+            "addSubscription": "Dodaj pretplatu",
+            "nextDueDate": "Sljedeći datum",
+            "legalExport": "Pravni izvoz",
+            "generatePdf": "Generiraj PDF",
+            "startDate": "Početni datum",
+            "endDate": "Završni datum",
+            "overwriteTitle": "Prepisati podatke?",
+            "overwriteDesc": "Ovo će obrisati sve postojeće račune. Ne može se poništiti.",
+            "overwriteData": "Prepiši podatke",
+            "cancel": "Odustani"
+        },
+        "subscription": {
+            "title": "Pretplata",
+            "currentPlan": "Trenutni plan",
+            "activeSince": "Aktivan od",
+            "cancel": "Otkaži pretplatu",
+            "upgrade": "Nadogradi na Pro",
+            "upgradeTitle": "Nadogradi na Pro",
+            "upgradeSubtitle": "Otključaj puni potencijal"
+        }
     },
     "common": {
         "save": "Spremi",
@@ -167,5 +246,139 @@
         "eventUpdated": "Događaj ažuriran",
         "eventRemoved": "Događaj uklonjen",
         "custodyUpdated": "Skrbništvo ažurirano"
+    },
+    "achievements": {
+        "goalSetter": "Omogućili ste praćenje ciljeva za nadzor vaših potrošačkih navika. Nastavite tako!",
+        "budgetMaster": "Izvrstan posao! Ostali ste ispod 90% vašeg mjesečnog proračuna.",
+        "budgetHero": "Izvanredno! Koristite manje od 75% proračuna. Vi ste prvak proračuna!",
+        "frugalGenius": "Nevjerojatno! Iskoristili ste manje od pola proračuna. Vi ste majstor štedljivosti!",
+        "trendSetter": "Vaša potrošnja ovog tjedna je niža nego prošlog tjedna. Odličan napredak!",
+        "downwardSpiral": "Nevjerojatno! Smanjili ste potrošnju za više od 20% ovog tjedna. Nastavite s momentom!",
+        "consistentTracker": "Dosljedno pratite svoje troškove. Bravo!",
+        "dailyLogger": "Pratili ste troškove 5 od zadnjih 7 dana. Dosljednost je ključ!",
+        "weekWarrior": "Zabilježili ste 10+ računa ovog tjedna. Vi ste u vatri!",
+        "cleanSheet": "Nevjerojatno! Zadržali ste sve svoje ciljne troškove ispod 80 € ovaj mjesec.",
+        "goalCrusher": "Održali ste 2+ nizova ciljeva tjedan dana. Nevjerojatna disciplina!",
+        "highRoller": "Napravili ste kupnju preko 100 €. Zapamtite za praćenje velikih troškova!",
+        "bigSpender": "Wow! Kupnja od 200+ €. Provjerite odgovara li to vašim ciljevima.",
+        "pennyPincher": "Napravili ste 10+ malih kupnji ispod 10 €. Svaki cent se broji!",
+        "weekendWarrior": "Pratili ste troškove tijekom vikenda. Ostanite dosljedni!",
+        "earlyBird": "Dobrodošli! Zabilježili ste prvih 5 računa.",
+        "veteran": "Pratili ste 50 računa! Vi ste TrueTrack veteran.",
+        "centurion": "Legendarno! 100 praćenih računa. Vi ste majstor praćenja!",
+        "coparentHero": "Pratili ste 30+ dana skrbništva! Posvećeni ste izvrsnosti zajedničkog roditeljstva.",
+        "calendarKeeper": "Počeli ste dodavati aktivnosti u svoj kalendar skrbništva. Odlična organizacija!",
+        "activityPlanner": "Isplanirali ste 10+ aktivnosti za svoje dijete. Vi ste nevjerojatan roditelj!",
+        "fairShare": "Vaša jednakost potrošnje je unutar 10% od 50/50. Pošteno i uravnoteženo!",
+        "harmonyKeeper": "Vaša ocjena harmonije je 80+! Održavate izvrsne odnose zajedničkog roditeljstva.",
+        "childFirst": "Pratili ste 20+ troškova vezanih za dijete. Vaše dijete je na prvom mjestu!",
+        "eventMaster": "Isplanirali ste 3+ posebna događaja (rođendani, škola). Stvarate uspomene!",
+        "healthConscious": "Potrošili ste 50+ € na zdravlje. Ulažete u wellness!",
+        "educationInvestor": "Uložili ste 100+ € u obrazovanje. Znanje je moć!"
+    },
+    "evidence": {
+        "building": "Izgradnja",
+        "fair": "Pošteno",
+        "good": "Dobro",
+        "strong": "Jako"
+    },
+    "status": {
+        "forecast": "Prognoza",
+        "justAdded": "Upravo dodano",
+        "alert": "Upozorenje",
+        "status": "Status",
+        "onTrack": "Na pravom putu",
+        "overBudget": "Preko proračuna",
+        "receiptAdded": "Račun dodan",
+        "lateSpending": "Kasna potrošnja",
+        "weekendSpike": "Vikend skok",
+        "categoryDrift": "Pomak kategorije",
+        "checkBudget": "Provjeri proračun",
+        "insightAlert": "Upozorenje uvida"
+    },
+    "popups": {
+        "budgetForecast": {
+            "title": "Prognoza proračuna",
+            "description": "Na temelju vaše trenutne brzine potrošnje, predviđamo ukupno krajem mjeseca od €{{projected}}.",
+            "insightOver": "Na putu ste da premašite proračun za €{{overage}}.",
+            "insightUnder": "Ugodno ste na putu da ostanete ispod proračuna."
+        },
+        "receiptProcessed": {
+            "title": "Račun obrađen",
+            "description": "Upravo smo dodali račun iz {{storeName}} za €{{amount}}.",
+            "insight": "Vaša nadzorna ploča je ažurirana s najnovijim podacima.",
+            "store": "Trgovina",
+            "amount": "Iznos",
+            "time": "Vrijeme"
+        },
+        "budgetAlert": {
+            "title": "Upozorenje proračuna",
+            "description": "Premašili ste svoj mjesečni proračun od €{{budget}}.",
+            "insight": "Razmislite o pauziranju nebitnih troškova za ostatak mjeseca.",
+            "budget": "Proračun",
+            "overage": "Premašaj"
+        },
+        "goodProgress": {
+            "title": "Dobar napredak",
+            "insight": "Nastavite tako!"
+        },
+        "dailySpending": {
+            "title": "Dnevni prosjek potrošnje",
+            "description": "U prosjeku trošite €{{dailyAvg}} svaki dan ovog mjeseca. Da ostanete unutar vašeg proračuna od €{{budget}}, pokušajte držati ovo ispod €{{target}}.",
+            "insightOver": "Prelazite u prekomjernu potrošnju. Pokušajte imati jedan \"Dan bez potrošnje\" ovaj tjedan.",
+            "insightUnder": "Odličan posao! Vaš dnevni tempo je održiv.",
+            "today": "Danas",
+            "yesterday": "Jučer",
+            "target": "Cilj"
+        },
+        "topCategories": {
+            "title": "Glavne kategorije",
+            "description": "Vaša potrošnja je jako koncentrirana u {{category}}. Diverzifikacija ili smanjenje ove kategorije je najbrži način za uštedu.",
+            "insight": "Provjerite jesu li ovo bitni ili diskrecijski troškovi."
+        },
+        "biggestPurchase": {
+            "title": "Najveća kupnja",
+            "description": "Vaša najveća pojedinačna transakcija bila je u {{storeName}} dana {{date}}.",
+            "noLargePurchases": "Još nema velikih kupnji.",
+            "insight": "Velike jednokratne kupnje mogu brzo poremetiti proračun. Planirajte ih unaprijed."
+        },
+        "weekendVsWeekday": {
+            "title": "Vikend naspram radnih dana",
+            "description": "{{percent}}% vaše potrošnje događa se vikendom (sub/ned).",
+            "insightHigh": "Imate naviku \"Vikend rasipanja\". Pokušajte se držati svoje rutine subotom.",
+            "insightBalanced": "Vaša potrošnja je prilično uravnotežena tijekom tjedna.",
+            "weekendTotal": "Ukupno vikend"
+        },
+        "spendingFrequency": {
+            "title": "Učestalost potrošnje",
+            "description": "U prosjeku obavljate {{frequency}} transakcija dnevno.",
+            "insightHigh": "Visoka učestalost često ukazuje na impulzivne mikro-transakcije. Pokušajte grupirati svoje kupnje.",
+            "insightLow": "Niska učestalost sugerira planiranu, promišljenu potrošnju.",
+            "totalTxns": "Ukupno trans.",
+            "daysPassed": "Prošli dani"
+        }
+    },
+    "labels": {
+        "dailyAvg": "Dnevni prosj.",
+        "topCat": "Glavna kat.",
+        "bigBuy": "Velika kupnja",
+        "weekend": "Vikend",
+        "freqPerDay": "Uč./Dan",
+        "aboveTarget": "Iznad cilja",
+        "dominant": "Dominantan",
+        "oneOff": "Jednokratno",
+        "vsWeekday": "naspram radnih",
+        "transPerDay": "Trans./Dan",
+        "improving": "Poboljšava se",
+        "attention": "Pažnja",
+        "neutral": "Neutralno",
+        "high": "Visoko",
+        "normal": "Normalno",
+        "balanced": "Uravnoteženo",
+        "ofTotal": "od ukupnog",
+        "justNow": "Upravo sada",
+        "thisWeek": "Ovaj tjedan",
+        "thisMonth": "Ovaj mjesec",
+        "yearlyGoal": "Godišnji cilj"
     }
 }

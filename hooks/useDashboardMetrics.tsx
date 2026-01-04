@@ -3,6 +3,7 @@ import { Category, Receipt } from '../types';
 import { CATEGORY_COLORS } from '../constants/colors';
 import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Sparkles } from 'lucide-react';
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Helper types
 export interface DashboardMetrics {
@@ -67,8 +68,10 @@ export interface DashboardMetrics {
     lastWeekTotal: number;
     smartInsights: { type: 'warning' | 'success' | 'info'; title: string; message: string; icon: React.ReactNode }[];
     equity: number;
-    stability: number;
     harmony: number;
+    avgNutritionScore: number;
+    avgValueScore: number;
+    stability: number;
 }
 
 export const useDashboardMetrics = (
@@ -79,6 +82,7 @@ export const useDashboardMetrics = (
     dateFilter: 'this_month' | 'last_month' | 'all',
     ageRestricted: boolean
 ): DashboardMetrics => {
+    const { t } = useLanguage();
 
     return useMemo(() => {
         // 0. Source Data
@@ -89,12 +93,19 @@ export const useDashboardMetrics = (
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
-        const checkDate = (r: Receipt) => {
-            let d = new Date(r.date);
-            if (r.date.includes('-') && !r.date.includes('T')) {
-                const parts = r.date.split('-');
-                d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        // Unified Date Parser
+        const parseDate = (dateStr: string) => {
+            if (!dateStr) return new Date();
+            // If YYYY-MM-DD (local date from input), parse manually to avoid UTC offset issues
+            if (dateStr.length === 10 && dateStr.includes('-') && !dateStr.includes('T')) {
+                const parts = dateStr.split('-');
+                return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             }
+            return new Date(dateStr);
+        };
+
+        const checkDate = (r: Receipt) => {
+            const d = parseDate(r.date);
             if (dateFilter === 'this_month') {
                 return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
             } else if (dateFilter === 'last_month') {
@@ -150,15 +161,14 @@ export const useDashboardMetrics = (
 
         globalFilteredReceipts.forEach(r => {
             // Robust Date Parsing for buckets
-            let d = new Date(r.date);
-            if (r.date.includes('-') && !r.date.includes('T')) {
-                const parts = r.date.split('-');
-                d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            }
+            const d = parseDate(r.date);
             const isRToday = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); // Re-do check safely
             const isRThisWeek = d >= currentWeekStart;
 
             r.items.forEach(i => {
+                // 18+ Check
+                if (ageRestricted && i.isRestricted) return;
+
                 const cat = i.category || Category.OTHER;
                 // Simple normalization (copy/paste lite logic or use helper if available? Inline for safety)
                 let normalizedCat = cat;
@@ -272,9 +282,11 @@ export const useDashboardMetrics = (
 
 
             // Store Totals
-            storeTotals[r.storeName] = (storeTotals[r.storeName] || 0) + r.items.reduce((s, i) => s + i.price, 0);
+            storeTotals[r.storeName] = (storeTotals[r.storeName] || 0) + r.items.reduce((s, i) => (!ageRestricted || !i.isRestricted) ? s + i.price : s, 0);
 
             r.items.forEach(i => {
+                if (ageRestricted && i.isRestricted) return;
+
                 const cat = i.category || Category.OTHER; // Original category
 
                 // Normalize Category for Aggregation
@@ -462,7 +474,7 @@ export const useDashboardMetrics = (
         else if (numericEvidenceScore > 30) { evidenceLabel = "Fair"; evidenceColor = "text-amber-400"; }
 
         // --- SPENDING PREDICTION / INSIGHT LOGIC ---
-        let spendingInsight = "Scan more receipts to generate insights.";
+        let spendingInsight = t('insights.scanMore');
         let trendDirection: 'up' | 'down' | 'flat' | 'neutral' = 'neutral';
 
         if (filteredReceipts.length >= 3) {
@@ -476,19 +488,19 @@ export const useDashboardMetrics = (
             const budgetUsedPercent = monthlyBudget > 0 ? (totalSpent / monthlyBudget) * 100 : 0;
 
             if (budgetUsedPercent > 100) {
-                spendingInsight = "You have exceeded your monthly budget.";
+                spendingInsight = t('insights.exceeded');
                 trendDirection = 'up';
             } else if (budgetUsedPercent > 85) {
-                spendingInsight = "You are approaching your budget limit.";
+                spendingInsight = t('insights.approaching');
                 trendDirection = 'up';
             } else if (diffPercent > 20) {
-                spendingInsight = "Recent spending is higher than average.";
+                spendingInsight = t('insights.higher');
                 trendDirection = 'up';
             } else if (diffPercent < -20) {
-                spendingInsight = "You are spending less than usual.";
+                spendingInsight = t('insights.lower');
                 trendDirection = 'down';
             } else {
-                spendingInsight = "Your spending habits are stable.";
+                spendingInsight = t('insights.stable');
                 trendDirection = 'flat';
             }
         }
@@ -518,19 +530,12 @@ export const useDashboardMetrics = (
             // Use filteredReceipts for Context-Aware Data
             filteredReceipts.forEach(r => {
                 let rDateStr = r.date;
-                if (r.date.includes('T')) {
-                    rDateStr = r.date.split('T')[0];
-                } else if (r.date.length === 10 && r.date.includes('-')) {
-                    // No-op
-                } else {
-                    try {
-                        const parsed = new Date(r.date);
-                        if (!isNaN(parsed.getTime())) {
-                            rDateStr = parsed.toISOString().split('T')[0];
-                        }
-                    } catch (e) {
-                        rDateStr = '';
-                    }
+                const parsed = parseDate(r.date);
+                if (!isNaN(parsed.getTime())) {
+                    const offset = parsed.getTimezoneOffset();
+                    // Adjust to local date string for comparison
+                    const local = new Date(parsed.getTime() - (offset * 60 * 1000));
+                    rDateStr = local.toISOString().split('T')[0];
                 }
 
                 if (rDateStr === dStr) {
@@ -570,21 +575,17 @@ export const useDashboardMetrics = (
         const thisMonthReceipts = (receipts || []).filter(r => {
             // if (!checkChildFilter(r)) return false;
 
-            let rDate = new Date(r.date);
-            if (r.date.includes('-') && !r.date.includes('T')) {
-                const parts = r.date.split('-');
-                rDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            }
+            const rDate = parseDate(r.date);
             return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
-        });
+        }).map(r => ({
+            ...r,
+            items: r.items.filter(i => !ageRestricted || !i.isRestricted)
+        })).filter(r => r.items.length > 0);
+
         const lastMonthReceipts = (receipts || []).filter(r => {
             // if (!checkChildFilter(r)) return false;
 
-            let rDate = new Date(r.date);
-            if (r.date.includes('-') && !r.date.includes('T')) {
-                const parts = r.date.split('-');
-                rDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            }
+            const rDate = parseDate(r.date);
             const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
             const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
             return rDate.getMonth() === lastMonth && rDate.getFullYear() === lastMonthYear;
@@ -831,11 +832,13 @@ export const useDashboardMetrics = (
         }));
 
         const biggestReceipt = (filteredReceipts || []).sort((a, b) => {
-            const totalA = a.total > 0 ? a.total : a.items.reduce((s, i) => s + i.price, 0);
-            const totalB = b.total > 0 ? b.total : b.items.reduce((s, i) => s + i.price, 0);
-            return totalB - totalA;
+            const getSafeTotal = (r: Receipt) => r.items.reduce((s, i) => (!ageRestricted || !i.isRestricted) ? s + i.price : s, 0);
+            return getSafeTotal(b) - getSafeTotal(a);
         })[0];
-        const biggestPurchase = biggestReceipt ? (biggestReceipt.total > 0 ? biggestReceipt.total : biggestReceipt.items.reduce((s, i) => s + i.price, 0)) : 0;
+
+        const biggestPurchase = biggestReceipt
+            ? biggestReceipt.items.reduce((s, i) => (!ageRestricted || !i.isRestricted) ? s + i.price : s, 0)
+            : 0;
 
 
         // Status Logic
@@ -936,7 +939,13 @@ export const useDashboardMetrics = (
             educationRatio,
             foodRatio,
             luxuryRatio,
-            healthRatio
+            healthRatio,
+
+            // AI Product Metrics
+            avgNutritionScore: filteredReceipts.reduce((acc, r) => acc + r.items.reduce((s, i) => i.insights ? s + i.insights.nutritionScore : s, 0), 0) /
+                (filteredReceipts.reduce((acc, r) => acc + r.items.filter(i => i.insights).length, 0) || 1),
+            avgValueScore: filteredReceipts.reduce((acc, r) => acc + r.items.reduce((s, i) => i.insights ? s + i.insights.valueRating : s, 0), 0) /
+                (filteredReceipts.reduce((acc, r) => acc + r.items.filter(i => i.insights).length, 0) || 1)
         };
 
     }, [receipts, monthlyBudget, daysInMonth, childSupportMode, dateFilter, ageRestricted]);

@@ -28,22 +28,22 @@ import SubscriptionModal from './SubscriptionModal';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const containerVariants = {
-    hidden: { opacity: 0 },
+    hidden: { opacity: 1 },
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1
+            staggerChildren: 0
         }
     }
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 1, y: 0 },
     visible: {
         opacity: 1,
         y: 0,
         transition: {
-            duration: 0.5
+            duration: 0
         }
     }
 };
@@ -94,8 +94,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         custodyDays,
         ambientMode,
         syncCustody,
-        isProMode
+        isProMode,
+        spendRatio,
+        isDataLoaded
     } = useData();
+
     const { user } = useUser();
     const { t } = useLanguage();
 
@@ -163,51 +166,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     // Achievement Description Helper
     const getAchievementDescription = (achievementId: string): string => {
-        const descriptions: Record<string, string> = {
-            // Goal & Budget
-            'goal_setter': 'You\'ve enabled goal tracking to monitor your spending habits. Keep it up!',
-            'budget_master': 'Excellent work! You\'ve stayed under 90% of your monthly budget.',
-            'budget_hero': 'Outstanding! You\'re using less than 75% of your budget. You\'re a budgeting champion!',
-            'frugal_genius': 'Incredible! You\'ve used less than half your budget. You\'re a master of frugality!',
-
-            // Trends
-            'trend_setter': 'Your spending this week is lower than last week. Great progress!',
-            'downward_spiral': 'Amazing! You\'ve reduced spending by over 20% this week. Keep the momentum!',
-
-            // Tracking Consistency
-            'consistent_tracker': 'You\'ve been consistently tracking your expenses. Well done!',
-            'daily_logger': 'You\'ve tracked expenses on 5 out of the last 7 days. Consistency is key!',
-            'week_warrior': 'You\'ve logged 10+ receipts this week. You\'re on fire!',
-
-            // Goal Compliance
-            'clean_sheet': 'Amazing! You\'ve kept all your goal spending under €80 this month.',
-            'goal_crusher': 'You\'ve maintained 2+ goal streaks for a week. Incredible discipline!',
-
-            // Spending Milestones
-            'high_roller': 'You\'ve made a purchase over €100. Remember to track big expenses!',
-            'big_spender': 'Whoa! A €200+ purchase. Make sure it aligns with your goals.',
-            'penny_pincher': 'You\'ve made 10+ small purchases under €10. Every penny counts!',
-
-            // Time-based
-            'weekend_warrior': 'You\'ve tracked expenses on the weekend. Stay consistent!',
-            'early_bird': 'Welcome aboard! You\'ve logged your first 5 receipts.',
-            'veteran': 'You\'ve tracked 50 receipts! You\'re a TrueTrack veteran.',
-            'centurion': 'Legendary! 100 receipts tracked. You\'re a tracking master!',
-
-            // Co-Parenting
-            'coparent_hero': 'You\'ve tracked 30+ custody days! You\'re committed to co-parenting excellence.',
-            'calendar_keeper': 'You\'ve started adding activities to your custody calendar. Great organization!',
-            'activity_planner': 'You\'ve planned 10+ activities for your child. You\'re an amazing parent!',
-            'fair_share': 'Your spending equity is within 10% of 50/50. Fair and balanced!',
-            'harmony_keeper': 'Your harmony score is 80+! You\'re maintaining excellent co-parenting relations.',
-            'child_first': 'You\'ve tracked 20+ child-related expenses. Your child comes first!',
-            'event_master': 'You\'ve planned 3+ special events (birthdays, school). Creating memories!',
-
-            // Category
-            'health_conscious': 'You\'ve spent €50+ on health. Investing in wellness!',
-            'education_investor': 'You\'ve invested €100+ in education. Knowledge is power!'
-        };
-        return descriptions[achievementId] || 'Keep up the great work tracking your expenses!';
+        // Convert snake_case to camelCase for translation keys
+        const toCamelCase = (str: string) => str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+        const key = `achievements.${toCamelCase(achievementId)}`;
+        const translated = t(key);
+        // Fallback if key not found
+        return translated !== key ? translated : 'Keep up the great work tracking your expenses!';
     };
 
     // Goal Gauge Component
@@ -407,7 +371,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         const biggestPurchase = Math.max(...(metrics.thisMonthReceipts || []).map(r => r.total), 0);
 
         // Top Category
-        const topCategory = metrics.categoryData.length > 0 ? metrics.categoryData[0].name : '-';
+        const topCatName = metrics.categoryData.length > 0 ? metrics.categoryData[0].name : null;
+        const topCategory = topCatName ? t(`categories.${topCatName.toLowerCase()}`, { defaultValue: topCatName }) : '-';
 
         // Weekend Spend %
         const weekendSpend = (metrics.thisMonthReceipts || []).reduce((acc, r) => {
@@ -424,71 +389,71 @@ const Dashboard: React.FC<DashboardProps> = ({
         const success = suggestions.find(s => s.severity === 'success');
 
         // Dynamic Status Logic
-        let statusLabel = 'Forecast';
+        let statusLabel = t('status.forecast');
         let statusValue = "€" + projected.toFixed(0);
         let statusTrend = projected > monthlyBudget ? 'down' : 'up';
         let statusIcon = projected > monthlyBudget ? TrendingDown : TrendingUp;
         let statusDetail = metrics.spendingInsight;
         let statusPopup = {
-            title: 'Budget Forecast',
-            description: "Based on your current spending velocity, we project a Month End total of €" + projected.toFixed(0) + ".",
-            insight: projected > monthlyBudget ? "You are on track to exceed your budget by €" + (projected - monthlyBudget).toFixed(0) + "." : 'You are comfortably on track to stay under budget.',
+            title: t('popups.budgetForecast.title'),
+            description: t('popups.budgetForecast.description', { projected: projected.toFixed(0) }),
+            insight: projected > monthlyBudget ? t('popups.budgetForecast.insightOver', { overage: (projected - monthlyBudget).toFixed(0) }) : t('popups.budgetForecast.insightUnder'),
             items: [
                 { label: t('dashboard.currentSpend'), value: "€" + totalSpent.toFixed(0) },
                 { label: t('dashboard.remainingBudget'), value: "€" + Math.max(0, monthlyBudget - totalSpent).toFixed(0) },
-                { label: 'Projected Total', value: "€" + projected.toFixed(0) }
+                { label: t('charts.target'), value: "€" + projected.toFixed(0) }
             ]
         };
 
         const latestReceipt = metrics.latestReceipt;
         // Priority 1: Just Added (Last 5 mins)
         if (latestReceipt && (new Date().getTime() - new Date(latestReceipt.date).getTime() < 5 * 60 * 1000)) {
-            statusLabel = 'Just Added';
-            statusValue = "Receipt Added";
+            statusLabel = t('status.justAdded');
+            statusValue = t('status.receiptAdded');
             statusTrend = 'up';
             statusIcon = CheckCircle2;
             statusDetail = `+€${latestReceipt.total.toFixed(2)} at ${latestReceipt.storeName}`;
             statusPopup = {
-                title: 'Receipt Processed',
-                description: `We just added a receipt from ${latestReceipt.storeName} for €${latestReceipt.total.toFixed(2)}.`,
-                insight: 'Your dashboard has been updated with the latest figures.',
+                title: t('popups.receiptProcessed.title'),
+                description: t('popups.receiptProcessed.description', { storeName: latestReceipt.storeName, amount: latestReceipt.total.toFixed(2) }),
+                insight: t('popups.receiptProcessed.insight'),
                 items: [
-                    { label: 'Store', value: latestReceipt.storeName },
-                    { label: 'Amount', value: "€" + latestReceipt.total.toFixed(2) },
-                    { label: 'Time', value: new Date(latestReceipt.date).toLocaleTimeString() }
+                    { label: t('popups.receiptProcessed.store'), value: latestReceipt.storeName },
+                    { label: t('popups.receiptProcessed.amount'), value: "€" + latestReceipt.total.toFixed(2) },
+                    { label: t('popups.receiptProcessed.time'), value: new Date(latestReceipt.date).toLocaleTimeString() }
                 ]
             };
         }
         // Priority 2: Critical Alerts
         else if (metrics.thisMonthTotal > monthlyBudget) {
-            statusLabel = 'Alert';
-            statusValue = 'Over Budget';
+            statusLabel = t('status.alert');
+            statusValue = t('status.overBudget');
             statusTrend = 'down';
             statusIcon = AlertTriangle;
             statusDetail = `Exceeded by €${(metrics.thisMonthTotal - monthlyBudget).toFixed(0)}`;
             statusPopup = {
-                title: 'Budget Alert',
-                description: `You have exceeded your monthly budget of €${monthlyBudget}.`,
-                insight: 'Consider pausing non-essential spending for the rest of the month.',
+                title: t('popups.budgetAlert.title'),
+                description: t('popups.budgetAlert.description', { budget: monthlyBudget.toString() }),
+                insight: t('popups.budgetAlert.insight'),
                 items: [
                     { label: t('dashboard.totalSpent'), value: "€" + metrics.thisMonthTotal.toFixed(0) },
-                    { label: 'Budget', value: "€" + monthlyBudget.toFixed(0) },
-                    { label: 'Overage', value: "€" + (metrics.thisMonthTotal - monthlyBudget).toFixed(0) }
+                    { label: t('popups.budgetAlert.budget'), value: "€" + monthlyBudget.toFixed(0) },
+                    { label: t('popups.budgetAlert.overage'), value: "€" + (metrics.thisMonthTotal - monthlyBudget).toFixed(0) }
                 ]
             };
         }
         // Priority 3: Success / Warning (Existing logic)
         else if (warning) {
-            statusLabel = 'Alert';
-            if (warning.id === 'late-night-habit') statusValue = 'Late Spending';
-            else if (warning.id === 'weekend-splurge') statusValue = 'Weekend Spike';
-            else if (warning.id.startsWith('cat-drift')) statusValue = 'Category Drift';
-            else if (warning.id === 'budget-warning') statusValue = 'Check Budget';
-            else if (warning.id === 'budget-critical') statusValue = 'Over Budget';
-            else statusValue = 'Insight Alert';
+            statusLabel = t('status.alert');
+            if (warning.id === 'late-night-habit') statusValue = t('status.lateSpending');
+            else if (warning.id === 'weekend-splurge') statusValue = t('status.weekendSpike');
+            else if (warning.id.startsWith('cat-drift')) statusValue = t('status.categoryDrift');
+            else if (warning.id === 'budget-warning') statusValue = t('status.checkBudget');
+            else if (warning.id === 'budget-critical') statusValue = t('status.overBudget');
+            else statusValue = t('status.insightAlert');
 
             // Catch-all for heavy text if ID logic misses (safety)
-            if (/over budget/i.test(warning.text)) statusValue = 'Over Budget';
+            if (/over budget/i.test(warning.text)) statusValue = t('status.overBudget');
 
             statusTrend = 'down';
             statusIcon = AlertTriangle;
@@ -501,22 +466,22 @@ const Dashboard: React.FC<DashboardProps> = ({
             };
         }
         else if (success) {
-            statusLabel = 'Status';
-            statusValue = 'On Track';
+            statusLabel = t('status.status');
+            statusValue = t('status.onTrack');
             statusTrend = 'up';
             statusIcon = CheckCircle2;
             statusDetail = success.text;
             statusPopup = {
-                title: 'Good Progress',
+                title: t('popups.goodProgress.title'),
                 description: success.text,
-                insight: success.subtext || 'Keep it up!',
+                insight: success.subtext || t('popups.goodProgress.insight'),
                 items: []
             };
         }
 
         // Helper for Top 3 Cats
         const top3Cats = metrics.categoryData.slice(0, 3).map(c => ({
-            label: c.name,
+            label: t(`categories.${c.name.toLowerCase()}`, { defaultValue: c.name }),
             value: c.percentage.toFixed(0) + "% ",
             subtext: "€" + c.value.toFixed(0) + " "
         }));
@@ -530,20 +495,20 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         return [
             {
-                label: 'Daily Avg',
+                label: t('labels.dailyAvg'),
                 value: "€" + dailyAvg.toFixed(0) + " ",
                 trend: dailyTrendDiff > 0 ? 'up' : 'down',
-                trendLabel: dailyTrendDiff > 0 ? 'Above Target' : 'On Track',
+                trendLabel: dailyTrendDiff > 0 ? t('labels.aboveTarget') : t('status.onTrack'),
                 icon: CalendarDays,
-                detail: "Target: €" + dailyTarget.toFixed(0),
+                detail: t('charts.target') + ": €" + dailyTarget.toFixed(0),
                 popup: {
-                    title: 'Daily Spending Average',
-                    description: "You are spending an average of €" + dailyAvg.toFixed(0) + " every day this month. To stay within your €" + monthlyBudget + " budget, try to keep this under €" + (monthlyBudget / daysInMonth).toFixed(0) + ".",
-                    insight: dailyAvg > (monthlyBudget / daysInMonth) ? 'You are pacing to overspend. Try having one "No Spend Day" this week.' : 'Great job! Your daily pacing is sustainable.',
+                    title: t('popups.dailySpending.title'),
+                    description: t('popups.dailySpending.description', { dailyAvg: dailyAvg.toFixed(0), budget: monthlyBudget.toString(), target: (monthlyBudget / daysInMonth).toFixed(0) }),
+                    insight: dailyAvg > (monthlyBudget / daysInMonth) ? t('popups.dailySpending.insightOver') : t('popups.dailySpending.insightUnder'),
                     items: [
-                        { label: 'Today', value: "€" + metrics.todayTotal.toFixed(0) },
-                        { label: 'Yesterday', value: "€" + (metrics.weekData[6]?.total || 0).toFixed(0) }, // Approx
-                        { label: 'Target', value: "€" + (monthlyBudget / daysInMonth).toFixed(0) }
+                        { label: t('popups.dailySpending.today'), value: "€" + metrics.todayTotal.toFixed(0) },
+                        { label: t('popups.dailySpending.yesterday'), value: "€" + (metrics.weekData[6]?.total || 0).toFixed(0) },
+                        { label: t('popups.dailySpending.target'), value: "€" + (monthlyBudget / daysInMonth).toFixed(0) }
                     ]
                 }
             },
@@ -551,70 +516,70 @@ const Dashboard: React.FC<DashboardProps> = ({
                 label: statusLabel,
                 value: statusValue,
                 trend: statusTrend,
-                trendLabel: statusTrend === 'down' ? 'Improving' : 'Attention',
+                trendLabel: statusTrend === 'down' ? t('labels.improving') : t('labels.attention'),
                 icon: statusIcon,
                 detail: statusDetail,
                 popup: statusPopup
             },
             {
-                label: 'Top Cat',
+                label: t('labels.topCat'),
                 value: topCategory,
                 trend: 'neutral',
-                trendLabel: 'Dominant',
+                trendLabel: t('labels.dominant'),
                 icon: ShoppingBag,
-                detail: (top3Cats[0]?.value || '0%') + " of total",
+                detail: (top3Cats[0]?.value || '0%') + " " + t('labels.ofTotal'),
                 popup: {
-                    title: 'Top Categories',
-                    description: "Your spending is heavily concentrated in " + topCategory + ". Diversifying or reducing this category is the fastest way to save.",
-                    insight: 'Check if these are essential or discretionary expenses.',
+                    title: t('popups.topCategories.title'),
+                    description: t('popups.topCategories.description', { category: topCategory }),
+                    insight: t('popups.topCategories.insight'),
                     items: top3Cats
                 }
             },
             {
-                label: 'Big Buy',
+                label: t('labels.bigBuy'),
                 value: "€" + biggestPurchase.toFixed(0),
                 trend: 'neutral',
-                trendLabel: 'One-off',
+                trendLabel: t('labels.oneOff'),
                 icon: ArrowUpRight,
                 detail: biggestReceipt?.storeName || '-',
                 popup: {
-                    title: 'Biggest Purchase',
-                    description: biggestReceipt ? "Your largest single transaction was at " + biggestReceipt.storeName + " on " + new Date(biggestReceipt.date).toLocaleDateString() + "." : 'No large purchases yet.',
-                    insight: 'Large one-off purchases can derail a budget quickly. Plan for these in advance.',
+                    title: t('popups.biggestPurchase.title'),
+                    description: biggestReceipt ? t('popups.biggestPurchase.description', { storeName: biggestReceipt.storeName, date: new Date(biggestReceipt.date).toLocaleDateString() }) : t('popups.biggestPurchase.noLargePurchases'),
+                    insight: t('popups.biggestPurchase.insight'),
                     items: biggestReceipt ? [{ label: biggestReceipt.storeName, value: "€" + biggestReceipt.total.toFixed(2), subtext: new Date(biggestReceipt.date).toLocaleTimeString() }] : []
                 }
             },
             {
-                label: 'Weekend',
+                label: t('labels.weekend'),
                 value: weekendPercent.toFixed(0) + "%",
                 trend: weekendPercent > 40 ? 'up' : 'neutral',
-                trendLabel: weekendPercent > 40 ? 'High' : 'Balanced',
+                trendLabel: weekendPercent > 40 ? t('labels.high') : t('labels.balanced'),
                 icon: Calendar,
-                detail: 'vs Weekday',
+                detail: t('labels.vsWeekday'),
                 popup: {
-                    title: 'Weekend vs Weekday',
-                    description: weekendPercent.toFixed(0) + "% of your spending happens on weekends (Sat/Sun).",
-                    insight: weekendPercent > 40 ? 'You have a "Weekend Splurge" habit. Try to stick to your routine on Saturdays.' : 'Your spending is fairly balanced throughout the week.',
+                    title: t('popups.weekendVsWeekday.title'),
+                    description: t('popups.weekendVsWeekday.description', { percent: weekendPercent.toFixed(0) }),
+                    insight: weekendPercent > 40 ? t('popups.weekendVsWeekday.insightHigh') : t('popups.weekendVsWeekday.insightBalanced'),
                     items: [
-                        { label: 'Weekend Total', value: "€" + weekendSpend.toFixed(0) },
+                        { label: t('popups.weekendVsWeekday.weekendTotal'), value: "€" + weekendSpend.toFixed(0) },
                         { label: t('dashboard.weekdayTotal'), value: "€" + (totalSpent - weekendSpend).toFixed(0) }
                     ]
                 }
             },
             {
-                label: 'Freq/Day',
+                label: t('labels.freqPerDay'),
                 value: frequency,
                 trend: parseFloat(frequency) > 3 ? 'up' : 'neutral',
-                trendLabel: parseFloat(frequency) > 3 ? 'High' : 'Normal',
+                trendLabel: parseFloat(frequency) > 3 ? t('labels.high') : t('labels.normal'),
                 icon: Activity,
-                detail: 'Trans./Day',
+                detail: t('labels.transPerDay'),
                 popup: {
-                    title: 'Spending Frequency',
-                    description: "On average, you make " + frequency + " transactions per day.",
-                    insight: parseFloat(frequency) > 3 ? 'High frequency often indicates impulsive micro-transactions. Try to batch your purchases.' : 'Low frequency suggests planned, deliberate spending.',
+                    title: t('popups.spendingFrequency.title'),
+                    description: t('popups.spendingFrequency.description', { frequency }),
+                    insight: parseFloat(frequency) > 3 ? t('popups.spendingFrequency.insightHigh') : t('popups.spendingFrequency.insightLow'),
                     items: [
-                        { label: 'Total Txns', value: "" + (metrics.thisMonthReceipts || []).length },
-                        { label: 'Days Passed', value: "" + daysPassed }
+                        { label: t('popups.spendingFrequency.totalTxns'), value: "" + (metrics.thisMonthReceipts || []).length },
+                        { label: t('popups.spendingFrequency.daysPassed'), value: "" + daysPassed }
                     ]
                 }
             }
@@ -745,6 +710,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             '--glow-size': active.glow,
             borderColor: active.color,
             boxShadow: "0 0 " + active.glow + " " + active.color,
+            borderRadius: '1.5rem', // Force rounding for shadow
             transition: 'all 1s ease',
             animation: healthState === 'critical' ? 'pulse-border-v2 3s infinite ease-in-out' : undefined
         } as React.CSSProperties;
@@ -752,7 +718,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     return (
         <motion.div
-            className="w-full h-full pt-0 px-4 pb-4 scroll-smooth no-scrollbar"
+            className="w-full h-full pt-16 px-4 pb-4 scroll-smooth no-scrollbar"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -767,11 +733,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                     variants={itemVariants}
                     initial="hidden"
                     animate="visible"
-                    className="mb-0"
+                    style={ambientMode ? ambientStyle : {}}
+                    className={"relative rounded-3xl border mb-4 transition-all duration-1000 " + (ambientMode ? 'border-transparent' : 'border-slate-800 shadow-lg')}
                 >
                     <SpotlightCard
-                        style={ambientMode ? ambientStyle : {}}
-                        className={"relative rounded-3xl border p-4 transition-all duration-1000 overflow-hidden group mb-4 " + (ambientMode ? 'bg-card' : 'bg-card border-slate-800 shadow-lg')}
+                        className="relative w-full h-full rounded-3xl overflow-hidden bg-card p-4 group"
+                        spotlightColor="rgba(56, 189, 248, 0.15)"
                     >
 
                         <BudgetOverview
@@ -877,7 +844,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                 <div className="bg-purple-500/10 p-1.5 rounded-lg text-purple-400">
                                                                     <CalendarDays size={16} />
                                                                 </div>
-                                                                <h3 className="text-sm font-bold text-slate-200">Co-parenting</h3>
+                                                                <h3 className="text-sm font-bold text-slate-200">{t('dashboard.coParenting')}</h3>
                                                             </div>
                                                             {(() => {
                                                                 const todayStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, '0') + "-" + String(today.getDate()).padStart(2, '0');
@@ -886,7 +853,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                 if (todaysEvents.length > 0) {
                                                                     return (
                                                                         <div className="mt-1 animate-in fade-in slide-in-from-left-2">
-                                                                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wide">Happening Today</span>
+                                                                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wide">{t('labels.justNow')}</span>
                                                                             <p className="text-sm font-bold text-white leading-tight">{todaysEvents[0].title}</p>
                                                                             {todaysEvents.length > 1 && <p className="text-[10px] text-slate-500">+{todaysEvents.length - 1} more</p>}
                                                                         </div>
@@ -977,7 +944,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                             >
                                                                 {/* Year-to-Date Summary */}
                                                                 <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 p-4 rounded-xl border border-purple-500/20">
-                                                                    <p className="text-[10px] text-purple-300 font-medium uppercase tracking-wide mb-2">Year to Date</p>
+                                                                    <p className="text-[10px] text-purple-300 font-medium uppercase tracking-wide mb-2">{t('coParenting.yearToDate')}</p>
                                                                     <div className="flex items-baseline gap-2 mb-1">
                                                                         <p className="text-3xl font-heading font-bold text-white">
                                                                             {(() => {
@@ -988,7 +955,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                                 }).length;
                                                                             })()}
                                                                         </p>
-                                                                        <span className="text-sm text-slate-400">days with you</span>
+                                                                        <span className="text-sm text-slate-400">{t('coParenting.daysWithYou')}</span>
                                                                     </div>
                                                                     <p className="text-xs text-slate-400">
                                                                         {Math.round(((() => {
@@ -1005,12 +972,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                                                                 {/* AI Trend Analysis */}
                                                                 <div className="space-y-3">
-                                                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Trend Analysis</p>
+                                                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">{t('coParenting.trendAnalysis')}</p>
 
                                                                     {/* This Week */}
                                                                     <div className="bg-slate-800/30 p-3 rounded-lg border border-white/5">
                                                                         <div className="flex items-center justify-between mb-2">
-                                                                            <span className="text-xs font-semibold text-slate-300">This Week</span>
+                                                                            <span className="text-xs font-semibold text-slate-300">{t('coParenting.thisWeek')}</span>
                                                                             <span className={"text-xs font-bold " + ((() => {
                                                                                 const weekStart = new Date(today);
                                                                                 weekStart.setDate(today.getDate() - today.getDay());
@@ -1047,7 +1014,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                     {/* This Month */}
                                                                     <div className="bg-slate-800/30 p-3 rounded-lg border border-white/5">
                                                                         <div className="flex items-center justify-between mb-2">
-                                                                            <span className="text-xs font-semibold text-slate-300">This Month</span>
+                                                                            <span className="text-xs font-semibold text-slate-300">{t('coParenting.thisMonth')}</span>
                                                                             <span className={"text-xs font-bold " + (monthDaysCount >= 15 ? 'text-emerald-400' : monthDaysCount >= 10 ? 'text-amber-400' : 'text-red-400')}>
                                                                                 {monthDaysCount >= 15 ? '✓ Positive' : monthDaysCount >= 10 ? '~ Average' : '✗ Low'}
                                                                             </span>
@@ -1060,7 +1027,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                     {/* Year Overall */}
                                                                     <div className="bg-slate-800/30 p-3 rounded-lg border border-white/5">
                                                                         <div className="flex items-center justify-between mb-2">
-                                                                            <span className="text-xs font-semibold text-slate-300">Year Overall</span>
+                                                                            <span className="text-xs font-semibold text-slate-300">{t('coParenting.yearOverall')}</span>
                                                                             <span className={"text-xs font-bold " + ((() => {
                                                                                 const yearStart = new Date(today.getFullYear(), 0, 1);
                                                                                 const daysWithYou = custodyDays.filter(day => {
@@ -1102,7 +1069,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                     <div className="flex items-start gap-2">
                                                                         <Sparkles size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
                                                                         <div>
-                                                                            <p className="text-xs font-semibold text-blue-300 mb-1">AI Insight</p>
+                                                                            <p className="text-xs font-semibold text-blue-300 mb-1">{t('coParenting.aiInsight')}</p>
                                                                             <p className="text-[10px] text-slate-300 leading-relaxed">
                                                                                 {(() => {
                                                                                     const yearStart = new Date(today.getFullYear(), 0, 1);
@@ -1161,7 +1128,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                             <div className="flex items-center justify-between gap-4 bg-slate-800/20 p-3 rounded-xl border border-white/5 animate-in fade-in slide-in-from-right-2">
                                                                                 <div className="flex flex-col gap-2 flex-1">
                                                                                     <div>
-                                                                                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">My Share</p>
+                                                                                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">{t('coParenting.myShare')}</p>
                                                                                         <div className="flex items-baseline gap-1">
                                                                                             <p className="text-2xl font-heading font-bold text-white">{monthDaysCount}</p>
                                                                                             <span className="text-xs text-slate-500">days</span>
@@ -1169,13 +1136,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                                     </div>
                                                                                     <div className="space-y-1">
                                                                                         <div className="flex justify-between text-[10px] font-medium">
-                                                                                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-slate-300">Me</span></div>
+                                                                                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-slate-300">{t('coParenting.me')}</span></div>
                                                                                             <span className="text-white tabular-nums">
                                                                                                 <CountUp value={monthDaysCount} suffix="d" decimals={0} />
                                                                                             </span>
                                                                                         </div>
                                                                                         <div className="flex justify-between text-[10px] font-medium">
-                                                                                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-slate-300">Partner</span></div>
+                                                                                            <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-slate-300">{t('coParenting.partner')}</span></div>
                                                                                             <span className="text-white tabular-nums">
                                                                                                 <CountUp value={new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount} suffix="d" decimals={0} />
                                                                                             </span>
@@ -1187,8 +1154,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                                         <PieChart key={"custody-pie-" + isInView}>
                                                                                             <Pie
                                                                                                 data={[
-                                                                                                    { name: 'Me', value: monthDaysCount },
-                                                                                                    { name: 'Partner', value: new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount }
+                                                                                                    { name: t('coParenting.me'), value: monthDaysCount },
+                                                                                                    { name: t('coParenting.partner'), value: new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount }
                                                                                                 ]}
                                                                                                 cx="50%"
                                                                                                 cy="50%"
@@ -1219,7 +1186,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-2">
                                                                                 {/* Weekend Split */}
                                                                                 <div>
-                                                                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mb-2">Weekend Split</p>
+                                                                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mb-2">{t('coParenting.weekendSplit')}</p>
                                                                                     {(() => {
                                                                                         const weekendDays = custodyDays.filter(d => {
                                                                                             const date = new Date(d.date);
@@ -1238,8 +1205,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                                         );
                                                                                     })()}
                                                                                     <div className="flex justify-between text-[9px] text-slate-400 mt-1">
-                                                                                        <span>You</span>
-                                                                                        <span>Partner</span>
+                                                                                        <span>{t('coParenting.you')}</span>
+                                                                                        <span>{t('coParenting.partner')}</span>
                                                                                     </div>
                                                                                 </div>
 
@@ -1403,7 +1370,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                             const diffHours = Math.floor(diffMins / 60);
                                                             const diffDays = Math.floor(diffHours / 24);
 
-                                                            if (diffMins < 1) return 'Just now';
+                                                            if (diffMins < 1) return t('labels.justNow');
                                                             if (diffMins < 60) return `${diffMins}m ago`;
                                                             if (diffHours < 24) return `${diffHours}h ago`;
                                                             return `${diffDays}d ago`;
@@ -1440,7 +1407,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                         <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400">
                                                                             <Bell className="w-3 h-3" />
                                                                         </div>
-                                                                        <p className="text-[10px] font-bold text-purple-300 uppercase tracking-wide">Recent Activity</p>
+                                                                        <p className="text-[10px] font-bold text-purple-300 uppercase tracking-wide">{t('dashboard.recentActivity')}</p>
                                                                     </div>
                                                                     <button
                                                                         onClick={(e) => {
@@ -1490,7 +1457,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                     {/* Upcoming Activities */}
                                                     <div className="mt-4 pt-4 border-t border-white/5">
                                                         <div className="flex justify-between items-center mb-2">
-                                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Upcoming</p>
+                                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{t('dashboard.upcomingEvents')}</p>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); onCustodyClick?.(); }}
                                                                 className="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
@@ -1645,7 +1612,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         <div className="flex items-center justify-end gap-4">
                                             <div className="text-right">
                                                 <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">
-                                                    {insightView === 'monthly' ? 'Daily Avg' : insightView === 'weekly' ? 'Weekly Avg' : 'Today'}
+                                                    {insightView === 'monthly' ? t('labels.dailyAvg') : insightView === 'weekly' ? t('labels.weeklyAvg') : t('history.today')}
                                                 </p>
                                                 <p className="text-xl font-bold text-white tabular-nums">
                                                     <CountUp value={insightView === 'monthly' ? metrics.dailyAverage : insightView === 'weekly' ? metrics.weeklyAverage : metrics.todayTotal} prefix="€" decimals={0} />
@@ -1654,7 +1621,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                             <div className="h-8 w-px bg-slate-800"></div>
                                             <div className="text-right">
                                                 <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">
-                                                    {insightView === 'monthly' ? 'Forecast' : insightView === 'weekly' ? 'This Week' : 'Yesterday'}
+                                                    {insightView === 'monthly' ? t('financial.forecast') : insightView === 'weekly' ? t('labels.thisWeek') : t('popups.dailySpending.yesterday')}
                                                 </p>
                                                 <p className="text-xl font-bold text-blue-400 tabular-nums">
                                                     <CountUp value={insightView === 'monthly' ? metrics.projectedTotal : insightView === 'weekly' ? metrics.thisWeekTotal : metrics.yesterdayTotal} prefix="€" decimals={0} />
@@ -1664,7 +1631,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                 <>
                                                     <div className="h-8 w-px bg-slate-800"></div>
                                                     <div className="text-right">
-                                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">Evidence</p>
+                                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{t('evidence.title')}</p>
                                                         <p className={"text-xl font-bold tabular-nums " + metrics.evidenceColor}>{metrics.evidenceLabel}</p>
                                                     </div>
                                                 </>
@@ -1686,7 +1653,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                             <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
                                                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                                                     <Sparkles className="w-3 h-3 text-purple-400" />
-                                                    Smart Suggestions
+                                                    {t('dashboard.smartSuggestions')}
                                                 </h4>
                                                 {metrics.smartInsights.map((insight, idx) => (
                                                     <div key={idx} className={"p-3 rounded-xl border flex items-start gap-3 " + (insight.type === 'warning' ? 'bg-red-500/10 border-red-500/20' : insight.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-blue-500/10 border-blue-500/20')}>
@@ -1723,14 +1690,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                     <Wallet className="text-indigo-400 w-3.5 h-3.5" />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-white text-xs font-bold leading-none">Financial Snapshot</span>
-                                                    <span className="text-indigo-300/50 text-[9px] uppercase tracking-wider font-bold leading-none mt-0.5">Real-time Overview</span>
+                                                    <span className="text-white text-xs font-bold leading-none">{t('dashboard.financialSnapshot')}</span>
+                                                    <span className="text-indigo-300/50 text-[9px] uppercase tracking-wider font-bold leading-none mt-0.5">{t('financial.realTimeOverview')}</span>
                                                 </div>
                                             </div>
                                             {/* Pulse Indicator */}
                                             <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-2 py-0.5">
                                                 <div className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></div>
-                                                <span className="text-[9px] font-bold text-indigo-300">LIVE</span>
+                                                <span className="text-[9px] font-bold text-indigo-300">{t('financial.live')}</span>
                                             </div>
                                         </div>
 
@@ -1761,7 +1728,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                     )}>
                                                                         <heroMetric.icon size={14} />
                                                                     </div>
-                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Status</span>
+                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('financial.currentStatus')}</span>
                                                                 </div>
                                                             </div>
 
@@ -1880,10 +1847,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                         <div>
                                                             <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wide mb-1">
                                                                 <Target className={"w-4 h-4 " + (isProMode ? "text-purple-400" : "text-slate-500")} />
-                                                                {isProMode ? "Track Your Habits" : "Goal Tracking"}
+                                                                {isProMode ? t('goals.trackHabits') : t('goals.title')}
                                                             </h3>
                                                             <p className="text-xs text-slate-500">
-                                                                {isProMode ? "Enable goals in settings to track spending." : "Upgrade to Pro to track spending goals."}
+                                                                {isProMode ? t('goals.enableDesc') : t('goals.upgradeDesc')}
                                                             </p>
                                                         </div>
                                                         <div className={"w-8 h-8 rounded-full flex items-center justify-center " + (isProMode ? "bg-purple-500/10" : "bg-slate-800/50")}>
@@ -1987,7 +1954,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                         <div className="flex items-center justify-between">
                                                             <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                                                 <Target className="w-4 h-4 text-purple-400" />
-                                                                Goal Breakdown
+                                                                {t('goals.breakdown')}
                                                             </h3>
                                                             <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
                                                                 {(['daily', 'weekly', 'monthly'] as const).map((view) => (
@@ -2093,7 +2060,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                                         {/* Footer */}
                                                                         <div className="flex items-center justify-between mt-2">
                                                                             <p className="text-[10px] text-slate-500">
-                                                                                {goalView === 'daily' ? 'Today' : goalView === 'weekly' ? 'This week' : 'This month'} • Target: €100
+                                                                                {goalView === 'daily' ? t('history.today') : goalView === 'weekly' ? t('labels.thisWeek') : t('labels.thisMonth')} • {t('goals.target')}: €100
                                                                             </p>
                                                                             {goal.streak > 0 && (
                                                                                 <div className="flex items-center gap-1">
@@ -2114,9 +2081,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                         <div className="flex items-center justify-between mb-4">
                                                             <h3 className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                                                 <Trophy className="w-4 h-4 text-yellow-500" />
-                                                                Achievements
+                                                                {t('goals.achievements')}
                                                             </h3>
-                                                            <span className="text-xs text-slate-500 font-medium">{unlockedCount} Unlocked</span>
+                                                            <span className="text-xs text-slate-500 font-medium">{unlockedCount} {t('goals.unlocked')}</span>
                                                         </div>
                                                         <div className="grid grid-cols-5 gap-2">
                                                             {achievements.slice(0, 10).map((badge) => (
@@ -2160,7 +2127,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                 <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                                                     <BarChart3 size={18} />
                                                 </div>
-                                                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Top Categories</h3>
+                                                <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('popups.topCategories.title')}</h3>
                                             </div>
                                             <div className="space-y-4">
                                                 {metrics.categoryData.slice(0, 5).map((cat, idx) => (
@@ -2168,7 +2135,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                         <div className="flex justify-between items-end mb-1">
                                                             <span className="text-xs font-medium text-slate-300 group-hover/bar:text-white transition-colors flex items-center gap-2">
                                                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(cat.name) }}></div>
-                                                                {cat.name}
+                                                                {t(`categories.${cat.name.toLowerCase()}`, { defaultValue: cat.name })}
                                                             </span>
                                                             <div className="flex items-end gap-1.5">
                                                                 <span className="text-sm font-bold text-white tabular-nums">€{cat.value.toFixed(0)}</span>
@@ -2187,7 +2154,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                     </div>
                                                 ))}
                                                 {metrics.categoryData.length === 0 && (
-                                                    <p className="text-xs text-slate-500 italic text-center py-4">No spending data yet.</p>
+                                                    <p className="text-xs text-slate-500 italic text-center py-4">{t('provision.noSpending')}</p>
                                                 )}
                                             </div>
                                         </SpotlightCard>
@@ -2206,7 +2173,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                             <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                                                 <ShoppingBag size={18} />
                                             </div>
-                                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Top Vendors</h3>
+                                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('provision.topVendors')}</h3>
                                         </div>
                                         <div className="space-y-4">
                                             {metrics.topStores.length > 0 ? (
@@ -2233,7 +2200,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                     </div>
                                                 ))
                                             ) : (
-                                                <div className="text-xs text-slate-500 text-center py-4">No data</div>
+                                                <div className="text-xs text-slate-500 text-center py-4">{t('provision.noData')}</div>
                                             )}
                                         </div>
                                     </SpotlightCard>

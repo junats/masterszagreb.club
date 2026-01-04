@@ -112,6 +112,14 @@ interface DataContextType {
     setHelpEnabled: (val: boolean) => void;
     isProMode: boolean;
     setIsProMode: (val: boolean) => void;
+    setIsProModeWithTimestamp: (val: boolean) => void;
+    proActivatedAt: string | null;
+
+    // Notification tracking
+    shownNotificationIds: Set<string>;
+    markNotificationAsShown: (id: string) => void;
+    unreadNotificationCount: number;
+    markAllNotificationsAsRead: () => void;
 
     // Meta
     isDataLoaded: boolean;
@@ -142,10 +150,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [showGlobalAmbient, setShowGlobalAmbient] = useState(true);
     const [helpEnabled, setHelpEnabled] = useState(false);
     const [isProMode, setIsProMode] = useState(false);
+    const [proActivatedAt, setProActivatedAt] = useState<string | null>(null);
     const [dataVersion, setDataVersion] = useState(0);
     const [lastPartnerChanges, setLastPartnerChanges] = useState<string | null>(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [recentChanges, setRecentChanges] = useState<CalendarChange[]>([]);
+    const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
     // --- Load Data ---
     useEffect(() => {
@@ -169,6 +180,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
                 if (savedSettings) {
                     const parsed = JSON.parse(savedSettings);
+
                     if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
                     if (parsed.categoryBudgets !== undefined) setCategoryBudgets(parsed.categoryBudgets);
                     if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
@@ -185,11 +197,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     } else {
                         console.warn('⚠️ No Pro mode found in storage, defaulting to false');
                     }
+                    if (parsed.proActivatedAt !== undefined) {
+                        setProActivatedAt(parsed.proActivatedAt);
+                    }
                 }
 
                 const { value: savedCustody } = await Preferences.get({ key: 'truetrack_custody' });
                 if (savedCustody) {
                     setCustodyDays(JSON.parse(savedCustody));
+                }
+
+                // Load shown notification IDs
+                const { value: savedNotificationIds } = await Preferences.get({ key: 'truetrack_shown_notifications' });
+                if (savedNotificationIds) {
+                    try {
+                        const parsed = JSON.parse(savedNotificationIds);
+                        if (Array.isArray(parsed)) {
+                            setShownNotificationIds(new Set(parsed));
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse notification IDs:', e);
+                    }
+                }
+
+                // Load unread notification count
+                const { value: savedUnreadCount } = await Preferences.get({ key: 'truetrack_unread_notifications' });
+                if (savedUnreadCount) {
+                    try {
+                        const count = parseInt(savedUnreadCount, 10);
+                        if (!isNaN(count)) {
+                            setUnreadNotificationCount(count);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse unread count:', e);
+                    }
                 }
             } catch (e) {
                 console.error("Failed to load data", e);
@@ -210,16 +251,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         saveReceipts();
     }, [receipts]);
 
-    useEffect(() => {
-        const saveSettings = async () => {
-            await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify({ budget: monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled, isProMode }) });
-            await Preferences.set({ key: 'truetrack_custody', value: JSON.stringify(custodyDays) });
-        };
-        saveSettings();
-    }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, custodyDays, ambientMode, showGlobalAmbient, helpEnabled, isProMode]);
-
     // Immediate persistence for Pro mode (critical to prevent loss on background)
     useEffect(() => {
+        // CRITICAL: Don't save until data is loaded, otherwise we'll overwrite with initial false value!
+        if (!isDataLoaded) return;
+
         const savePro = async () => {
             try {
                 const settings = {
@@ -233,7 +269,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     ambientMode,
                     showGlobalAmbient,
                     helpEnabled,
-                    isProMode
+                    isProMode,
+                    proActivatedAt
                 };
                 await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify(settings) });
                 console.log('✅ Pro mode saved immediately:', isProMode);
@@ -242,7 +279,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         };
         savePro();
-    }, [isProMode, monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled]);
+    }, [isProMode, proActivatedAt, monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled, isDataLoaded]);
+
+    // Save custody days separately
+    useEffect(() => {
+        if (!isDataLoaded) return; // Don't save until data is loaded
+
+        const saveCustody = async () => {
+            try {
+                await Preferences.set({ key: 'truetrack_custody', value: JSON.stringify(custodyDays) });
+            } catch (e) {
+                console.error('Failed to save custody days:', e);
+            }
+        };
+        saveCustody();
+    }, [custodyDays, isDataLoaded]);
+
+    // Persist shown notification IDs (with cleanup to prevent unbounded growth)
+    useEffect(() => {
+        const saveNotificationIds = async () => {
+            try {
+                // Keep only the last 100 notification IDs to prevent unbounded growth
+                const idsArray = Array.from(shownNotificationIds).slice(-100);
+                await Preferences.set({ key: 'truetrack_shown_notifications', value: JSON.stringify(idsArray) });
+            } catch (e) {
+                console.error('Failed to save notification IDs:', e);
+            }
+        };
+        saveNotificationIds();
+    }, [shownNotificationIds]);
+
+    // Persist unread notification count
+    useEffect(() => {
+        const saveUnreadCount = async () => {
+            try {
+                await Preferences.set({ key: 'truetrack_unread_notifications', value: unreadNotificationCount.toString() });
+            } catch (e) {
+                console.error('Failed to save unread count:', e);
+            }
+        };
+        saveUnreadCount();
+    }, [unreadNotificationCount]);
 
     // Auto-Sync when Co-Parenting Mode is enabled
     useEffect(() => {
@@ -251,17 +328,49 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [childSupportMode, isDataLoaded]);
 
+    // Helper to mark notification as shown
+    const markNotificationAsShown = (id: string) => {
+        setShownNotificationIds(prev => new Set([...prev, id]));
+    };
+
+    // Wrapper for setIsProMode that also sets activation timestamp
+    const setIsProModeWithTimestamp = (value: boolean) => {
+        console.log('🔧 setIsProModeWithTimestamp called with:', value);
+        console.log('📅 Current proActivatedAt:', proActivatedAt);
+
+        setIsProMode(value);
+        console.log('✅ setIsProMode called with:', value);
+
+        if (value && !proActivatedAt) {
+            // Only set timestamp on first activation
+            const timestamp = new Date().toISOString();
+            console.log('⏰ Setting proActivatedAt to:', timestamp);
+            setProActivatedAt(timestamp);
+        } else if (!value) {
+            // Clear timestamp if Pro is disabled
+            console.log('🗑️ Clearing proActivatedAt');
+            setProActivatedAt(null);
+        } else {
+            console.log('ℹ️ Pro already activated, keeping existing timestamp:', proActivatedAt);
+        }
+    };
+
+    // Helper to mark all notifications as read
+    const markAllNotificationsAsRead = () => {
+        setUnreadNotificationCount(0);
+    };
+
     // --- Widget Sync ---
     useEffect(() => {
         const syncWidget = async () => {
             try {
-                await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays);
+                await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays, isProMode);
             } catch (e) {
                 console.error("Widget sync failed:", e);
             }
         };
         syncWidget();
-    }, [receipts, monthlyBudget, custodyDays]);
+    }, [receipts, monthlyBudget, custodyDays, isProMode]);
 
     // --- Recurring Expenses Check ---
     useEffect(() => {
@@ -612,21 +721,37 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     } else {
                         const hasChanges = detectedChanges.length > 0;
                         if (hasChanges) {
-                            // Send detailed notifications
-                            import('../services/notificationService').then(({ NotificationService }) => {
-                                NotificationService.sendDetailedCalendarNotification(detectedChanges);
-                            });
+                            // Filter out already-shown notifications
+                            const newChanges = detectedChanges.filter(change => !shownNotificationIds.has(change.id));
 
-                            // Legacy message for backwards compatibility
-                            let changeMsg = "";
-                            if (newFromRemote > 0 && updatedFromRemote > 0) {
-                                changeMsg = `Partner added ${newFromRemote} and updated ${updatedFromRemote} events`;
-                            } else if (newFromRemote > 0) {
-                                changeMsg = `Partner added ${newFromRemote} new event${newFromRemote > 1 ? 's' : ''}`;
-                            } else if (updatedFromRemote > 0) {
-                                changeMsg = `Partner updated ${updatedFromRemote} event${updatedFromRemote > 1 ? 's' : ''}`;
+                            if (newChanges.length > 0) {
+                                // Send detailed notifications only for new changes
+                                import('../services/notificationService').then(({ NotificationService }) => {
+                                    NotificationService.sendDetailedCalendarNotification(newChanges);
+                                });
+
+                                // Mark these notifications as shown
+                                newChanges.forEach(change => markNotificationAsShown(change.id));
+
+                                // Increment unread notification count
+                                setUnreadNotificationCount(prev => prev + newChanges.length);
+
+                                // Legacy message for backwards compatibility
+                                let changeMsg = "";
+                                const newCount = newChanges.filter(c => c.type === 'added').length;
+                                const updatedCount = newChanges.filter(c => c.type === 'modified').length;
+
+                                if (newCount > 0 && updatedCount > 0) {
+                                    changeMsg = `Partner added ${newCount} and updated ${updatedCount} events`;
+                                } else if (newCount > 0) {
+                                    changeMsg = `Partner added ${newCount} new event${newCount > 1 ? 's' : ''}`;
+                                } else if (updatedCount > 0) {
+                                    changeMsg = `Partner updated ${updatedCount} event${updatedCount > 1 ? 's' : ''}`;
+                                }
+                                if (changeMsg) {
+                                    setLastPartnerChanges(changeMsg);
+                                }
                             }
-                            setLastPartnerChanges(changeMsg);
                         }
                     }
                 }
@@ -839,6 +964,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             showGlobalAmbient, setShowGlobalAmbient,
             helpEnabled, setHelpEnabled,
             isProMode, setIsProMode,
+            setIsProModeWithTimestamp,
+            proActivatedAt,
+            shownNotificationIds,
+            markNotificationAsShown,
+            unreadNotificationCount,
+            markAllNotificationsAsRead,
             lastPartnerChanges,
             setLastPartnerChanges,
             isDataLoaded,

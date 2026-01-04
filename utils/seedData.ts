@@ -6,17 +6,17 @@ export type SeedScenario = 'good' | 'average' | 'bad';
 // --- HEALTH/GOOD ---
 // Product Database with strict scenario alignment
 // Product Database with strict scenario alignment
-const dummyProducts: { name: string, price: number, store: string, category: Category, goalType?: GoalType, scenario: string[], isChild?: boolean }[] = [
+const dummyProducts: { name: string, price: number, store: string, category: Category, goalType?: GoalType, scenario: string[], isChild?: boolean, isRestricted?: boolean }[] = [
     // BAD SCENARIO ITEMS (High Cost / Unhealthy / Impulsive)
-    { name: 'Craft Beer Crate', price: 45.00, store: 'Off License', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL, scenario: ['bad'] },
-    { name: 'Vodka bottle', price: 32.00, store: 'Tesco', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL, scenario: ['bad'] },
+    { name: 'Craft Beer Crate', price: 45.00, store: 'Off License', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL, scenario: ['bad'], isRestricted: true },
+    { name: 'Vodka bottle', price: 32.00, store: 'Tesco', category: Category.ALCOHOL, goalType: GoalType.ALCOHOL, scenario: ['bad'], isRestricted: true },
     { name: 'Mega Burger Meal', price: 18.50, store: 'McDonalds', category: Category.DINING, goalType: GoalType.JUNK_FOOD, scenario: ['bad'] },
     { name: 'Late Night Pizza', price: 24.00, store: 'Domino\'s', category: Category.DINING, goalType: GoalType.JUNK_FOOD, scenario: ['bad', 'average'] },
-    { name: 'Online Bet', price: 50.00, store: 'PaddyPower', category: Category.LUXURY, goalType: GoalType.GAMBLING, scenario: ['bad'] },
-    { name: 'Lotto Ticket', price: 10.00, store: 'Centra', category: Category.LUXURY, goalType: GoalType.GAMBLING, scenario: ['bad', 'average'] },
+    { name: 'Online Bet', price: 50.00, store: 'PaddyPower', category: Category.LUXURY, goalType: GoalType.GAMBLING, scenario: ['bad'], isRestricted: true },
+    { name: 'Lotto Ticket', price: 10.00, store: 'Centra', category: Category.LUXURY, goalType: GoalType.GAMBLING, scenario: ['bad', 'average'], isRestricted: true },
     { name: 'New Video Game', price: 70.00, store: 'GameStop', category: Category.LUXURY, goalType: GoalType.GAMING, scenario: ['bad', 'average'] },
-    { name: 'Vape Juice', price: 12.00, store: 'Vape Shop', category: Category.HEALTH, goalType: GoalType.SMOKING, scenario: ['bad'] },
-    { name: 'Cigarettes', price: 16.50, store: 'Spar', category: Category.HEALTH, goalType: GoalType.SMOKING, scenario: ['bad'] },
+    { name: 'Vape Juice', price: 12.00, store: 'Vape Shop', category: Category.HEALTH, goalType: GoalType.SMOKING, scenario: ['bad'], isRestricted: true },
+    { name: 'Cigarettes', price: 16.50, store: 'Spar', category: Category.HEALTH, goalType: GoalType.SMOKING, scenario: ['bad'], isRestricted: true },
     { name: 'Cinema Tickets', price: 30.00, store: 'Odeon', category: Category.LUXURY, goalType: undefined, scenario: ['bad', 'average'] },
 
     // GOOD SCENARIO ITEMS (Essential / Healthy / Responsible)
@@ -66,7 +66,8 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
                 price: price,
                 quantity: 1,
                 category: product.category,
-                isChildRelated: product.isChild || false
+                isChildRelated: product.isChild || false,
+                isRestricted: product.isRestricted || false
             }],
             scannedAt: new Date().toISOString(),
             type: 'receipt',

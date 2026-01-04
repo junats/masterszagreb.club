@@ -19,20 +19,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationDidEnterBackground(_ application: UIApplication) {
         print("🔄 AppDelegate: App entered background - copying data to widget")
         
-        // Copy data from Capacitor Preferences to App Group UserDefaults
-        if let userDefaults = UserDefaults.standard.string(forKey: "CapacitorStorage.widgetData") {
-            print("📝 AppDelegate: Found widgetData in Capacitor storage")
-            
+        // Try to find widget data with multiple possible keys
+        // @capacitor/preferences might prefix with "CapacitorStorage." or use raw key depending on configuration
+        let possibleKeys = ["CapacitorStorage.widgetData", "widgetData"]
+        var widgetData: String?
+        
+        for key in possibleKeys {
+            if let data = UserDefaults.standard.string(forKey: key) {
+                widgetData = data
+                print("📝 AppDelegate: Found widgetData with key: \(key)")
+                break
+            }
+        }
+        
+        if let data = widgetData {
             // Write to App Group UserDefaults
             if let appGroupDefaults = UserDefaults(suiteName: "group.com.truetrack.app") {
-                appGroupDefaults.set(userDefaults, forKey: "widgetData")
+                appGroupDefaults.set(data, forKey: "widgetData")
                 appGroupDefaults.synchronize()
                 print("✅ AppDelegate: Copied to App Group UserDefaults")
             } else {
                 print("❌ AppDelegate: Failed to get App Group UserDefaults")
             }
         } else {
-            print("❌ AppDelegate: No widgetData found in Capacitor storage")
+            print("❌ AppDelegate: No widgetData found in Capacitor storage (scanned keys: \(possibleKeys))")
         }
         
         // Trigger widget refresh

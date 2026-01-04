@@ -5,9 +5,11 @@ import { HapticsService } from '../services/haptics';
 import { User } from '../types';
 import { authService } from '../services/authService';
 import { useUser } from '../contexts/UserContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Preferences } from '@capacitor/preferences';
 
 const AuthScreen: React.FC = () => {
+    const { t } = useLanguage();
     const { signIn } = useUser();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -94,7 +96,7 @@ const AuthScreen: React.FC = () => {
                 const currentEmail = email.trim();
                 if (currentEmail && currentEmail.toLowerCase() !== storedEmail.toLowerCase()) {
                     console.warn(`AuthScreen: Biometric email mismatch. Stored: ${storedEmail}, Entered: ${currentEmail}`);
-                    setError(`Face ID is linked to ${storedEmail}. Please clear the email field or use that account.`);
+                    setError(t('auth.errors.faceIdMismatch', { email: storedEmail }));
                     setLoading(false);
                     return;
                 }
@@ -111,14 +113,14 @@ const AuthScreen: React.FC = () => {
                     return;
                 } else {
                     console.error("AuthScreen: Biometric signIn rejected:", authError);
-                    setError(authError || "Biometric login failed. Please use your password.");
+                    setError(authError || t('auth.errors.biometricFail'));
                     if (authError?.toLowerCase().includes('incorrect password')) {
                         setIsBiometricError(true);
                     }
                 }
             } else {
                 console.log("AuthScreen: No biometric credentials found (empty keychain).");
-                setError("Face ID not set up. Please sign in once with your password to enable it.");
+                setError(t('auth.errors.faceIdNotSet'));
             }
         } catch (err: any) {
             console.error("AuthScreen: Biometric Exception:", err);
@@ -126,9 +128,9 @@ const AuthScreen: React.FC = () => {
             if (errMsg.toLowerCase().includes('cancel') || errMsg.toLowerCase().includes('user canceled')) {
                 console.log("AuthScreen: User cancelled biometric prompt.");
             } else if (errMsg.toLowerCase().includes('not set up') || errMsg.toLowerCase().includes('no credentials')) {
-                setError("Face ID not set up. Please sign in with your password first.");
+                setError(t('auth.errors.faceIdNotSet'));
             } else {
-                setError("Biometric authentication failed. Please use your password.");
+                setError(t('auth.errors.biometricFail'));
             }
         } finally {
             // Only stop loading if we didn't succeed (success path has early return)
@@ -177,9 +179,9 @@ const AuthScreen: React.FC = () => {
             console.error("AuthScreen: Manual login failed:", authError);
             const lowError = authError?.toLowerCase() || "";
             if (lowError.includes('invalid login credentials')) {
-                setError("Invalid credentials. If you usually sign in with Google or Apple, please use the buttons below.");
+                setError(t('auth.errors.invalidCredentials'));
             } else {
-                setError(authError || "Invalid email or password.");
+                setError(authError || t('auth.errors.default'));
             }
         }
     };
@@ -205,7 +207,7 @@ const AuthScreen: React.FC = () => {
                     if (lowError.includes('user already exists') || lowError.includes('already registered')) {
                         console.log("AuthScreen: User exists, auto-switching to login mode.");
                         setIsLogin(true);
-                        setError("Account already exists. Please sign in with your password.");
+                        setError(t('auth.errors.accountExists'));
                         HapticsService.notificationWarning();
                         setLoading(false);
                         return;
@@ -232,7 +234,7 @@ const AuthScreen: React.FC = () => {
             }
         } catch (err: any) {
             console.error("Auth Error:", err);
-            setError("Authentication failed. Please try again.");
+            setError(t('auth.errors.default'));
         } finally {
             setLoading(false);
         }
@@ -262,7 +264,7 @@ const AuthScreen: React.FC = () => {
                 signIn(result.user);
             }
         } catch (err) {
-            setError("An unexpected error occurred.");
+            setError(t('auth.errors.default'));
             setLoading(false);
         }
     };
@@ -283,14 +285,14 @@ const AuthScreen: React.FC = () => {
                     </div>
 
                     <h1 className="text-4xl font-heading font-bold text-white mb-2 tracking-tighter">
-                        {isLogin ? "Welcome Back" : "Let's Get Started"}
+                        {isLogin ? t('auth.welcomeBack') : t('auth.letsGetStarted')}
                     </h1>
-                    <p className="text-emerald-400 font-medium tracking-wide uppercase text-xs mb-4">Financial Neutrality For Modern Families</p>
+                    <p className="text-emerald-400 font-medium tracking-wide uppercase text-xs mb-4">{t('auth.tagline')}</p>
                     <p className="text-slate-400 font-medium tracking-tight">
-                        {isLogin ? "Sign in to manage your shared expenses." : "Create your account for absolute clarity."}
+                        {isLogin ? t('auth.loginDesc') : t('auth.signupDesc')}
                     </p>
                     <p className="text-xs text-slate-500 mt-3 max-w-[280px] mx-auto leading-relaxed">
-                        Secure your legal standing with unbiased record keeping and verified shared expenses.
+                        {t('auth.legalDisclaimer')}
                     </p>
                 </div>
 
@@ -305,7 +307,7 @@ const AuthScreen: React.FC = () => {
                                     <UserIcon className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
                                     <input
                                         type="text"
-                                        placeholder="Full Name"
+                                        placeholder={t('auth.labels.fullName')}
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
@@ -321,7 +323,7 @@ const AuthScreen: React.FC = () => {
                                 <Mail className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
                                 <input
                                     type="email"
-                                    placeholder="Email address"
+                                    placeholder={t('auth.labels.email')}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
@@ -335,7 +337,7 @@ const AuthScreen: React.FC = () => {
                             <Lock className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
                             <input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="Password"
+                                placeholder={t('auth.labels.password')}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-12 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
@@ -372,14 +374,14 @@ const AuthScreen: React.FC = () => {
                                     >
                                         {rememberMe && <Check size={10} className="text-white" />}
                                     </div>
-                                    <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors font-medium">Remember me</span>
+                                    <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors font-medium">{t('auth.labels.rememberMe')}</span>
                                 </label>
                                 <button
                                     type="button"
-                                    onClick={() => setError("Password reset feature coming soon. Please contact support.")}
+                                    onClick={() => setError(t('auth.errors.passwordReset'))}
                                     className="text-[11px] text-slate-500 hover:text-primary transition-colors font-medium"
                                 >
-                                    Forgot password?
+                                    {t('auth.labels.forgotPassword')}
                                 </button>
                             </div>
                         )}
@@ -390,7 +392,7 @@ const AuthScreen: React.FC = () => {
                             className="w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group relative overflow-hidden"
                         >
                             <span className="relative z-10 flex items-center gap-2">
-                                {loading ? "Connecting..." : (isLogin ? "Sign In" : "Create Account")}
+                                {loading ? t('auth.labels.connecting') : (isLogin ? t('auth.labels.signIn') : t('auth.labels.createAccount'))}
                                 {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
                             </span>
                         </button>
@@ -407,7 +409,7 @@ const AuthScreen: React.FC = () => {
                                     className="w-full flex items-center justify-center gap-3 bg-indigo-600/25 hover:bg-indigo-600/35 border border-indigo-500/40 rounded-xl py-3.5 transition-all disabled:opacity-50 group shadow-lg shadow-indigo-900/20"
                                 >
                                     <ScanFace className="w-6 h-6 text-indigo-300 group-hover:scale-110 transition-transform" />
-                                    <span className="text-indigo-200 font-bold text-sm">Sign in with Face ID</span>
+                                    <span className="text-indigo-200 font-bold text-sm">{t('auth.labels.faceId')}</span>
                                 </button>
                             </div>
                         )}
@@ -431,7 +433,7 @@ const AuthScreen: React.FC = () => {
                                     }}
                                     className="mt-1 text-xs font-bold text-primary hover:text-sky-400 text-left transition-colors flex items-center gap-1 self-start ml-6"
                                 >
-                                    Sign in with this account instead <ArrowRight size={12} />
+                                    {t('auth.prompts.signInWithAccount')} <ArrowRight size={12} />
                                 </button>
                             )}
 
@@ -443,12 +445,12 @@ const AuthScreen: React.FC = () => {
                                         HapticsService.impactMedium();
                                         await biometricService.deleteCredentials();
                                         setBiometricEnabled(false); // UI State Sync
-                                        setError("Face ID Reset. Please sign in once with your password to re-enable it.");
+                                        setError(t('auth.errors.faceIdReset'));
                                         setIsBiometricError(false);
                                     }}
                                     className="mt-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 text-left transition-colors flex items-center gap-1.5 self-start ml-6"
                                 >
-                                    <Trash2 size={12} /> Reset Face ID Vault
+                                    <Trash2 size={12} /> {t('auth.labels.resetFaceId')}
                                 </button>
                             )}
                         </div>
@@ -459,7 +461,7 @@ const AuthScreen: React.FC = () => {
                             <div className="w-full border-t border-white/10"></div>
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-[#0f172a] px-2 text-slate-500 font-medium">Or continue with</span>
+                            <span className="bg-[#0f172a] px-2 text-slate-500 font-medium">{t('auth.labels.orContinue')}</span>
                         </div>
                     </div>
 
@@ -476,7 +478,7 @@ const AuthScreen: React.FC = () => {
                                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                             </svg>
-                            <span className="font-bold text-sm tracking-tight">Google</span>
+                            <span className="font-bold text-sm tracking-tight">{t('auth.social.google')}</span>
                         </button>
                         <button
                             type="button"
@@ -487,14 +489,14 @@ const AuthScreen: React.FC = () => {
                             <svg className="w-5 h-5 shrink-0 text-black fill-current" viewBox="0 0 24 24">
                                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24.02-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.18 0 2.45-1.02 3.67-1.06 1.6-.05 2.8.6 3.46 1.54-2.9 1.49-2.26 5.09.28 6.32-.52 1.63-1.29 3.17-2.49 5.43zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
                             </svg>
-                            <span className="font-bold text-sm tracking-tight">Apple</span>
+                            <span className="font-bold text-sm tracking-tight">{t('auth.social.apple')}</span>
                         </button>
                     </div>
 
 
                     <div className="mt-8 text-center px-4">
                         <p className="text-slate-500 text-sm mb-2">
-                            {isLogin ? "New to TrueTrack?" : "Already have an account?"}
+                            {isLogin ? t('auth.prompts.newToTrueTrack') : t('auth.prompts.alreadyHaveAccount')}
                         </p>
                         <button
                             type="button"
@@ -506,20 +508,20 @@ const AuthScreen: React.FC = () => {
                             }}
                             className="text-white font-bold text-lg hover:text-primary transition-all active:scale-95 underline underline-offset-8 decoration-primary/30 hover:decoration-primary"
                         >
-                            {isLogin ? "Create an account" : "Sign in instead"}
+                            {isLogin ? t('auth.prompts.createAccountLink') : t('auth.prompts.signInLink')}
                         </button>
                     </div>
                 </div>
 
                 <div className="flex flex-col items-center gap-4 mt-8">
                     <p className="text-slate-600 text-[10px] font-medium text-center">
-                        Your data is encrypted and secure. By continuing, you agree to our Terms of Service.
+                        {t('auth.footer.encrypted')}
                     </p>
 
                     <button
                         type="button"
                         onClick={async () => {
-                            if (window.confirm("This will clear all local settings and Face ID data. Continue?")) {
+                            if (window.confirm(t('auth.troubleshoot.confirmReset'))) {
                                 await Preferences.clear();
                                 await biometricService.deleteCredentials();
                                 window.location.reload();
@@ -527,11 +529,11 @@ const AuthScreen: React.FC = () => {
                         }}
                         className="text-slate-700 text-[9px] uppercase tracking-widest hover:text-slate-500 transition-colors"
                     >
-                        Troubleshoot: Reset App Data
+                        {t('auth.troubleshoot.resetData')}
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

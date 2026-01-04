@@ -4,6 +4,9 @@ import { Preferences } from '@capacitor/preferences';
 // Import translation files
 import en from '../i18n/en.json';
 import hr from '../i18n/hr.json';
+import sv from '../i18n/sv.json';
+import no from '../i18n/no.json';
+import da from '../i18n/da.json';
 
 type TranslationKey = string;
 type Translations = typeof en;
@@ -19,7 +22,10 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const translationFiles: Record<string, Translations> = {
     en,
-    hr
+    hr,
+    sv,
+    no,
+    da
 };
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

@@ -11,9 +11,10 @@ interface NavigationProps {
   isVisible: boolean;
   childSupportMode?: boolean;
   helpEnabled: boolean;
+  unreadCount?: number;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible, childSupportMode, helpEnabled }) => {
+const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible, childSupportMode, helpEnabled, unreadCount = 0 }) => {
   const { t } = useLanguage();
 
   if (!isVisible) return null;
@@ -21,8 +22,8 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
   const navItems = [
     { id: 'dashboard', label: t('navigation.dashboard'), icon: Home, hidden: false },
     { id: 'scan', label: t('navigation.scan'), icon: Scan, hidden: false },
-    { id: 'notifications', label: 'Alerts', icon: Bell, hidden: false },
-    { id: 'support', label: 'Help', icon: LifeBuoy, hidden: !helpEnabled },
+    { id: 'notifications', label: t('navigation.alerts'), icon: Bell, hidden: false },
+    { id: 'support', label: t('navigation.help'), icon: LifeBuoy, hidden: !helpEnabled },
     { id: 'settings', label: t('navigation.settings'), icon: SettingsIcon, hidden: false },
   ] as const;
 
@@ -44,11 +45,11 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
               <div className={`p-2 rounded-full transition-all duration-500 ease-out relative ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'
                 } `}>
                 {/* Active Glow Background */}
-                <div className={`absolute inset-0 bg-primary/20 rounded-full blur-md transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'} `}></div>
+                <div className={`absolute inset-1 bg-primary/20 rounded-full blur-sm transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'} `}></div>
                 <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
 
-                {/* Notification Badge for Alerts */}
-                {item.id === 'notifications' && (
+                {/* Notification Badge for Alerts - Only show if unread > 0 */}
+                {item.id === 'notifications' && unreadCount > 0 && (
                   <div className="absolute -top-0.5 -right-0.5 z-20">
                     <div className="relative">
                       {/* Pulsing glow */}

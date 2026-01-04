@@ -2,39 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { HapticsService } from '../services/haptics';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface IntroTourProps {
     onComplete: () => void;
 }
 
-const TOUR_STEPS = [
+const getTourSteps = (t: any) => [
     {
-        title: "Welcome to TrueTrack",
-        description: "Your intelligent expense tracker with ambient awareness.",
+        title: t('tour.welcomeTitle'),
+        description: t('tour.welcomeDesc'),
         target: "body", // General welcome
         position: "center"
     },
     {
-        title: "Ambient Background",
-        description: "The background glow changes color based on your budget health. Green is good, Red needs attention.",
+        title: t('tour.ambientTitle'),
+        description: t('tour.ambientDesc'),
         target: ".ambient-background", // We'll need to add this class or ID
         position: "top"
     },
     {
-        title: "Interactive Cards",
-        description: "Tap any card to see more details. Try swiping items in the History view to delete them!",
+        title: t('tour.cardsTitle'),
+        description: t('tour.cardsDesc'),
         target: ".dashboard-card", // Target generic card
         position: "bottom"
     },
     {
-        title: "Navigation",
-        description: "Quickly switch between scanning receipts, viewing history, and managing settings.",
+        title: t('tour.navTitle'),
+        description: t('tour.navDesc'),
         target: "nav",
         position: "top"
     }
 ];
 
 const IntroTour: React.FC<IntroTourProps> = ({ onComplete }) => {
+    const { t } = useLanguage();
+    const TOUR_STEPS = getTourSteps(t);
     const [currentStep, setCurrentStep] = useState(0);
 
     useEffect(() => {
@@ -77,7 +80,7 @@ const IntroTour: React.FC<IntroTourProps> = ({ onComplete }) => {
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-4">
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                Step {currentStep + 1} of {TOUR_STEPS.length}
+                                {t('tour.stepIndicator', { current: currentStep + 1, total: TOUR_STEPS.length })}
                             </span>
                             <button
                                 onClick={onComplete}
@@ -97,7 +100,7 @@ const IntroTour: React.FC<IntroTourProps> = ({ onComplete }) => {
                                 onClick={handleNext}
                                 className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-900/20"
                             >
-                                {currentStep === TOUR_STEPS.length - 1 ? 'Get Started' : 'Next'}
+                                {currentStep === TOUR_STEPS.length - 1 ? t('tour.getStarted') : t('tour.next')}
                                 {currentStep === TOUR_STEPS.length - 1 ? <Check size={18} /> : <ChevronRight size={18} />}
                             </button>
                         </div>

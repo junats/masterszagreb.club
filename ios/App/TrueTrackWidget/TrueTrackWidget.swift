@@ -35,6 +35,10 @@ struct WidgetData: Decodable {
     let daysWithCoparent: Int
     let nextTransition: String
     
+    // Premium / Insights
+    let latestInsight: String?
+    let proStatus: Bool?
+    
     let lastUpdated: TimeInterval
     
     var safeWeeklySpend: Double {
@@ -311,179 +315,202 @@ struct TrueTrackWidgetEntryView : View {
     
     @ViewBuilder
     func largeWidgetContent(data: WidgetData) -> some View {
-        HStack(spacing: 16) {
-            // Left side - Spending info
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.58, green: 0.47, blue: 0.98), Color(red: 0.45, green: 0.35, blue: 0.85)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 8, height: 8)
-                    
-                    Text("This Month")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.6))
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                    
-                    Spacer()
-                    
-                    Text("\(Int(data.safeBudgetPercentage))%")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(data.safeBudgetPercentage > 100 ? Color(red: 0.94, green: 0.38, blue: 0.38) : Color(red: 0.58, green: 0.47, blue: 0.98))
-                }
-                
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("€\(String(format: "%.0f", data.monthlySpend))")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(data.monthlySpend > data.monthlyBudget ? Color(red: 0.94, green: 0.38, blue: 0.38) : .white)
-                    
-                    Text("/ €\(String(format: "%.0f", data.monthlyBudget))")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.35))
-                }
-                
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 6)
-                    
-                    GeometryReader { geometry in
-                        RoundedRectangle(cornerRadius: 3)
+        VStack(spacing: 0) {
+            HStack(spacing: 16) {
+                // Left side - Spending info
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 6) {
+                        Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: data.monthlySpend > data.monthlyBudget 
-                                        ? [Color(red: 0.94, green: 0.38, blue: 0.38), Color(red: 0.85, green: 0.28, blue: 0.28)]
-                                        : [Color(red: 0.58, green: 0.47, blue: 0.98), Color(red: 0.45, green: 0.35, blue: 0.85)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                                    colors: [Color(red: 0.58, green: 0.47, blue: 0.98), Color(red: 0.45, green: 0.35, blue: 0.85)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: min(CGFloat(data.safeBudgetPercentage / 100) * geometry.size.width, geometry.size.width), height: 6)
-                            .shadow(color: (data.monthlySpend > data.monthlyBudget ? Color(red: 0.94, green: 0.38, blue: 0.38) : Color(red: 0.58, green: 0.47, blue: 0.98)).opacity(0.5), radius: 4, x: 0, y: 0)
-                    }
-                }
-                .frame(height: 6)
-                
-                VStack(spacing: 8) {
-                    MiniStatItem(label: "Week", value: "€\(String(format: "%.0f", data.safeWeeklySpend))")
-                    MiniStatItem(label: "Today", value: "€\(String(format: "%.0f", data.dailySpend))")
-                }
-                
-                if data.daysWithYou > 0 || data.daysWithCoparent > 0 {
-                    Divider()
-                        .background(Color.white.opacity(0.08))
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Custody")
+                            .frame(width: 8, height: 8)
+                        
+                        Text("This Month")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(.white.opacity(0.6))
                             .textCase(.uppercase)
                             .tracking(0.5)
                         
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("You")
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.5))
-                                Text("\(data.daysWithYou)d")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                        Spacer()
+                        
+                        Text("\(Int(data.safeBudgetPercentage))%")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(data.safeBudgetPercentage > 100 ? Color(red: 0.94, green: 0.38, blue: 0.38) : Color(red: 0.58, green: 0.47, blue: 0.98))
+                    }
+                    
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("€\(String(format: "%.0f", data.monthlySpend))")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(data.monthlySpend > data.monthlyBudget ? Color(red: 0.94, green: 0.38, blue: 0.38) : .white)
+                        
+                        Text("/ €\(String(format: "%.0f", data.monthlyBudget))")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.35))
+                    }
+                    
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.white.opacity(0.08))
+                            .frame(height: 6)
+                        
+                        GeometryReader { geometry in
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(
+                                    LinearGradient(
+                                        colors: data.monthlySpend > data.monthlyBudget 
+                                            ? [Color(red: 0.94, green: 0.38, blue: 0.38), Color(red: 0.85, green: 0.28, blue: 0.28)]
+                                            : [Color(red: 0.58, green: 0.47, blue: 0.98), Color(red: 0.45, green: 0.35, blue: 0.85)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: min(CGFloat(data.safeBudgetPercentage / 100) * geometry.size.width, geometry.size.width), height: 6)
+                                .shadow(color: (data.monthlySpend > data.monthlyBudget ? Color(red: 0.94, green: 0.38, blue: 0.38) : Color(red: 0.58, green: 0.47, blue: 0.98)).opacity(0.5), radius: 4, x: 0, y: 0)
+                        }
+                    }
+                    .frame(height: 6)
+                    
+                    VStack(spacing: 8) {
+                        MiniStatItem(label: "Week", value: "€\(String(format: "%.0f", data.safeWeeklySpend))")
+                        MiniStatItem(label: "Today", value: "€\(String(format: "%.0f", data.dailySpend))")
+                    }
+                    
+                    if data.daysWithYou > 0 || data.daysWithCoparent > 0 {
+                        Divider()
+                            .background(Color.white.opacity(0.08))
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Custody")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.6))
+                                .textCase(.uppercase)
+                                .tracking(0.5)
+                            
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("You")
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.5))
+                                    Text("\(data.daysWithYou)d")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Co-parent")
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.5))
+                                    Text("\(data.daysWithCoparent)d")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
                             }
                             
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Co-parent")
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.5))
-                                Text("\(data.daysWithCoparent)d")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        
-                        Text("Next: \(data.nextTransition)")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(Color(red: 0.58, green: 0.47, blue: 0.98))
-                    }
-                }
-                
-                Spacer()
-            }
-            
-            // Right side - Pie chart
-            if !data.safeTopCategories.isEmpty {
-                VStack(alignment: .center, spacing: 8) {
-                    Text("Categories")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.6))
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Chart(data.safeTopCategories) { category in
-                        SectorMark(
-                            angle: .value("Amount", category.amount),
-                            innerRadius: .ratio(0.5),
-                            angularInset: 1.5
-                        )
-                        .foregroundStyle(by: .value("Category", category.category))
-                    }
-                    .chartForegroundStyleScale([
-                        "Food": Color(red: 0.94, green: 0.27, blue: 0.27),
-                        "Activities": Color(red: 0.96, green: 0.62, blue: 0.04),
-                        "Education": Color(red: 0.23, green: 0.51, blue: 0.96),
-                        "Health": Color(red: 0.06, green: 0.72, blue: 0.51),
-                        "Clothing": Color(red: 0.55, green: 0.36, blue: 0.96),
-                        "Transport": Color(red: 0.93, green: 0.28, blue: 0.57),
-                        "Luxury": Color(red: 0.85, green: 0.55, blue: 0.26),
-                        "Child": Color(red: 0.40, green: 0.76, blue: 0.65),
-                        "Alcohol": Color(red: 0.76, green: 0.40, blue: 0.56),
-                        "Dining": Color(red: 0.99, green: 0.71, blue: 0.42),
-                        "Other": Color(red: 0.42, green: 0.45, blue: 0.50)
-                    ])
-                    .chartLegend(.hidden)
-                    .frame(width: 120, height: 120)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(data.safeTopCategories.prefix(4)) { category in
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(getCategoryColor(category.category))
-                                    .frame(width: 6, height: 6)
-                                
-                                Text(category.category)
-                                    .font(.system(size: 9, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.7))
-                                
-                                Spacer()
-                                
-                                Text("€\(String(format: "%.0f", category.amount))")
-                                    .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.9))
-                            }
-                        }
-                    }
-                    
-                    Divider().background(Color.white.opacity(0.05)).padding(.vertical, 6)
-                    
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Left").font(.system(size: 8, weight: .medium)).foregroundColor(.white.opacity(0.4))
-                            Text("€\(String(format: "%.0f", data.safeRemainingBudget))").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor(data.safeRemainingBudget < 0 ? Color(red: 0.94, green: 0.38, blue: 0.38) : Color(red: 0.06, green: 0.72, blue: 0.51))
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(data.safeDaysLeftInMonth)d left").font(.system(size: 8, weight: .medium)).foregroundColor(.white.opacity(0.4))
-                            Text("€\(String(format: "%.0f", data.safeAverageDailySpend))/d").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor(.white.opacity(0.9))
+                            Text("Next: \(data.nextTransition)")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(Color(red: 0.58, green: 0.47, blue: 0.98))
                         }
                     }
                     
                     Spacer()
                 }
+                
+                // Right side - Pie chart
+                if !data.safeTopCategories.isEmpty {
+                    VStack(alignment: .center, spacing: 8) {
+                        Text("Categories")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.6))
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Chart(data.safeTopCategories) { category in
+                            SectorMark(
+                                angle: .value("Amount", category.amount),
+                                innerRadius: .ratio(0.5),
+                                angularInset: 1.5
+                            )
+                            .foregroundStyle(by: .value("Category", category.category))
+                        }
+                        .chartForegroundStyleScale([
+                            "Food": Color(red: 0.94, green: 0.27, blue: 0.27),
+                            "Activities": Color(red: 0.96, green: 0.62, blue: 0.04),
+                            "Education": Color(red: 0.23, green: 0.51, blue: 0.96),
+                            "Health": Color(red: 0.06, green: 0.72, blue: 0.51),
+                            "Clothing": Color(red: 0.55, green: 0.36, blue: 0.96),
+                            "Transport": Color(red: 0.93, green: 0.28, blue: 0.57),
+                            "Luxury": Color(red: 0.85, green: 0.55, blue: 0.26),
+                            "Child": Color(red: 0.40, green: 0.76, blue: 0.65),
+                            "Alcohol": Color(red: 0.76, green: 0.40, blue: 0.56),
+                            "Dining": Color(red: 0.99, green: 0.71, blue: 0.42),
+                            "Household": Color(red: 0.13, green: 0.83, blue: 0.93),
+                            "Other": Color(red: 0.42, green: 0.45, blue: 0.50)
+                        ])
+                        .chartLegend(.hidden)
+                        .frame(width: 120, height: 120)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(data.safeTopCategories.prefix(4)) { category in
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(getCategoryColor(category.category))
+                                        .frame(width: 6, height: 6)
+                                    
+                                    Text(category.category)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.7))
+                                    
+                                    Spacer()
+                                    
+                                    Text("€\(String(format: "%.0f", category.amount))")
+                                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                            }
+                        }
+                        
+                        Divider().background(Color.white.opacity(0.05)).padding(.vertical, 6)
+                        
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Left").font(.system(size: 8, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                                Text("€\(String(format: "%.0f", data.safeRemainingBudget))").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor(data.safeRemainingBudget < 0 ? Color(red: 0.94, green: 0.38, blue: 0.38) : Color(red: 0.06, green: 0.72, blue: 0.51))
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(data.safeDaysLeftInMonth)d left").font(.system(size: 8, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                                Text("€\(String(format: "%.0f", data.safeAverageDailySpend))/d").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor(.white.opacity(0.9))
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                }
+            }
+            
+            // --- Premium Insight Footer (NEW) ---
+            if let insight = data.latestInsight, data.proStatus == true {
+                Spacer()
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(red: 0.58, green: 0.47, blue: 0.98))
+                    Text(insight)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.9))
+                        .lineLimit(1)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.white.opacity(0.08))
+                .cornerRadius(8)
+                .padding(.top, 12)
             }
         }
         .padding(10)
@@ -513,6 +540,7 @@ struct TrueTrackWidgetEntryView : View {
         case "Child": return Color(red: 0.40, green: 0.76, blue: 0.65)
         case "Alcohol": return Color(red: 0.76, green: 0.40, blue: 0.56)
         case "Dining": return Color(red: 0.99, green: 0.71, blue: 0.42)
+        case "Household": return Color(red: 0.13, green: 0.83, blue: 0.93)
         default: return Color(red: 0.42, green: 0.45, blue: 0.50)
         }
     }

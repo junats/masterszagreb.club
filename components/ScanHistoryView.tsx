@@ -28,9 +28,9 @@ const ScanHistoryView: React.FC<ScanHistoryViewProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full pt-2">
             {/* Tab Switcher */}
-            <div className="px-4 pt-2 pb-3">
+            <div className="px-4 pb-4">
                 <div className="flex bg-slate-800/50 rounded-lg p-0.5 border border-white/5">
                     <button
                         onClick={() => handleTabChange('scan')}

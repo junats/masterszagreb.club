@@ -18,23 +18,23 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
     const getHeaderInfo = (view: ViewState): { title: string; subtitle: string } => {
         switch (view) {
             case 'dashboard':
-                return { title: t('navigation.dashboard'), subtitle: 'Overview' };
+                return { title: t('navigation.dashboard'), subtitle: t('navigation.dashboardSubtitle') };
             case 'scan':
-                return { title: t('scanner.title'), subtitle: 'Camera' };
+                return { title: t('scanner.title'), subtitle: t('navigation.scanSubtitle') };
             case 'history':
-                return { title: t('navigation.history'), subtitle: 'Transactions' };
+                return { title: t('navigation.history'), subtitle: t('navigation.historySubtitle') };
             case 'settings':
-                return { title: t('navigation.settings'), subtitle: 'Preferences' };
+                return { title: t('navigation.settings'), subtitle: t('navigation.settingsSubtitle') };
             case 'support':
-                return { title: 'Help & Support', subtitle: 'Assistance' };
+                return { title: t('navigation.helpTitle'), subtitle: t('navigation.helpSubtitle') };
             case 'provision':
-                return { title: 'Provision', subtitle: 'Analysis' };
+                return { title: t('navigation.provision'), subtitle: t('navigation.provisionSubtitle') };
             case 'custody':
-                return { title: 'Custody', subtitle: 'Calendar' };
+                return { title: t('navigation.custody'), subtitle: t('navigation.custodySubtitle') };
             case 'settlement':
-                return { title: 'Settlement', subtitle: 'Report' };
+                return { title: t('navigation.settlement'), subtitle: t('navigation.settlementSubtitle') };
             default:
-                return { title: 'TrueTrack', subtitle: 'App' };
+                return { title: 'TrueTrack', subtitle: t('common.app') };
         }
     };
 

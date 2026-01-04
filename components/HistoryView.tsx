@@ -282,273 +282,369 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
             <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out">
                 <div className="h-full overflow-y-auto no-scrollbar px-4 pt-0 pb-24">
-                    <button onClick={() => onSelectReceipt(null)} className="text-slate-400 text-sm mb-4 flex items-center gap-1 font-medium hover:text-white transition-colors duration-300">
-                        &larr; Back to History
+                    <button
+                        onClick={() => onSelectReceipt(null)}
+                        className="text-white bg-white/5 hover:bg-white/10 text-sm mb-4 px-4 py-2 rounded-xl flex items-center gap-2 font-semibold transition-all duration-300 border border-white/10 hover:border-white/20 active:scale-95"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to History
                     </button>
 
-                    <div className={`rounded-3xl p-6 shadow-2xl border ${isBill ? 'bg-slate-900 border-indigo-500/50' : 'bg-surface border-white/10'} relative overflow-hidden`}>
-                        <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
+                    {/* Sticky Header Wrapper */}
+                    <div className="sticky top-0 z-10 -mx-4 px-4 pb-3 bg-gradient-to-b from-background via-background to-transparent">
+                        <div className={`rounded-3xl p-3 shadow-2xl border ${isBill ? 'bg-slate-900 border-indigo-500/50' : 'bg-surface border-white/10'} relative overflow-hidden`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
 
-                        <div className="flex justify-between items-start mb-6 mt-2">
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    {isBill && <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded uppercase tracking-wide">Invoice / Bill</span>}
+                            {/* Single line layout */}
+                            <div className="flex items-center justify-between gap-3 mt-0.5">
+                                {/* Store name */}
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-lg font-heading font-bold text-white tracking-tight truncate">{selectedReceipt.storeName}</h2>
                                 </div>
-                                <h2 className="text-2xl font-heading font-bold text-white tracking-tight">{selectedReceipt.storeName}</h2>
 
-                                {isBill && selectedReceipt.referenceCode && (
-                                    <div className="mt-2 bg-black/30 border border-white/10 rounded-lg p-2 flex items-center gap-3 w-full hover:border-white/30 transition-colors duration-300">
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">Payment Code</p>
-                                            <p className="text-sm font-mono text-white tracking-wide break-all">{selectedReceipt.referenceCode}</p>
-                                        </div>
-                                        <button className="text-slate-400 hover:text-white transition-colors duration-300 shrink-0" onClick={() => navigator.clipboard.writeText(selectedReceipt.referenceCode!)}>
-                                            <Copy size={14} />
+                                {/* Pie chart */}
+                                <div className="relative flex-shrink-0">
+                                    <svg width="36" height="36" viewBox="0 0 36 36" className="transform -rotate-90">
+                                        {(() => {
+                                            const childItems = visibleItems.filter(i => i.isChildRelated);
+                                            const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
+                                            const childPercentage = effectiveTotal > 0 ? (childTotal / effectiveTotal) * 100 : 0;
+                                            const circumference = 2 * Math.PI * 15.9155;
+                                            const childStroke = (childPercentage / 100) * circumference;
+                                            const otherStroke = circumference - childStroke;
+
+                                            return (
+                                                <>
+                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3.2" />
+                                                    {childPercentage > 0 && (
+                                                        <circle
+                                                            cx="18"
+                                                            cy="18"
+                                                            r="15.9155"
+                                                            fill="none"
+                                                            stroke="#34d399"
+                                                            strokeWidth="3.2"
+                                                            strokeDasharray={`${childStroke} ${circumference}`}
+                                                            strokeLinecap="round"
+                                                        />
+                                                    )}
+                                                    {childPercentage < 100 && (
+                                                        <circle
+                                                            cx="18"
+                                                            cy="18"
+                                                            r="15.9155"
+                                                            fill="none"
+                                                            stroke="#f472b6"
+                                                            strokeWidth="3.2"
+                                                            strokeDasharray={`${otherStroke} ${circumference}`}
+                                                            strokeDashoffset={-childStroke}
+                                                            strokeLinecap="round"
+                                                        />
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-[7px] font-bold text-white">
+                                            {(() => {
+                                                const childItems = visibleItems.filter(i => i.isChildRelated);
+                                                const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
+                                                const childPercentage = effectiveTotal > 0 ? Math.round((childTotal / effectiveTotal) * 100) : 0;
+                                                return `${childPercentage}%`;
+                                            })()}
+                                        </span>
+                                    </div>
+                                </div>
+
+
+                                {/* Mini trends sparkline - Item Nutrition Scores */}
+                                <div className="flex-shrink-0">
+                                    <svg width="40" height="24" viewBox="0 0 40 24" className="opacity-60">
+                                        <polyline
+                                            points={(() => {
+                                                // Get items with nutrition scores
+                                                const scoredItems = visibleItems.filter(i => i.insights?.nutritionScore !== undefined);
+                                                if (scoredItems.length === 0) return "0,20 40,20"; // Flat line if no data
+                                                if (scoredItems.length === 1) return `0,${24 - (scoredItems[0].insights!.nutritionScore / 100 * 24)} 40,${24 - (scoredItems[0].insights!.nutritionScore / 100 * 24)}`;
+
+                                                return scoredItems.map((item, idx) => {
+                                                    const score = item.insights!.nutritionScore;
+                                                    const x = (idx / (scoredItems.length - 1)) * 40;
+                                                    const y = 24 - ((score / 100) * 20) - 2; // Keep within padded bounds
+                                                    return `${x},${y}`;
+                                                }).join(' ');
+                                            })()}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            className={isBill ? 'text-indigo-400' : 'text-primary'}
+                                        />
+                                    </svg>
+                                </div>
+
+                                {/* Total */}
+                                <div className="text-right flex-shrink-0">
+                                    <p className={`text-xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="flex gap-1.5 flex-shrink-0">
+                                    <button onClick={handleShare} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                        <Share2 size={14} />
+                                    </button>
+                                    {onDelete && (
+                                        <button onClick={handleDelete} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                                            <Trash2 size={14} />
                                         </button>
-                                    </div>
-                                )}
-                                {selectedReceipt.location ? (
-                                    <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
-                                        <MapPin size={12} />
-                                        <span>{selectedReceipt.location}</span>
-                                    </div>
-                                ) : isBill ? (
-                                    <div className="flex items-center gap-1 text-slate-400 text-xs mt-2 font-medium">
-                                        <MapPin size={12} />
-                                        <span>Provider Address</span>
-                                    </div>
-                                ) : null}
+                                    )}
+                                </div>
                             </div>
+
                             {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
                                 <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-medium">
-                                    <span>Restricted items hidden from totals</span>
+                                    <span>{t('history.restrictedHidden')}</span>
                                 </div>
                             )}
                         </div>
-                        <div className="text-right flex flex-col items-end gap-2">
-                            <div className="flex gap-2 mb-1">
-                                <button onClick={handleShare} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                                    <Share2 size={16} />
-                                </button>
-                                {onDelete && (
-                                    <button onClick={handleDelete} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
-                                        <Trash2 size={16} />
+                    </div>
+
+                    {/* Content with spacing */}
+                    <div className="pt-6">
+
+                        {displayImageUrl && (
+                            <div className="mt-4">
+                                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">{t('history.originalScan')}</p>
+                                <div
+                                    className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
+                                    onClick={() => setShowFullImage(true)}
+                                >
+                                    <img
+                                        src={displayImageUrl}
+                                        alt="Receipt Scan"
+                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
+                                        <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
+                                            <ImageIcon size={14} /> {t('history.viewFullImage')}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-3 mb-6 pr-1">
+                            {visibleItems.map((item, idx) => {
+                                const isHidden = ageRestricted && item.isRestricted;
+                                if (isHidden) return null;
+
+                                const handleDeleteItem = () => {
+                                    if (onUpdate) {
+                                        const newItems = [...selectedReceipt.items];
+                                        newItems.splice(idx, 1);
+                                        // Recalculate total
+                                        const newTotal = newItems.reduce((sum, i) => sum + i.price, 0);
+                                        onUpdate({ ...selectedReceipt, items: newItems, total: newTotal });
+                                        onSelectReceipt({ ...selectedReceipt, items: newItems, total: newTotal });
+                                        // Haptic feedback
+                                        import('../services/haptics').then(({ HapticsService }) => {
+                                            HapticsService.notificationSuccess();
+                                        });
+                                    }
+                                };
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="relative overflow-hidden rounded-lg mb-2"
+                                    >
+                                        <div
+                                            className={`relative bg-surfaceHighlight flex flex-col justify-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}
+                                        >
+                                            <div className="flex justify-between items-center w-full">
+                                                <div>
+                                                    <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                            item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                                                                item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                                                                    item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                                                        item.category === Category.DINING ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
+                                                                            'bg-slate-800 border-slate-700 text-slate-400'
+                                                            }`}>
+                                                            {item.category}
+                                                        </span>
+                                                        {item.isRestricted && !ageRestricted && (
+                                                            <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
+                                                        )}
+                                                        {item.isChildRelated && childSupportMode && (
+                                                            <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
+                                                                <Baby size={10} /> Child
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
+                                                        €{item.price.toFixed(2)}
+                                                    </span>
+                                                    {onUpdate && childSupportMode && (
+                                                        <button
+                                                            onClick={() => handleToggleChildRelated(idx)}
+                                                            className={`p-2 rounded-lg transition-all duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/20 ring-2 ring-emerald-500/30' : 'text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 bg-slate-800/50'}`}
+                                                            title="Toggle Child Related"
+                                                        >
+                                                            <Baby size={18} />
+                                                        </button>
+                                                    )}
+                                                    {onUpdate && !ageRestricted && (
+                                                        <button
+                                                            onClick={() => handleToggleRestriction(idx)}
+                                                            className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
+                                                            title="Toggle Restriction (18+)"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* AI Insights Display */}
+                                            {item.insights && (
+                                                <div className="w-full mt-2 pt-2 border-t border-white/5 grid grid-cols-2 gap-2">
+                                                    <div className="col-span-2 text-[10px] text-slate-400 italic">
+                                                        ✨ {item.insights.insight}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 bg-black/20 rounded p-1.5">
+                                                        {item.insights.nutritionScore === -1 ? (
+                                                            <span className="text-[9px] text-slate-500 w-full text-center font-medium tracking-wide">{t('financial.utilityItem')}</span>
+                                                        ) : (
+                                                            <>
+                                                                <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className={`h-full rounded-full ${item.insights.nutritionScore > 70 ? 'bg-emerald-500' : item.insights.nutritionScore > 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                                        style={{ width: `${item.insights.nutritionScore}%` }}
+                                                                    />
+                                                                </div>
+                                                                <span className="text-[9px] font-bold text-slate-400 w-8 text-right">{t('financial.nutri')} {item.insights.nutritionScore}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1 bg-black/20 rounded p-1.5 justify-center">
+                                                        <span className="text-[9px] text-slate-400">{t('financial.value')}:</span>
+                                                        <div className="flex">
+                                                            {[1, 2, 3, 4, 5].map(star => (
+                                                                <span key={star} className={`text-[10px] ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                            {isEditingDate ? (
+                                <div className="flex items-center gap-2 w-full">
+                                    <input
+                                        type="date"
+                                        value={new Date(selectedReceipt.date).toISOString().split('T')[0]}
+                                        onChange={(e) => {
+                                            if (onUpdate && e.target.value) {
+                                                onUpdate({ ...selectedReceipt, date: e.target.value });
+                                                onSelectReceipt({ ...selectedReceipt, date: e.target.value });
+                                            }
+                                        }}
+                                        className="bg-surfaceHighlight border border-white/20 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-primary"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            if (onUpdate) {
+                                                onUpdate({ ...selectedReceipt, date: today });
+                                                onSelectReceipt({ ...selectedReceipt, date: today });
+                                            }
+                                        }}
+                                        className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-bold hover:bg-primary/30"
+                                    >
+                                        {t('common.today')}
                                     </button>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Total</p>
-                                <p className={`text-3xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
-                            </div>
+                                    <button
+                                        onClick={() => setIsEditingDate(false)}
+                                        className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold hover:bg-white/20"
+                                    >
+                                        {t('common.done')}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
+                                    {onUpdate && (
+                                        <button
+                                            onClick={() => setIsEditingDate(true)}
+                                            className="text-[10px] text-primary hover:text-primary/80 font-medium underline"
+                                        >
+                                            {t('common.editDate')}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {displayImageUrl && (
-                        <div className="mb-6">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">Original Scan</p>
+                    {showFullImage && displayImageUrl && (
+                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-sm">
+                            <button
+                                onClick={() => {
+                                    setShowFullImage(false);
+                                    setZoomLevel(1);
+                                    setPanPosition({ x: 0, y: 0 });
+                                }}
+                                className="absolute right-6 z-[200] text-white bg-black/60 backdrop-blur-md rounded-full p-3 transition-all hover:bg-black/80 shadow-2xl hover:scale-110 active:scale-95"
+                                style={{
+                                    top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)'
+                                }}
+                            >
+                                <X size={24} />
+                            </button>
+
                             <div
-                                className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
-                                onClick={() => setShowFullImage(true)}
+                                className="relative w-full h-full flex items-center justify-center touch-none"
+                                onMouseDown={handleMouseDown}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseUp}
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleMouseUp}
                             >
                                 <img
                                     src={displayImageUrl}
-                                    alt="Receipt Scan"
-                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                    alt="Full Receipt"
+                                    draggable={false}
+                                    style={{
+                                        transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
+                                        cursor: zoomLevel > 1 ? 'grab' : 'zoom-in',
+                                        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                                    }}
+                                    onClick={handleImageClick}
+                                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
                                 />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
-                                    <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
-                                        <ImageIcon size={14} /> View Full Image
-                                    </span>
-                                </div>
+                            </div>
+
+                            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-medium border border-white/10 pointer-events-none">
+                                {zoomLevel === 1 ? 'Tap to Zoom' : 'Drag to Pan • Tap to Reset'}
                             </div>
                         </div>
                     )}
-
-                    <div className="space-y-3 mb-6 pr-1">
-                        {visibleItems.map((item, idx) => {
-                            const isHidden = ageRestricted && item.isRestricted;
-                            if (isHidden) return null;
-
-                            const handleDeleteItem = () => {
-                                if (onUpdate) {
-                                    const newItems = [...selectedReceipt.items];
-                                    newItems.splice(idx, 1);
-                                    // Recalculate total
-                                    const newTotal = newItems.reduce((sum, i) => sum + i.price, 0);
-                                    onUpdate({ ...selectedReceipt, items: newItems, total: newTotal });
-                                    onSelectReceipt({ ...selectedReceipt, items: newItems, total: newTotal });
-                                    // Haptic feedback
-                                    import('../services/haptics').then(({ HapticsService }) => {
-                                        HapticsService.notificationSuccess();
-                                    });
-                                }
-                            };
-
-                            return (
-                                <motion.div
-                                    key={idx}
-                                    className="relative overflow-hidden rounded-lg mb-2"
-                                >
-                                    <motion.div
-                                        className="absolute inset-0 bg-red-500/20 flex items-center justify-end px-4 rounded-lg"
-                                        initial={{ opacity: 0 }}
-                                        whileHover={{ opacity: 1 }}
-                                    >
-                                        <Trash2 size={18} className="text-red-400" />
-                                    </motion.div>
-                                    <motion.div
-                                        className={`relative bg-surfaceHighlight flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors duration-200 ${item.isRestricted && !ageRestricted ? 'opacity-50 grayscale' : ''}`}
-                                        drag="x"
-                                        dragConstraints={{ left: -100, right: 0 }}
-                                        onDragEnd={(e, info) => {
-                                            if (info.offset.x < -60) {
-                                                handleDeleteItem();
-                                            }
-                                        }}
-                                        whileDrag={{ scale: 0.98 }}
-                                    >
-                                        <div>
-                                            <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
-                                                    item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
-                                                        item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                                            item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                                                                item.category === Category.DINING ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
-                                                                    'bg-slate-800 border-slate-700 text-slate-400'
-                                                    }`}>
-                                                    {item.category}
-                                                </span>
-                                                {item.isRestricted && !ageRestricted && (
-                                                    <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
-                                                )}
-                                                {item.isChildRelated && childSupportMode && (
-                                                    <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
-                                                        <Baby size={10} /> Child
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
-                                                €{item.price.toFixed(2)}
-                                            </span>
-                                            {onUpdate && childSupportMode && (
-                                                <button
-                                                    onClick={() => handleToggleChildRelated(idx)}
-                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isChildRelated ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-600 hover:text-emerald-400 hover:bg-slate-800'}`}
-                                                    title="Toggle Child Related"
-                                                >
-                                                    <Baby size={14} />
-                                                </button>
-                                            )}
-                                            {onUpdate && !ageRestricted && (
-                                                <button
-                                                    onClick={() => handleToggleRestriction(idx)}
-                                                    className={`p-1.5 rounded-lg transition-colors duration-200 ${item.isRestricted ? 'text-red-400 bg-red-500/10' : 'text-slate-600 hover:text-red-400 hover:bg-slate-800'}`}
-                                                    title="Toggle Restriction (18+)"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                        {isEditingDate ? (
-                            <div className="flex items-center gap-2 w-full">
-                                <input
-                                    type="date"
-                                    value={new Date(selectedReceipt.date).toISOString().split('T')[0]}
-                                    onChange={(e) => {
-                                        if (onUpdate && e.target.value) {
-                                            onUpdate({ ...selectedReceipt, date: e.target.value });
-                                            onSelectReceipt({ ...selectedReceipt, date: e.target.value });
-                                        }
-                                    }}
-                                    className="bg-surfaceHighlight border border-white/20 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-primary"
-                                />
-                                <button
-                                    onClick={() => {
-                                        const today = new Date().toISOString().split('T')[0];
-                                        if (onUpdate) {
-                                            onUpdate({ ...selectedReceipt, date: today });
-                                            onSelectReceipt({ ...selectedReceipt, date: today });
-                                        }
-                                    }}
-                                    className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-bold hover:bg-primary/30"
-                                >
-                                    Today
-                                </button>
-                                <button
-                                    onClick={() => setIsEditingDate(false)}
-                                    className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold hover:bg-white/20"
-                                >
-                                    Done
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500 font-medium">{new Date(selectedReceipt.date).toLocaleDateString()}</span>
-                                {onUpdate && (
-                                    <button
-                                        onClick={() => setIsEditingDate(true)}
-                                        className="text-[10px] text-primary hover:text-primary/80 font-medium underline"
-                                    >
-                                        Edit Date
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {showFullImage && displayImageUrl && (
-                    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-sm">
-                        <button
-                            onClick={() => {
-                                setShowFullImage(false);
-                                setZoomLevel(1);
-                                setPanPosition({ x: 0, y: 0 });
-                            }}
-                            className="absolute top-6 right-6 z-[110] text-white/70 hover:text-white bg-white/10 rounded-full p-2 transition-colors duration-300"
-                        >
-                            <X size={24} />
-                        </button>
-
-                        <div
-                            className="relative w-full h-full flex items-center justify-center touch-none"
-                            onMouseDown={handleMouseDown}
-                            onMouseMove={handleMouseMove}
-                            onMouseUp={handleMouseUp}
-                            onMouseLeave={handleMouseUp}
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleMouseUp}
-                        >
-                            <img
-                                src={displayImageUrl}
-                                alt="Full Receipt"
-                                draggable={false}
-                                style={{
-                                    transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
-                                    cursor: zoomLevel > 1 ? 'grab' : 'zoom-in',
-                                    transition: isDragging ? 'none' : 'transform 0.2s ease-out'
-                                }}
-                                onClick={handleImageClick}
-                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
-                            />
-                        </div>
-
-                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-white text-xs font-medium border border-white/10 pointer-events-none">
-                            {zoomLevel === 1 ? 'Tap to Zoom' : 'Drag to Pan • Tap to Reset'}
-                        </div>
-                    </div>
-                )}
+                </div> {/* Close content wrapper */}
             </div>
 
         );

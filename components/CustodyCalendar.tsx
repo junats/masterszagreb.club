@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar as CalendarIcon, ChevronLeft, ChevronRight, User, U
 import { CustodyDay, CustodyStatus, CalendarActivity } from '../types';
 
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CustodyCalendarProps {
     onBack: () => void;
@@ -13,6 +14,7 @@ interface CustodyCalendarProps {
 
 const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
     const { custodyDays, updateCustodyDay, syncCustody } = useData();
+    const { t } = useLanguage();
     const onUpdateDay = updateCustodyDay; // Alias for compatibility with existing logic
 
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -41,7 +43,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
 
         try {
             // Use mailto: directly - most reliable method
-            const inviteMessage = `Hi there!\n\nI'd like to invite you to share our co-parenting calendar on TrueTrack.\n\nTrueTrack helps us manage custody schedules, track expenses, and stay organized.\n\nTo join:\n1. Download TrueTrack from the App Store\n2. Create an account with this email: ${inviteEmail}\n3. We'll be automatically connected!\n\nLooking forward to better co-parenting together!\n\nBest regards`;
+            const inviteMessage = t('coParenting.emailBody', { email: inviteEmail });
 
             // Open email client with pre-filled message
             window.location.href = `mailto:${inviteEmail}?subject=Join me on TrueTrack&body=${encodeURIComponent(inviteMessage)}`;
@@ -54,12 +56,12 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                 console.log("Database save failed (non-critical):", dbError);
             }
 
-            alert(`Email client opened! Send the invitation to ${inviteEmail}`);
+            alert(t('coParenting.messages.clientOpened', { email: inviteEmail }));
             setShowInviteModal(false);
             setInviteEmail('');
         } catch (e: any) {
             console.error("Invite failed:", e);
-            alert("Failed to open email client. Please invite manually.");
+            alert(t('coParenting.messages.inviteFailed'));
         } finally {
             setIsInviting(false);
         }
@@ -205,21 +207,21 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                         <ArrowLeft size={24} className="text-slate-300" />
                     </button>
                     <h1 className="text-xl font-heading font-bold flex items-center gap-2">
-                        Custody Calendar
+                        {t('coParenting.title')}
                     </h1>
                     {/* Placeholder for alignment, as invite button moved */}
                     <div className="w-10"></div>
                 </div>
 
-                {/* Action Row: Sync | Invite | Manage */}
-                <div className="grid grid-cols-3 gap-2">
+                {/* Action Row: Sync | Invite | iOS Cal | Manage */}
+                <div className="grid grid-cols-4 gap-2">
                     <button
                         onClick={handleSync}
                         disabled={isSyncing}
                         className="py-3 px-2 rounded-xl bg-surface border border-white/10 flex flex-col items-center justify-center gap-1 hover:bg-white/5 active:scale-95 transition-all"
                     >
                         <RefreshCw size={18} className={`text-blue-400 ${isSyncing ? "animate-spin" : ""}`} />
-                        <span className="font-bold text-xs text-blue-100">Sync</span>
+                        <span className="font-bold text-xs text-blue-100">{t('coParenting.sync')}</span>
                     </button>
 
                     <button
@@ -227,7 +229,28 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                         className="py-3 px-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col items-center justify-center gap-1 hover:bg-indigo-500/20 active:scale-95 transition-all"
                     >
                         <User size={18} className="text-indigo-400" />
-                        <span className="font-bold text-xs text-indigo-100">Invite</span>
+                        <span className="font-bold text-xs text-indigo-100">{t('coParenting.invite')}</span>
+                    </button>
+
+                    <button
+                        onClick={async () => {
+                            setIsSyncing(true);
+                            try {
+                                const { CalendarService } = await import('../services/calendarService');
+                                await CalendarService.syncToIOSCalendar(custodyDays);
+                                // Success - the share sheet will appear
+                            } catch (error: any) {
+                                console.error('iOS Calendar sync failed:', error);
+                                alert(error.message || 'Failed to generate calendar file.');
+                            } finally {
+                                setIsSyncing(false);
+                            }
+                        }}
+                        disabled={isSyncing}
+                        className="py-3 px-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col items-center justify-center gap-1 hover:bg-emerald-500/20 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        <CalendarIcon size={18} className="text-emerald-400" />
+                        <span className="font-bold text-xs text-emerald-100">{t('coParenting.iosCal')}</span>
                     </button>
 
                     <button
@@ -238,7 +261,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                             }`}
                     >
                         {manageEvents ? <Check size={18} /> : <CalendarIcon size={18} />}
-                        <span className="font-bold text-xs">{manageEvents ? 'Done' : 'Events'}</span>
+                        <span className="font-bold text-xs">{manageEvents ? t('coParenting.done') : t('coParenting.manage')}</span>
                     </button>
                 </div>
             </div>
@@ -259,12 +282,12 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
                             className="relative bg-surface border border-white/10 p-6 rounded-2xl w-full max-w-sm shadow-xl"
                         >
-                            <h3 className="text-lg font-bold text-white mb-2">Invite Co-Parent</h3>
-                            <p className="text-white/60 text-sm mb-4">Send an invite to share this calendar.</p>
+                            <h3 className="text-lg font-bold text-white mb-2">{t('coParenting.inviteTitle')}</h3>
+                            <p className="text-white/60 text-sm mb-4">{t('coParenting.inviteDesc')}</p>
 
                             <input
                                 type="email"
-                                placeholder="ex-partner@example.com"
+                                placeholder={t('coParenting.placeholderEmail')}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white mb-4 focus:ring-2 focus:ring-primary outline-none"
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
@@ -275,14 +298,14 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                     onClick={() => setShowInviteModal(false)}
                                     className="flex-1 py-3 rounded-xl font-bold text-white/70 hover:bg-white/5 transition-colors"
                                 >
-                                    Cancel
+                                    {t('coParenting.cancel')}
                                 </button>
                                 <button
                                     onClick={handleInvite}
                                     disabled={isInviting}
                                     className="flex-1 bg-primary py-3 rounded-xl font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-50"
                                 >
-                                    {isInviting ? 'Sending...' : 'Share Invite'}
+                                    {isInviting ? t('coParenting.sending') : t('coParenting.shareInvite')}
                                 </button>
                             </div>
 
@@ -331,15 +354,15 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center">
-                        <p className="text-xs text-emerald-400 font-bold uppercase mb-1">Me</p>
+                        <p className="text-xs text-emerald-400 font-bold uppercase mb-1">{t('coParenting.me')}</p>
                         <p className="text-xl font-bold text-white">{stats.me}</p>
                     </div>
                     <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl text-center">
-                        <p className="text-xs text-blue-400 font-bold uppercase mb-1">Partner</p>
+                        <p className="text-xs text-blue-400 font-bold uppercase mb-1">{t('coParenting.partner')}</p>
                         <p className="text-xl font-bold text-white">{stats.partner}</p>
                     </div>
                     <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-center">
-                        <p className="text-xs text-amber-400 font-bold uppercase mb-1">Split</p>
+                        <p className="text-xs text-amber-400 font-bold uppercase mb-1">{t('coParenting.split')}</p>
                         <p className="text-xl font-bold text-white">{stats.split}</p>
                     </div>
                 </div>
@@ -393,15 +416,15 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                 <div className="mt-8 flex justify-center gap-6">
                     <div className="flex items-center gap-2">
                         <User size={14} className="text-emerald-400" />
-                        <span className="text-xs text-slate-400">Me</span>
+                        <span className="text-xs text-slate-400">{t('coParenting.me')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <UserX size={14} className="text-blue-400" />
-                        <span className="text-xs text-slate-400">Partner</span>
+                        <span className="text-xs text-slate-400">{t('coParenting.partner')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Users size={14} className="text-amber-400" />
-                        <span className="text-xs text-slate-400">Split</span>
+                        <span className="text-xs text-slate-400">{t('coParenting.split')}</span>
                     </div>
                 </div>
             </div>
@@ -425,7 +448,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                         <div className="p-4 space-y-4">
                             {/* Existing Activities */}
                             <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-1">Activities</label>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-1">{t('coParenting.activities')}</label>
                                 {((custodyDays || []).find(d => d.date === selectedDate)?.activities || []).length > 0 ? (
                                     ((custodyDays || []).find(d => d.date === selectedDate)?.activities || []).map(activity => (
                                         <div key={activity.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/5 group">
@@ -461,7 +484,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-xs text-slate-500 italic py-1 px-1">No activities planned.</p>
+                                    <p className="text-xs text-slate-500 italic py-1 px-1">{t('coParenting.noActivities')}</p>
                                 )}
                             </div>
 
@@ -469,14 +492,14 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                             <div className="pt-3 border-t border-white/10 space-y-2">
                                 <input
                                     type="text"
-                                    placeholder="New Activity..."
+                                    placeholder={t('coParenting.newActivity')}
                                     value={newActivityTitle}
                                     onChange={(e) => setNewActivityTitle(e.target.value)}
                                     className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder:text-slate-600 focus:border-purple-500 focus:outline-none transition-colors text-sm"
                                 />
                                 <div className="flex gap-2">
                                     <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg px-2 flex-1">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">From</span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase">{t('coParenting.from')}</span>
                                         <input
                                             type="time"
                                             value={newActivityStartTime}
@@ -485,7 +508,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                         />
                                     </div>
                                     <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg px-2 flex-1">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">To</span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase">{t('coParenting.to')}</span>
                                         <input
                                             type="time"
                                             value={newActivityEndTime}
@@ -499,11 +522,11 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                     <div className="flex-1 overflow-x-auto pb-1 no-scrollbar">
                                         <div className="flex justify-between gap-1 mb-2">
                                             {[
-                                                { type: 'birthday', icon: <Cake size={14} />, label: 'B-Day' },
-                                                { type: 'sport', icon: <Activity size={14} />, label: 'Sport' },
-                                                { type: 'school', icon: <GraduationCap size={14} />, label: 'School' },
-                                                { type: 'playdate', icon: <Users size={14} />, label: 'Play' },
-                                                { type: 'other', icon: <MoreHorizontal size={14} />, label: 'Other' }
+                                                { type: 'birthday', icon: <Cake size={14} />, label: t('coParenting.types.birthday') },
+                                                { type: 'sport', icon: <Activity size={14} />, label: t('coParenting.types.sport') },
+                                                { type: 'school', icon: <GraduationCap size={14} />, label: t('coParenting.types.school') },
+                                                { type: 'playdate', icon: <Users size={14} />, label: t('coParenting.types.playdate') },
+                                                { type: 'other', icon: <MoreHorizontal size={14} />, label: t('coParenting.types.other') }
                                             ].map(t => (
                                                 <button
                                                     key={t.type}
