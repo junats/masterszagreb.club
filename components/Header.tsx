@@ -1,19 +1,22 @@
 import React from 'react';
 import { User, ViewState } from '../types';
-import { ShieldCheck, HeartHandshake } from 'lucide-react';
+import { ShieldCheck, HeartHandshake, Bell } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import NotificationCenter from './NotificationCenter';
 
 interface HeaderProps {
     user: User | null;
     currentView: ViewState;
     onAvatarClick: () => void;
     ageRestricted: boolean; // Add to props if needed for Shield icon
+    onNavigate: (view: ViewState) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRestricted }) => {
-    const { childSupportMode } = useData();
+const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRestricted, onNavigate }) => {
+    const { childSupportMode, unreadNotificationCount } = useData();
     const { t } = useLanguage();
+    const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
 
     const getHeaderInfo = (view: ViewState): { title: string; subtitle: string } => {
         switch (view) {
@@ -41,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
     const { title, subtitle } = getHeaderInfo(currentView);
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-40 bg-[#0B1221]/40 backdrop-blur-3xl border-b border-white/10 transition-all duration-300 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+        <header className="fixed top-0 left-0 right-0 z-[60] bg-[#0B1221]/90 backdrop-blur-3xl border-b border-white/10 transition-all duration-300 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
             style={{ height: 'calc(var(--header-height) + var(--safe-area-top))' }}>
             {/* Safe Area Spacer */}
             <div style={{ height: 'var(--safe-area-top)' }} />
@@ -52,10 +55,21 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
                     <img src="/logo.png" alt="TrueTrack Logo" className="w-8 h-8 rounded-lg" />
                     <div>
                         <h1 className="text-xl font-heading font-bold text-white tracking-tight leading-none">{title}</h1>
-                        <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mt-1">{subtitle}</p>
+                        <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mt-1">{subtitle}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
+                    {/* Notification Bell */}
+                    <button
+                        onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 transition-colors"
+                    >
+                        <Bell className="w-5 h-5 text-slate-400" />
+                        {unreadNotificationCount > 0 && (
+                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0B1221]" />
+                        )}
+                    </button>
+
                     {/* Avatar / Profile Link */}
                     <div className="relative group cursor-pointer" onClick={onAvatarClick}>
                         <div className={`w-9 h-9 rounded-full border border-white/10 flex items-center justify-center overflow-hidden transition-transform active:scale-95 ${user?.tier === 'PRO' ? 'ring-2 ring-amber-500/30' : ''} ${childSupportMode ? 'ring-2 ring-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : ''} shadow-lg`}>
@@ -80,6 +94,8 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
                     )}
                 </div>
             </div>
+
+            <NotificationCenter isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} onNavigate={onNavigate} />
         </header>
     );
 };

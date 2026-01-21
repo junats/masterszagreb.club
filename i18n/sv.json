@@ -47,7 +47,87 @@
         "totalSpent": "Totalt spenderat",
         "weekdayTotal": "Vardagar totalt",
         "weekendTotal": "Helg totalt",
-        "performance": "Prestanda & Trender"
+        "performance": "Prestanda & Trender",
+        "coparenting": {
+            "yearToDate": "Year to Date",
+            "daysWithYou": "Days with You",
+            "trendAnalysis": "Trend Analysis",
+            "thisWeek": "This Week",
+            "thisMonth": "This Month",
+            "yearOverall": "Year Overall",
+            "weekendSplit": "Weekend Split",
+            "you": "You",
+            "partner": "Partner",
+            "aiInsight": "AI Insight",
+            "myShare": "My Share",
+            "me": "Me",
+            "me_uc": "ME"
+        },
+        "pulse": {
+            "title": "Parenting Pulse",
+            "steady": {
+                "title": "Steady Pulse",
+                "message": "Your co-parenting rhythm is stable. Consistency builds security for everyone."
+            },
+            "critical": {
+                "title": "Action Needed",
+                "message": "Schedule is currently lopsided. Consider renegotiating days for better balance."
+            },
+            "attention": {
+                "title": "Uneven Rhythm",
+                "message": "Minor friction detected. A small adjustment could help."
+            },
+            "optimum": {
+                "title": "In Sync",
+                "message": "Outstanding cooperation! Healthy partnership."
+            },
+            "equity": "Equity",
+            "stability": "Stability",
+            "harmony": "Harmony"
+        },
+        "activity": {
+            "recent": "Recent Activity",
+            "upcoming": "Upcoming Events",
+            "noActivities": "No upcoming activities.",
+            "justNow": "Just now",
+            "added": "Added",
+            "updated": "Updated",
+            "removed": "Removed",
+            "custody": "Custody",
+            "changed": "Changed",
+            "event": "Event",
+            "moreEvents": "+{{count}} more"
+        },
+        "status": {
+            "safe": "Safe",
+            "risk": "Risk"
+        },
+        "insightsData": {
+            "smartSuggestions": "Smart Suggestions",
+            "coparenting": {
+                "strong": "You're maintaining strong custody time across all periods. Keep up the consistent presence!",
+                "promising": "Recent improvements are promising! This week and month show positive trends, though the year overall needs attention. Continue this momentum.",
+                "belowTarget": "Custody time is below target across all periods. Consider discussing schedule adjustments with your co-parent.",
+                "mixed": "Mixed trends detected. Focus on maintaining consistency week-to-week for better long-term balance.",
+                "lowerWeek": "This week is lower than usual, but your year-to-date average is solid. Temporary dip or pattern change?"
+            }
+        },
+        "actions": {
+            "share": "Share",
+            "insights": "Insights"
+        },
+        "metrics": {
+            "trends": "Spending Trends",
+            "financialSnapshot": "Financial Snapshot",
+            "performance": "Performance & Forecast"
+        },
+        "chart": {
+            "week": "W",
+            "month": "M",
+            "year": "Y",
+            "dailyAvg": "Daily Avg",
+            "weeklyAvg": "Weekly Avg"
+        }
     },
     "insights": {
         "lateNightTitle": "Kritiskt: €{{amount}} spenderat mellan 23:00 och 05:00.",
@@ -94,7 +174,9 @@
             "chooseAvatar": "Välj Avatar",
             "upload": "Ladda upp bild",
             "reset": "Återställ Avatar",
-            "save": "Spara ändringar"
+            "save": "Spara ändringar",
+            "imageTooLarge": "Image too large. Please select an image under 2MB.",
+            "nicknamePlaceholder": "Enter nickname"
         },
         "budget": {
             "monthly": "Månadsbudget"
@@ -121,7 +203,10 @@
             "trackingStreak": "Spårar {{streak}} dagar i rad",
             "active": "Aktiv",
             "coParentingFeatures": "Samföräldraskapsfunktioner",
-            "coParentingDesc": "Delad kalender, delade utgifter & vårdnad"
+            "coParentingDesc": "Delad kalender, delade utgifter & vårdnad",
+            "exportDialogTitle": "Export Data",
+            "exportTitle": "TrueTrack Export",
+            "exportMessage": "Here is my spending data from TrueTrack."
         },
         "security": {
             "title": "Säkerhet",
@@ -143,7 +228,9 @@
             "add": "Lägg till Kategori",
             "name": "Kategorinamn",
             "color": "Färg",
-            "deleteConfirm": "Radera denna kategori?"
+            "deleteConfirm": "Are you sure you want to delete this category?",
+            "placeholder": "e.g. Gaming, Pets, Gifts",
+            "selectCategoryPlaceholder": "Select Category"
         },
         "recurring": {
             "title": "Återkommande Utgifter",
@@ -154,7 +241,12 @@
             "amount": "Belopp",
             "frequency": "Frekvens",
             "date": "Datum",
-            "deleteConfirm": "Radera utgift?"
+            "deleteConfirm": "Delete this recurring expense?",
+            "expenseNamePlaceholder": "e.g. Netflix, Gym",
+            "amountPlaceholder": "0.00",
+            "frequencyWeekly": "Veckovis",
+            "frequencyMonthly": "Månadsvis",
+            "frequencyYearly": "Årlig"
         },
         "data": {
             "title": "Datahantering",
@@ -164,12 +256,15 @@
             "delete": "Radera All Data",
             "deleteDesc": "Oåterkallelig åtgärd",
             "exportError": "Misslyckades exportera data.",
-            "noData": "Ingen data att exportera.",
-            "resetApp": "Återställ App"
+            "noData": "No data to export.",
+            "resetApp": "Återställ App",
+            "exportFail": "Failed to export data.",
+            "seedSuccess": "Generated {{scenario}} scenario: {{count}} receipts."
         },
         "account": {
             "signOut": "Logga ut",
-            "signOutDesc": "Avsluta din session"
+            "signOutDesc": "Avsluta din session",
+            "signOutConfirm": "Are you sure you want to sign out?"
         },
         "language": {
             "title": "Språk",
@@ -205,7 +300,10 @@
                 "insights": "Detaljerade Utgiftsinsikter",
                 "cloud": "Molnbackup & Synkning",
                 "support": "Prioriterad Support"
-            }
+            },
+            "cancelConfirm": "Are you sure you want to cancel your Pro subscription? You will lose access to all Pro features.",
+            "cancelSuccess": "Subscription cancelled. You are now on the Free plan.",
+            "pricePerMonth": "€{{price}}/mo"
         },
         "uicalc": {
             "devTools": "Utvecklarverktyg",
@@ -213,7 +311,11 @@
             "debugStorage": "Debug Lagring",
             "dataDump": "Radera All Data",
             "widgetSuccess": "Widget data uppdaterad!",
-            "widgetFail": "Widget test misslyckades"
+            "widgetFail": "Widget test misslyckades",
+            "widgetUpdateSuccess": "Widget data updated! Background the app to refresh widget.",
+            "widgetUpdateFail": "Widget test failed:",
+            "storageDumpEmpty": "Storage Dump: EMPTY (No keys found)",
+            "storageKeysTitle": "Storage Keys:"
         },
         "modals": {
             "addCategory": "Lägg Till Ny Kategori",
@@ -231,8 +333,11 @@
             "overwriteTitle": "Skriv Över Data?",
             "overwriteDesc": "Detta raderar all befintlig data och genererar ny {{scenario}} scenario data. Detta kan inte ångras.",
             "overwriteData": "Skriv Över Data",
-            "cancel": "Avbryt"
-        }
+            "cancel": "Avbryt",
+            "generateFormalReport": "Generate formal report"
+        },
+        "biometricPrompt": "Please enter your current password to enable Face ID login:",
+        "notificationsLabel": "Notiser"
     },
     "common": {
         "save": "Spara",
@@ -260,7 +365,48 @@
         "title": "Skanna Kvitto",
         "tapToScan": "Tryck för att skanna",
         "processing": "Bearbetar...",
-        "scanAnother": "Skanna en till"
+        "scanAnother": "Skanna en till",
+        "uploadPrompt": "Upload a Receipt or Bill.",
+        "parentalModeActive": "Parental Mode Active",
+        "retryScan": "Retry Scan",
+        "analyzing": {
+            "title": "Analyzing Receipt...",
+            "description": "Extracting merchant, date, and totals.",
+            "progress": "Processing {{current}} of {{total}}"
+        },
+        "camera": "Camera",
+        "uploadFile": "Upload File",
+        "scanItem": "Scan Item",
+        "manual": "Manual",
+        "supports": "Supports Receipts, Invoices, and Kindergarten Bills.",
+        "tip": "Ensure text is clear and well-lit.",
+        "cancel": "Cancel",
+        "review": {
+            "title": "Review Scan",
+            "count": "Receipt {{current}} of {{total}}",
+            "store": "Store",
+            "date": "Date",
+            "totalAmount": "Total Amount",
+            "items": "Items ({{count}})",
+            "tapToEdit": "Tap to edit details",
+            "child": "Child",
+            "save": "Save {{count}} Receipts",
+            "saveSingle": "Save Receipt",
+            "previous": "Previous",
+            "next": "Next"
+        },
+        "insights": {
+            "utilityItem": "UTILITY ITEM",
+            "nutri": "Nutri",
+            "value": "Value:",
+            "unrecognized": "⚠️ Unrecognized. Please take a photo of the package for safety analysis.",
+            "verify": "Verify item details"
+        },
+        "unknownStore": "Unknown Store",
+        "quickScan": "Quick Scan",
+        "unknownProduct": "Unknown Product ({{code}})",
+        "documentUpload": "Document Upload",
+        "manualEntry": "Manual Entry"
     },
     "history": {
         "title": "Historik",
@@ -324,13 +470,30 @@
         "childFirst": "Du har spårat 20+ barnrelaterade utgifter.",
         "eventMaster": "Du har planerat 3+ speciella händelser.",
         "healthConscious": "Du har spenderat €50+ på hälsa.",
-        "educationInvestor": "Du har investerat €100+ i utbildning."
+        "educationInvestor": "Du har investerat €100+ i utbildning.",
+        "weekender": {
+            "title": "Weekender",
+            "description": "Active during the weekend."
+        },
+        "streak": {
+            "title": "Streak",
+            "description": "You're on a roll!"
+        },
+        "budget": {
+            "title": "Budget",
+            "description": "Budget related achievement."
+        },
+        "saving": {
+            "title": "Saving",
+            "description": "Saving related achievement."
+        }
     },
     "evidence": {
         "building": "Bygger",
         "fair": "Rättvis",
         "good": "Bra",
-        "strong": "Stark"
+        "strong": "Stark",
+        "title": "Evidence Score"
     },
     "status": {
         "forecast": "Prognos",
@@ -588,13 +751,13 @@
         "healthScore": "Hälsopoäng",
         "nutrition": "Näring",
         "value": "Värde",
-        "forecast": "Prognos",
+        "forecast": "Forecast",
         "projected": "Prognostiserad",
         "store": "Butik",
         "unavailable": "Ej tillgänglig",
-        "live": "LIVE",
-        "currentStatus": "Nuvarande Status",
-        "realTimeOverview": "Realtidsöversikt",
+        "live": "Live",
+        "currentStatus": "Current Status",
+        "realTimeOverview": "Real-time Overview",
         "utilityItem": "NYTTIG Pryl",
         "nutri": "Näring"
     },
@@ -628,10 +791,10 @@
         "verified": "Verifierad",
         "monthlyTrend": "Månadstrend",
         "dailyActivity": "Daglig Aktivitet",
-        "topVendors": "Topp Säljare",
+        "topVendors": "Top Vendors",
         "spendingBreakdown": "Utgiftsfördelning",
-        "noData": "Ingen data",
-        "noSpending": "Ingen utgiftsdata än.",
+        "noData": "No data available.",
+        "noSpending": "No spending data available for this period.",
         "downloadPdf": "Ladda ner PDF Rapport",
         "shareTitle": "Utgiftsrapport",
         "shareText": "Här är min rapport",
@@ -744,5 +907,15 @@
             }
         },
         "quote": "Var stark."
+    },
+    "goals": {
+        "trackHabits": "Track Habits",
+        "title": "Track Goals",
+        "enableDesc": "Monitor your spending habits and set limits.",
+        "upgradeDesc": "Upgrade to Pro to track spending habits.",
+        "breakdown": "Goal Breakdown",
+        "target": "Target",
+        "achievements": "Achievements",
+        "unlocked": "Unlocked"
     }
 }

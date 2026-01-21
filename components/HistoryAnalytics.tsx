@@ -208,7 +208,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'trend' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.spendingComposition')}</h4>
+                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-500">{t('analytics.spendingComposition')}</h4>
                         </div>
                         <div className="h-[85%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -237,7 +237,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'child' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.childTrend')}</h4>
+                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-500">{t('analytics.childTrend')}</h4>
                         </div>
                         <div className="h-[85%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -261,7 +261,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'dist' && (
                     <AnimatedSection className="h-64 w-full relative" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.categoryBreakdown')}</h4>
+                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-500">{t('analytics.categoryBreakdown')}</h4>
                         </div>
                         <div className="h-[90%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -284,7 +284,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-4 pr-20">
-                                <span className="text-[10px] text-slate-500 font-medium uppercase">{t('analytics.total')}</span>
+                                <span className="text-xs text-slate-500 font-medium uppercase">{t('analytics.total')}</span>
                                 <span className="text-lg font-heading font-bold text-white tabular-nums">€{categoryData.total.toFixed(0)}</span>
                             </div>
                         </div>
@@ -294,7 +294,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'sources' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.topMerchants')}</h4>
+                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-500">{t('analytics.topMerchants')}</h4>
                         </div>
                         <div className="h-[90%]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -319,8 +319,8 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 {activeTab === 'budgets' && (
                     <AnimatedSection className="h-full w-full overflow-y-auto no-scrollbar pb-2" animateContainer={true}>
                         <div className="flex justify-between items-center mb-4 px-1">
-                            <h4 className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{t('analytics.budgetActual')}</h4>
-                            <span className="text-[10px] text-slate-500 font-medium">{t('analytics.setLimits')}</span>
+                            <h4 className="text-xs uppercase tracking-wider font-bold text-slate-500">{t('analytics.budgetActual')}</h4>
+                            <span className="text-xs text-slate-500 font-medium">{t('analytics.setLimits')}</span>
                         </div>
                         <div className="space-y-4">
                             {(budgetData || []).map((item) => {

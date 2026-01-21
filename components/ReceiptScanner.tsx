@@ -5,7 +5,10 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { analyzeReceiptImage } from '../services/geminiService';
 import { storageService } from '../services/storageService';
-import { Receipt, AnalysisResult } from '../types';
+import { Receipt, AnalysisResult, SubscriptionTier } from '../types';
+
+
+import { useLanguage } from '../contexts/LanguageContext';
 
 const computeHash = (str: string): string => {
   let hash = 0;
@@ -30,9 +33,13 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   const {
     ageRestricted,
     categories,
-    isProMode
+    addReceipts // Added addReceipts as per snippet, assuming it's needed
   } = useData();
   const { user } = useUser();
+  const { t } = useLanguage();
+
+  // Check actual Pro status for AI features
+  const isProSubscription = user?.tier === SubscriptionTier.PRO;
 
   // Fallback if user is null (should normally be handled by auth guard)
   const userId = user?.id || 'user-1';
@@ -130,7 +137,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
         // 4. AI Insights Analysis (Pro feature only)
         let itemsWithInsights = result.items || [];
-        if (isProMode && itemsWithInsights.length > 0) {
+        if (isProSubscription && itemsWithInsights.length > 0) {
           try {
             console.log('✨ Analyzing items for AI insights (Pro feature)...');
             const { analyzeItemInsights } = await import('../services/geminiService');
@@ -167,7 +174,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
         return {
           id: generateId(),
-          storeName: result.storeName || 'Unknown Store',
+          storeName: result.storeName || t('scanner.unknownStore'),
           date: result.date || new Date().toISOString().split('T')[0],
           total: result.total || (itemsWithInsights).reduce((sum, item) => sum + item.price, 0) || 0,
           items: itemsWithInsights,
@@ -291,7 +298,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         // If unknown, prompt for package photo
         const isUnknown = !productData;
         const mockItem = {
-          name: productData ? (productData.brand ? `${productData.brand} ${productData.name}` : productData.name) : `Unknown Product (${code})`,
+          name: productData ? (productData.brand ? `${productData.brand} ${productData.name}` : productData.name) : t('scanner.unknownProduct', { code }),
           price: 0,
           category: productData?.category || 'Health', // Default to Health/Other
           quantity: 1,
@@ -304,15 +311,15 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             nutritionScore: -1,
             valueRating: 3,
             childFriendly: 1,
-            insight: "⚠️ Unrecognized. Please take a photo of the package for safety analysis.",
-            warnings: ["Verify item details"]
+            insight: t('scanner.insights.unrecognized'),
+            warnings: [t('scanner.insights.verify')]
           } : undefined
         };
 
         // --- 3. Create Receipt ---
         const newReceipt: Receipt = {
           id: generateId(),
-          storeName: productData?.brand || 'Quick Scan',
+          storeName: productData?.brand || t('scanner.quickScan'),
           date: new Date().toISOString().split('T')[0],
           total: 0,
           items: [{ ...mockItem }], // Insights might be pre-filled if unknown
@@ -323,7 +330,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         };
 
         // --- 4. AI Insights Analysis ---
-        if (isProMode) {
+        if (isProSubscription) {
           try {
             // We can pass the barcode to the AI service if we updated it, or just use the name
             const { analyzeItemInsights } = await import('../services/geminiService');
@@ -422,10 +429,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
             newReceipts.push({
               id: crypto.randomUUID(),
-              storeName: "Unknown Store",
+              storeName: t('scanner.unknownStore'),
               date: new Date().toISOString().split('T')[0],
               total: 0,
-              items: [{ name: "Document Upload", price: 0, category: "Other", quantity: 1 }],
+              items: [{ name: t('scanner.documentUpload'), price: 0, category: "Other", quantity: 1 }],
               storagePath: storagePath,
               imageUrl: '', // No preview for docs
               scannedAt: new Date().toISOString(),
@@ -463,7 +470,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       storeName: manualData.store,
       date: manualData.date,
       total: parsedTotal,
-      items: [{ name: "Manual Entry", price: parsedTotal, category: manualData.category, quantity: 1 }],
+      items: [{ name: t('scanner.manualEntry'), price: parsedTotal, category: manualData.category, quantity: 1 }],
       scannedAt: new Date().toISOString(),
       imageUrl: '',
       storagePath: '',
@@ -479,7 +486,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
 
   return (
-    <div className="flex flex-col h-full px-4 pt-0 pb-8 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col h-full px-4 pt-0 pb-32 overflow-y-auto no-scrollbar">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -490,12 +497,12 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           <div className="w-16 h-16 bg-surfaceHighlight rounded-2xl mx-auto flex items-center justify-center mb-4 ring-1 ring-white/10 shadow-lg shadow-black/50">
             <ScanLine size={32} className="text-primary" />
           </div>
-          <p className="text-slate-400 text-sm font-medium mt-1">Upload a Receipt or Bill.</p>
+          <p className="text-slate-400 text-sm font-medium mt-1">{t('scanner.uploadPrompt')}</p>
 
           {ageRestricted && (
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.1)]">
               <CheckCircle size={12} />
-              <span>Parental Mode Active</span>
+              <span>{t('scanner.parentalModeActive')}</span>
             </div>
           )}
         </div>
@@ -510,7 +517,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
               onClick={() => { setError(null); handleCameraCapture(); }}
               className="self-end px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 text-xs font-bold rounded-lg transition-colors border border-red-500/30"
             >
-              Retry Scan
+              {t('scanner.retryScan')}
             </button>
           </div>
         )}
@@ -524,8 +531,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                 <Loader2 size={48} className="text-primary animate-spin relative z-10" />
               </div>
 
-              <h3 className="text-xl font-heading font-bold text-white mb-2">Analyzing Receipt...</h3>
-              <p className="text-slate-400 text-sm mb-6">Extracting merchant, date, and totals.</p>
+              <h3 className="text-xl font-heading font-bold text-white mb-2">{t('scanner.analyzing.title')}</h3>
+              <p className="text-slate-400 text-sm mb-6">{t('scanner.analyzing.description')}</p>
 
               {progress && (
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-2">
@@ -536,7 +543,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                 </div>
               )}
               {progress && progress.total > 1 && (
-                <p className="text-xs text-slate-500 font-mono">Processing {progress.current} of {progress.total}</p>
+                <p className="text-xs text-slate-500 font-mono">{t('scanner.analyzing.progress', { current: progress.current, total: progress.total })}</p>
               )}
             </div>
           </div>
@@ -551,7 +558,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center ring-1 ring-blue-500/20">
               <CameraIcon size={32} className="text-blue-400" />
             </div>
-            <span className="text-slate-300 font-medium">Camera</span>
+            <span className="text-slate-300 font-medium">{t('scanner.camera')}</span>
           </button>
 
           {/* Gallery / File */}
@@ -562,7 +569,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             <div className="w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center ring-1 ring-purple-500/20">
               <Images size={32} className="text-purple-400" />
             </div>
-            <span className="text-slate-300 font-medium">Upload File</span>
+            <span className="text-slate-300 font-medium">{t('scanner.uploadFile')}</span>
           </button>
 
           {/* Barcode Scan (New) */}
@@ -573,7 +580,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
               <ScanLine size={32} className="text-amber-400" />
             </div>
-            <span className="text-slate-300 font-medium">Scan Item</span>
+            <span className="text-slate-300 font-medium">{t('scanner.scanItem')}</span>
           </button>
 
           {/* Manual Entry - Adjusted grid */}
@@ -584,20 +591,20 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
               <Edit2 size={32} className="text-emerald-400" />
             </div>
-            <span className="text-slate-300 font-medium">Manual</span>
+            <span className="text-slate-300 font-medium">{t('scanner.manual')}</span>
           </button>
         </div>
 
 
         <p className="text-xs text-slate-500 max-w-[260px] mx-auto text-center mt-2 font-medium">
-          Supports Receipts, Invoices, and Kindergarten Bills.<br />
-          Ensure text is clear and well-lit.
+          {t('scanner.supports')}<br />
+          {t('scanner.tip')}
         </p>
 
 
         <div className="mt-auto">
           <button onClick={onCancel} className="w-full py-4 rounded-2xl text-slate-500 font-bold hover:bg-white/5 hover:text-slate-300 transition-all duration-300">
-            Cancel
+            {t('scanner.cancel')}
           </button>
         </div>
 
@@ -612,10 +619,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                   {/* Header - Fixed */}
                   <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">
                     <div>
-                      <h2 className="text-xl font-heading font-bold text-white">Review Scan</h2>
+                      <h2 className="text-xl font-heading font-bold text-white">{t('scanner.review.title')}</h2>
                       {scannedReceipts.length > 1 && (
                         <p className="text-xs text-slate-400 mt-1">
-                          Receipt {currentReceiptIndex + 1} of {scannedReceipts.length}
+                          {t('scanner.review.count', { current: currentReceiptIndex + 1, total: scannedReceipts.length })}
                         </p>
                       )}
                     </div>
@@ -629,7 +636,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     {/* Store & Date */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.store')}</label>
                         <input
                           type="text"
                           value={scannedReceipts[0]?.storeName || ''}
@@ -638,7 +645,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.date')}</label>
                         <input
                           type="date"
                           value={scannedReceipts[0]?.date || ''}
@@ -650,7 +657,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
                     {/* Total */}
                     <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Total Amount</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.totalAmount')}</label>
                       <div className="relative">
                         <span className="absolute left-3 top-2.5 text-slate-400">€</span>
                         <input
@@ -665,8 +672,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     {/* Items Preview */}
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
-                        <span>Items ({scannedReceipts[0]?.items.length || 0})</span>
-                        <span className="text-primary text-[10px]">Tap to edit details</span>
+                        <span>{t('scanner.review.items', { count: scannedReceipts[0]?.items.length || 0 })}</span>
+                        <span className="text-primary text-xs">{t('scanner.review.tapToEdit')}</span>
                       </label>
                       <div className="space-y-2">
                         {(scannedReceipts[0]?.items || []).map((item, idx) => (
@@ -675,10 +682,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                               <div className="flex-1 min-w-0 pr-3">
                                 <p className="text-sm text-white font-medium truncate">{item.name}</p>
                                 <div className="flex gap-2 mt-1">
-                                  <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
+                                  <span className="text-xs bg-white/10 px-1.5 py-0.5 rounded text-slate-300">{item.category}</span>
                                   {item.isChildRelated && (
-                                    <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                      <CheckCircle size={8} /> Child
+                                    <span className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                      <CheckCircle size={8} /> {t('scanner.review.child')}
                                     </span>
                                   )}
                                 </div>
@@ -689,12 +696,12 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                             {/* AI Insights Display */}
                             {item.insights && (
                               <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-2">
-                                <div className="col-span-2 text-[10px] text-slate-400 italic">
+                                <div className="col-span-2 text-xs text-slate-400 italic">
                                   ✨ {item.insights.insight}
                                 </div>
                                 <div className="flex items-center gap-2 bg-black/20 rounded p-1.5">
                                   {item.insights.nutritionScore === -1 ? (
-                                    <span className="text-[9px] text-slate-500 w-full text-center font-medium tracking-wide">UTILITY ITEM</span>
+                                    <span className="text-xs text-slate-500 w-full text-center font-medium tracking-wide">{t('scanner.insights.utilityItem')}</span>
                                   ) : (
                                     <>
                                       <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
@@ -703,15 +710,15 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                                           style={{ width: `${item.insights.nutritionScore}%` }}
                                         />
                                       </div>
-                                      <span className="text-[9px] font-bold text-slate-400 w-8 text-right">Nutri {item.insights.nutritionScore}</span>
+                                      <span className="text-xs font-bold text-slate-400 w-8 text-right">{t('scanner.insights.nutri')} {item.insights.nutritionScore}</span>
                                     </>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 bg-black/20 rounded p-1.5 justify-center">
-                                  <span className="text-[9px] text-slate-400">Value:</span>
+                                  <span className="text-xs text-slate-400">{t('scanner.insights.value')}</span>
                                   <div className="flex">
                                     {[1, 2, 3, 4, 5].map(star => (
-                                      <span key={star} className={`text-[10px] ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
+                                      <span key={star} className={`text-xs ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
                                     ))}
                                   </div>
                                 </div>
@@ -740,7 +747,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                         disabled={scannedReceipts.length <= 1}
                         className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                       >
-                        ← Previous
+                        ← {t('scanner.review.previous')}
                       </button>
 
                       {/* Pagination Dots - Now properly tracking current index */}
@@ -770,7 +777,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                         disabled={scannedReceipts.length <= 1}
                         className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                       >
-                        Next →
+                        {t('scanner.review.next')} →
                       </button>
                     </div>
                   )}
@@ -782,7 +789,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                       className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
                     >
                       <Save size={20} />
-                      Save {scannedReceipts.length > 1 ? `${scannedReceipts.length} Receipts` : 'Receipt'}
+                      {scannedReceipts.length > 1 ? t('scanner.review.save', { count: scannedReceipts.length }) : t('scanner.review.saveSingle')}
                     </button>
                   </div>
                 </div>

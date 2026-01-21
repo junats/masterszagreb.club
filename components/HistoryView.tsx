@@ -5,6 +5,7 @@ import { storageService } from '../services/storageService';
 import { Share } from '@capacitor/share';
 import HistoryAnalytics from './HistoryAnalytics';
 import AnimatedSection from './AnimatedSection';
+import { PlaceholderImage } from './ui/PlaceholderImage';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 
 import { useData } from '../contexts/DataContext';
@@ -406,7 +407,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                             </div>
 
                             {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
-                                <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-medium">
+                                <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium">
                                     <span>{t('history.restrictedHidden')}</span>
                                 </div>
                             )}
@@ -418,16 +419,27 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
                         {displayImageUrl && (
                             <div className="mt-4">
-                                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">{t('history.originalScan')}</p>
+                                <p className="text-xs uppercase tracking-wider font-bold text-slate-500 mb-2">{t('history.originalScan')}</p>
                                 <div
                                     className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10 group cursor-pointer hover:border-white/30 transition-all duration-300"
                                     onClick={() => setShowFullImage(true)}
                                 >
-                                    <img
-                                        src={displayImageUrl}
-                                        alt="Receipt Scan"
-                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                                    />
+                                    {displayImageUrl ? (
+                                        <img
+                                            src={displayImageUrl}
+                                            alt="Receipt Scan"
+                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                                e.currentTarget.parentElement?.querySelector('.placeholder-fallback')?.classList.remove('hidden');
+                                            }}
+                                        />
+                                    ) : (
+                                        <PlaceholderImage className="w-full h-full rounded-none" />
+                                    )}
+                                    <div className="placeholder-fallback hidden absolute inset-0">
+                                        <PlaceholderImage className="w-full h-full rounded-none" />
+                                    </div>
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors duration-300">
                                         <span className="bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/10 shadow-lg">
                                             <ImageIcon size={14} /> {t('history.viewFullImage')}
@@ -469,7 +481,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                 <div>
                                                     <p className="text-slate-200 text-sm font-medium mb-1">{item.name}</p>
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
+                                                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${item.category === Category.LUXURY ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' :
                                                             item.category === Category.EDUCATION ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
                                                                 item.category === Category.NECESSITY ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
                                                                     item.category === Category.ALCOHOL ? 'bg-red-500/10 border-red-500/30 text-red-400' :
@@ -479,10 +491,10 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                             {item.category}
                                                         </span>
                                                         {item.isRestricted && !ageRestricted && (
-                                                            <span className="text-[10px] text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
+                                                            <span className="text-xs text-red-400 border border-red-500/30 px-1 rounded font-bold">18+</span>
                                                         )}
                                                         {item.isChildRelated && childSupportMode && (
-                                                            <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
+                                                            <span className="text-xs text-emerald-400 border border-emerald-500/30 px-1 rounded font-bold flex items-center gap-1">
                                                                 <Baby size={10} /> Child
                                                             </span>
                                                         )}
@@ -516,12 +528,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                             {/* AI Insights Display */}
                                             {item.insights && (
                                                 <div className="w-full mt-2 pt-2 border-t border-white/5 grid grid-cols-2 gap-2">
-                                                    <div className="col-span-2 text-[10px] text-slate-400 italic">
+                                                    <div className="col-span-2 text-xs text-slate-400 italic">
                                                         ✨ {item.insights.insight}
                                                     </div>
                                                     <div className="flex items-center gap-2 bg-black/20 rounded p-1.5">
                                                         {item.insights.nutritionScore === -1 ? (
-                                                            <span className="text-[9px] text-slate-500 w-full text-center font-medium tracking-wide">{t('financial.utilityItem')}</span>
+                                                            <span className="text-xs text-slate-500 w-full text-center font-medium tracking-wide">{t('financial.utilityItem')}</span>
                                                         ) : (
                                                             <>
                                                                 <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
@@ -530,15 +542,15 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                                         style={{ width: `${item.insights.nutritionScore}%` }}
                                                                     />
                                                                 </div>
-                                                                <span className="text-[9px] font-bold text-slate-400 w-8 text-right">{t('financial.nutri')} {item.insights.nutritionScore}</span>
+                                                                <span className="text-xs font-bold text-slate-400 w-8 text-right">{t('financial.nutri')} {item.insights.nutritionScore}</span>
                                                             </>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-1 bg-black/20 rounded p-1.5 justify-center">
-                                                        <span className="text-[9px] text-slate-400">{t('financial.value')}:</span>
+                                                        <span className="text-xs text-slate-400">{t('financial.value')}:</span>
                                                         <div className="flex">
                                                             {[1, 2, 3, 4, 5].map(star => (
-                                                                <span key={star} className={`text-[10px] ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
+                                                                <span key={star} className={`text-xs ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
                                                             ))}
                                                         </div>
                                                     </div>
@@ -572,13 +584,13 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                 onSelectReceipt({ ...selectedReceipt, date: today });
                                             }
                                         }}
-                                        className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-bold hover:bg-primary/30"
+                                        className="px-2 py-1 rounded bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30"
                                     >
                                         {t('common.today')}
                                     </button>
                                     <button
                                         onClick={() => setIsEditingDate(false)}
-                                        className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold hover:bg-white/20"
+                                        className="px-2 py-1 rounded bg-white/10 text-white text-xs font-bold hover:bg-white/20"
                                     >
                                         {t('common.done')}
                                     </button>
@@ -589,7 +601,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                     {onUpdate && (
                                         <button
                                             onClick={() => setIsEditingDate(true)}
-                                            className="text-[10px] text-primary hover:text-primary/80 font-medium underline"
+                                            className="text-xs text-primary hover:text-primary/80 font-medium underline"
                                         >
                                             {t('common.editDate')}
                                         </button>
@@ -685,7 +697,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                             <button
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
-                                className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors duration-200 ${viewMode === mode ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`px-3 py-1 rounded-md text-xs uppercase font-bold tracking-wider transition-colors duration-200 ${viewMode === mode ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 {mode}
                             </button>
@@ -821,14 +833,23 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                 >
                                     <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 group-hover:shadow-lg transition-all duration-300">
                                         {thumbUrl ? (
-                                            <img
-                                                src={thumbUrl}
-                                                alt="Receipt"
-                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                                            />
+                                            <>
+                                                <img
+                                                    src={thumbUrl}
+                                                    alt="Receipt"
+                                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                        e.currentTarget.parentElement?.querySelector('.placeholder-thumb')?.classList.remove('hidden');
+                                                    }}
+                                                />
+                                                <div className="placeholder-thumb hidden absolute inset-0">
+                                                    <PlaceholderImage className="w-full h-full rounded-none bg-transparent" text="" />
+                                                </div>
+                                            </>
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-slate-700">
-                                                <ReceiptIcon size={24} />
+                                                <PlaceholderImage className="w-full h-full rounded-none bg-transparent" text="" />
                                             </div>
                                         )}
                                         {isBill && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>}
@@ -841,14 +862,14 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                         </div>
 
                                         {isBill && receipt.referenceCode && (
-                                            <p className="text-[10px] font-mono text-indigo-300/80 truncate mb-1">
+                                            <p className="text-xs font-mono text-indigo-300/80 truncate mb-1">
                                                 Ref: {receipt.referenceCode}
                                             </p>
                                         )}
 
                                         <div className="flex justify-between items-end mt-1">
-                                            <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
-                                            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
+                                            <p className="text-xs text-slate-500 font-medium group-hover:text-slate-400 transition-colors duration-300">{new Date(receipt.date).toLocaleDateString()}</p>
+                                            <div className="flex items-center gap-1 text-xs text-slate-400 font-medium group-hover:text-primary transition-colors duration-300">
                                                 <span>{visibleItemCount} items</span>
                                                 <ChevronRight size={12} />
                                             </div>

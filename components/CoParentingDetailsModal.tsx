@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Scale, Heart, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { CustodyDay } from '../types';
@@ -68,7 +69,7 @@ export const CoParentingDetailsModal: React.FC<CoParentingDetailsModalProps> = (
 
     const adviceList = getHonestAdvice();
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -146,6 +147,7 @@ export const CoParentingDetailsModal: React.FC<CoParentingDetailsModalProps> = (
                     </motion.div>
                 </>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 };

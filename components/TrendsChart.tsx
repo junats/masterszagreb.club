@@ -9,7 +9,7 @@ export const CustomTooltip = ({ active, payload, label }: any) => {
         const data = payload[0].payload;
         return (
             <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-xl">
-                <p className="text-slate-400 text-[10px] font-medium mb-1 uppercase tracking-wider">{label}</p>
+                <p className="text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">{label}</p>
                 <p className="text-white text-sm font-bold font-mono">
                     €{(data.total || 0).toFixed(2)}
                 </p>
@@ -22,7 +22,7 @@ export const CustomTooltip = ({ active, payload, label }: any) => {
 import { useLanguage } from '../contexts/LanguageContext';
 
 // Extracted TrendsChart Component
-export const TrendsChart = ({ activeData, categories, isVisible, chartView, layoutId }: { activeData: any[], categories: CategoryDefinition[], isVisible: boolean, chartView: string, layoutId?: string }) => {
+export const TrendsChart = React.memo(({ activeData, categories, isVisible, chartView, layoutId }: { activeData: any[], categories: CategoryDefinition[], isVisible: boolean, chartView: string, layoutId?: string }) => {
     const { t } = useLanguage();
 
     // Simplified animation logic: Direct control via Props
@@ -76,4 +76,4 @@ export const TrendsChart = ({ activeData, categories, isVisible, chartView, layo
             ) : null}
         </ResponsiveContainer>
     );
-};
+});

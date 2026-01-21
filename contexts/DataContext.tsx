@@ -114,6 +114,10 @@ interface DataContextType {
     setIsProMode: (val: boolean) => void;
     setIsProModeWithTimestamp: (val: boolean) => void;
     proActivatedAt: string | null;
+    goalsEnabled: boolean;
+    setGoalsEnabled: (val: boolean) => void;
+    financialSnapshotEnabled: boolean;
+    setFinancialSnapshotEnabled: (val: boolean) => void;
 
     // Notification tracking
     shownNotificationIds: Set<string>;
@@ -150,6 +154,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [showGlobalAmbient, setShowGlobalAmbient] = useState(true);
     const [helpEnabled, setHelpEnabled] = useState(false);
     const [isProMode, setIsProMode] = useState(false);
+    const [goalsEnabled, setGoalsEnabled] = useState(true); // Default to true, or match isProMode initially
+    const [financialSnapshotEnabled, setFinancialSnapshotEnabled] = useState(true);
     const [proActivatedAt, setProActivatedAt] = useState<string | null>(null);
     const [dataVersion, setDataVersion] = useState(0);
     const [lastPartnerChanges, setLastPartnerChanges] = useState<string | null>(null);
@@ -194,8 +200,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (parsed.isProMode !== undefined) {
                         console.log('📦 Loading Pro mode from storage:', parsed.isProMode);
                         setIsProMode(parsed.isProMode);
+                        // Backwards compatibility: if goalsEnabled wasn't saved but isProMode was, assume goals align with pro mode
+                        if (parsed.goalsEnabled === undefined) {
+                            setGoalsEnabled(parsed.isProMode);
+                        }
                     } else {
                         console.warn('⚠️ No Pro mode found in storage, defaulting to false');
+                    }
+                    if (parsed.goalsEnabled !== undefined) {
+                        setGoalsEnabled(parsed.goalsEnabled);
                     }
                     if (parsed.proActivatedAt !== undefined) {
                         setProActivatedAt(parsed.proActivatedAt);
@@ -270,7 +283,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     showGlobalAmbient,
                     helpEnabled,
                     isProMode,
-                    proActivatedAt
+                    proActivatedAt,
+                    goalsEnabled,
+                    financialSnapshotEnabled
                 };
                 await Preferences.set({ key: SETTINGS_STORAGE_KEY, value: JSON.stringify(settings) });
                 console.log('✅ Pro mode saved immediately:', isProMode);
@@ -279,7 +294,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         };
         savePro();
-    }, [isProMode, proActivatedAt, monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled, isDataLoaded]);
+    }, [monthlyBudget, categoryBudgets, ageRestricted, childSupportMode, categories, recurringExpenses, goals, ambientMode, showGlobalAmbient, helpEnabled, isProMode, goalsEnabled, financialSnapshotEnabled, proActivatedAt, isDataLoaded]);
 
     // Save custody days separately
     useEffect(() => {
@@ -966,6 +981,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isProMode, setIsProMode,
             setIsProModeWithTimestamp,
             proActivatedAt,
+            goalsEnabled,
+            setGoalsEnabled,
+            financialSnapshotEnabled,
+            setFinancialSnapshotEnabled,
+
             shownNotificationIds,
             markNotificationAsShown,
             unreadNotificationCount,

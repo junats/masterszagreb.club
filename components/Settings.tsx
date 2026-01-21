@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Users, Bell, Shield, LogOut, ChevronRight, Wallet, Lock, FileDown, Database, Star, PieChart, Tag, Plus, Trash2, X as XIcon, Calendar, RefreshCw, FileText, Target, Trophy, Crown, AlertTriangle, AlertOctagon, Sparkles, Check, LifeBuoy } from 'lucide-react';
+import { User as UserIcon, Users, Bell, Shield, LogOut, ChevronRight, Wallet, Lock, FileDown, Database, Star, PieChart, Tag, Plus, Trash2, X as XIcon, Calendar, RefreshCw, FileText, Target, Trophy, Crown, AlertTriangle, AlertOctagon, Sparkles, Check, LifeBuoy, Activity } from 'lucide-react';
 import { Receipt, User, SubscriptionTier, Category, CategoryDefinition, RecurringExpense, Goal, GoalType, CustodyDay } from '../types';
 import { generateDemoData } from '../utils/demoData';
 import { exportService } from '../services/exportService';
@@ -51,7 +51,12 @@ const Settings: React.FC<SettingsProps> = () => {
         setCustodyDays,
         deleteAllReceipts,
         isProMode, setIsProMode,
-        proActivatedAt
+        proActivatedAt,
+        goalsEnabled, setGoalsEnabled,
+        addGoal,
+        updateGoal,
+        financialSnapshotEnabled,
+        setFinancialSnapshotEnabled
     } = useData();
 
     const { user, updateUser, signOut: contextSignOut, upgradeToPro } = useUser();
@@ -102,15 +107,15 @@ const Settings: React.FC<SettingsProps> = () => {
                 // If verified, we still need the password to store it.
                 // For now, we'll enable the toggle, and in AuthScreen we'll capture password on next login.
                 // Actually, let's ask for the password now if we want it to work immediately.
-                const pwd = prompt("Please enter your current password to enable Face ID login:");
+                const pwd = prompt(t('settings.biometricPrompt'));
                 if (pwd && user?.email) {
                     try {
                         await biometricService.saveCredentials(user.email, pwd);
                         await biometricService.setEnabled(true);
                         setBiometricEnabled(true);
-                        showToast("Face ID enabled successfully!", 'success');
+                        showToast(t('settings.security.faceIdKeywords.success'), 'success');
                     } catch (err) {
-                        showToast("Failed to save credentials.", 'error');
+                        showToast(t('settings.security.faceIdKeywords.failed'), 'error');
                         setBiometricEnabled(false);
                     }
                 } else {
@@ -122,7 +127,7 @@ const Settings: React.FC<SettingsProps> = () => {
         } else {
             await biometricService.deleteCredentials();
             setBiometricEnabled(false);
-            showToast("Face ID disabled.", 'info');
+            showToast(t('settings.security.faceIdKeywords.disabled'), 'info');
         }
     };
 
@@ -161,7 +166,7 @@ const Settings: React.FC<SettingsProps> = () => {
     };
 
     const handleDeleteRecurring = (id: string) => {
-        if (confirm('Delete this recurring expense?')) {
+        if (confirm(t('settings.recurring.deleteConfirm'))) {
             setRecurringExpenses(recurringExpenses.filter(e => e.id !== id));
         }
     };
@@ -180,13 +185,13 @@ const Settings: React.FC<SettingsProps> = () => {
     };
 
     const handleDeleteCategory = (id: string) => {
-        if (confirm('Are you sure you want to delete this category?')) {
+        if (confirm(t('settings.categories.deleteConfirm'))) {
             setCategories(categories.filter(c => c.id !== id));
         }
     };
 
     const handleToggleRestricted = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (user?.tier !== SubscriptionTier.PRO && !e.target.checked === false) { // Trying to turn ON
+        if (!isProMode && !e.target.checked === false) { // Trying to turn ON
             e.preventDefault();
             setShowPaywall(true);
         } else {
@@ -195,14 +200,14 @@ const Settings: React.FC<SettingsProps> = () => {
     };
 
     const handleExportData = async () => {
-        if (user?.tier !== SubscriptionTier.PRO) {
+        if (!isProMode) {
             setShowPaywall(true);
             return;
         }
 
         const receiptsData = localStorage.getItem('truetrack_receipts');
         if (!receiptsData) {
-            alert("No data to export.");
+            alert(t('settings.data.noData'));
             return;
         }
 
@@ -241,10 +246,10 @@ const Settings: React.FC<SettingsProps> = () => {
 
                 // Share the file
                 await Share.share({
-                    title: 'TrueTrack Export',
-                    text: 'Here is my spending data from TrueTrack.',
+                    title: t('settings.proFeatures.exportTitle'),
+                    text: t('settings.proFeatures.exportMessage'),
                     url: result.uri,
-                    dialogTitle: 'Export Data'
+                    dialogTitle: t('settings.proFeatures.exportDialogTitle')
                 });
 
             } catch (nativeError) {
@@ -261,7 +266,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
         } catch (e) {
             console.error("Export failed", e);
-            alert("Failed to export data.");
+            alert(t('settings.data.exportFail'));
         }
     };
 
@@ -274,7 +279,7 @@ const Settings: React.FC<SettingsProps> = () => {
                 className="flex-1 w-full max-w-md mx-auto relative pt-0 pb-8 px-4 custom-scrollbar"
             >
                 <div className="pb-4 px-6 text-center">
-                    <p className="text-[10px] text-slate-500 font-mono">TrueTrack v1.8 (Build {new Date().toLocaleTimeString()})</p>
+                    {/* App Version moved to bottom */}
                 </div>
 
                 {/* Content Container - No Overflow Clipping for Shadows/Badges */}
@@ -290,7 +295,7 @@ const Settings: React.FC<SettingsProps> = () => {
                     >
                         {/* Avatar Section */}
                         <div className="relative shrink-0">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner ring-1 ring-white/10 z-10 relative ${user?.tier === SubscriptionTier.PRO
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner ring-1 ring-white/10 z-10 relative ${isProMode
                                 ? 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
                                 : 'bg-slate-700'
                                 }`}>
@@ -312,7 +317,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-0.5">
                                 <h3 className="text-white font-heading font-bold tracking-tight text-lg truncate group-hover:text-primary transition-colors">{user?.nickname || user?.name}</h3>
-                                {user?.tier === SubscriptionTier.PRO ? (
+                                {isProMode ? (
                                     <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wide shrink-0">{t('settings.profile.pro')}</span>
                                 ) : (
                                     <span className="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide shrink-0">{t('settings.profile.free')}</span>
@@ -372,7 +377,7 @@ const Settings: React.FC<SettingsProps> = () => {
                     <section>
                         <div className="flex items-center justify-between mb-3 ml-1">
                             <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">{t('settings.proFeatures.title')}</h4>
-                            {user?.tier === SubscriptionTier.PRO && (
+                            {isProMode && (
                                 <div className="flex items-center gap-1">
                                     <Shield size={10} className="text-amber-500" />
                                     <span className="text-[10px] text-amber-500 font-bold tracking-wide">{t('settings.proFeatures.active')}</span>
@@ -409,7 +414,7 @@ const Settings: React.FC<SettingsProps> = () => {
                             {/* Enable Goals/Pro Features */}
                             <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${isProMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                                    <div className={`p-2 rounded-xl ${goalsEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
                                         <Target size={18} />
                                     </div>
                                     <div>
@@ -421,23 +426,90 @@ const Settings: React.FC<SettingsProps> = () => {
                                     <input
                                         type="checkbox"
                                         className="sr-only peer"
-                                        checked={isProMode}
+                                        checked={goalsEnabled}
                                         onChange={(e) => {
-                                            if (user?.tier !== SubscriptionTier.PRO) {
+                                            if (!isProMode) {
                                                 setShowPaywall(true);
                                                 return;
                                             }
                                             HapticsService.impactMedium();
-                                            setIsProMode(e.target.checked);
+                                            setGoalsEnabled(e.target.checked);
                                         }}
                                     />
-                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user?.tier === SubscriptionTier.PRO ? 'peer-checked:bg-purple-500' : ''}`}></div>
+                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${isProMode ? 'peer-checked:bg-purple-500' : ''}`}></div>
+                                </label>
+                            </div>
+
+                            {/* Goals List (Collapsible) */}
+                            {goalsEnabled && isProMode && (
+                                <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar p-2 bg-black/20 border-t border-white/5 mx-2 mb-2 rounded-xl">
+                                    {goals.map(goal => (
+                                        <div
+                                            key={goal.id}
+                                            className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"
+                                            onClick={() => {
+                                                HapticsService.impactLight();
+                                                const updatedGoals = goals.map(g =>
+                                                    g.id === goal.id ? { ...g, isEnabled: !g.isEnabled } : g
+                                                );
+                                                setGoals(updatedGoals);
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${goal.isEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                    <div className="text-xl">{goal.emoji}</div>
+                                                </div>
+                                                <span className="text-slate-300 text-sm font-medium">{goal.name}</span>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={goal.isEnabled}
+                                                    readOnly
+                                                />
+                                                <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Financial Snapshot Toggle */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${financialSnapshotEnabled ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-500'}`}>
+                                        <Activity size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-200 text-sm font-bold block">Financial Snapshot</span>
+                                            {!isProMode && <Lock size={12} className="text-amber-500" />}
+                                        </div>
+                                        <span className="text-xs text-slate-500 font-medium block">Show financial metrics on dashboard</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={financialSnapshotEnabled}
+                                        onChange={(e) => {
+                                            if (!isProMode) {
+                                                setShowPaywall(true);
+                                                return;
+                                            }
+                                            HapticsService.impactMedium();
+                                            setFinancialSnapshotEnabled(e.target.checked);
+                                        }}
+                                    />
+                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${isProMode ? 'peer-checked:bg-cyan-500 peer-checked:shadow-[0_0_15px_rgba(6,182,212,0.3)]' : ''}`}></div>
                                 </label>
                             </div>
 
                             {/* Help & Support (Pro) */}
                             {setHelpEnabled && (
-                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 ${user?.tier !== SubscriptionTier.PRO ? 'opacity-60' : ''}`}>
+                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-xl ${helpEnabled ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
                                             <LifeBuoy size={18} />
@@ -445,7 +517,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.lifeSupport')}</span>
-                                                {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
+                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.lifeSupportDesc')}</span>
                                         </div>
@@ -456,7 +528,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             className="sr-only peer"
                                             checked={helpEnabled}
                                             onChange={(e) => {
-                                                if (user?.tier !== SubscriptionTier.PRO) {
+                                                if (!isProMode) {
                                                     setShowPaywall(true);
                                                     return;
                                                 }
@@ -471,7 +543,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                             {/* Ambient Mode Toggle */}
                             {setAmbientMode && (
-                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 ${user?.tier !== SubscriptionTier.PRO ? 'opacity-60' : ''}`}>
+                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-xl ${ambientMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
                                             <Star size={18} />
@@ -479,7 +551,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.ambient')}</span>
-                                                {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
+                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.ambientDesc')}</span>
                                         </div>
@@ -490,7 +562,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             className="sr-only peer"
                                             checked={ambientMode}
                                             onChange={(e) => {
-                                                if (user?.tier !== SubscriptionTier.PRO) {
+                                                if (!isProMode) {
                                                     setShowPaywall(true);
                                                     return;
                                                 }
@@ -505,7 +577,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                             {/* Global App Background Toggle (Sub-option) */}
                             {setAmbientMode && setShowGlobalAmbient && ambientMode && (
-                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 pl-8 bg-white/5 ${user?.tier !== SubscriptionTier.PRO ? 'opacity-60' : ''}`}>
+                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 pl-8 bg-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-xl ${showGlobalAmbient ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
                                             <Sparkles size={18} />
@@ -513,7 +585,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.appBg')}</span>
-                                                {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
+                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.appBgDesc')}</span>
                                         </div>
@@ -524,7 +596,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             className="sr-only peer"
                                             checked={showGlobalAmbient}
                                             onChange={(e) => {
-                                                if (user?.tier !== SubscriptionTier.PRO) {
+                                                if (!isProMode) {
                                                     setShowPaywall(true);
                                                     return;
                                                 }
@@ -540,10 +612,10 @@ const Settings: React.FC<SettingsProps> = () => {
                             {/* Parental Control */}
                             <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${user?.tier === SubscriptionTier.PRO ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
+                                    <div className={`p-2 rounded-xl ${isProMode ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
                                         <Lock size={18} />
                                     </div>
-                                    <div className={user?.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}>
+                                    <div className={!isProMode ? 'opacity-50' : ''}>
                                         <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.parental')}</span>
                                         <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.parentalDesc')}</span>
                                     </div>
@@ -554,7 +626,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         className="sr-only peer"
                                         checked={ageRestricted}
                                         onChange={(e) => {
-                                            if (user?.tier !== SubscriptionTier.PRO) {
+                                            if (!isProMode) {
                                                 setShowPaywall(true);
                                                 return;
                                             }
@@ -562,7 +634,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             handleToggleRestricted(e);
                                         }}
                                     />
-                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user?.tier === SubscriptionTier.PRO ? 'peer-checked:bg-rose-500 peer-checked:shadow-[0_0_15px_rgba(244,63,94,0.3)]' : ''}`}></div>
+                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${isProMode ? 'peer-checked:bg-rose-500 peer-checked:shadow-[0_0_15px_rgba(244,63,94,0.3)]' : ''}`}></div>
                                 </label>
                             </div>
 
@@ -572,10 +644,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                 className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${user?.tier === SubscriptionTier.PRO ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                                    <div className={`p-2 rounded-xl ${isProMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
                                         <FileDown size={18} />
                                     </div>
-                                    <div className={`text-left ${user?.tier !== SubscriptionTier.PRO ? 'opacity-50' : ''}`}>
+                                    <div className={`text-left ${!isProMode ? 'opacity-50' : ''}`}>
                                         <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.export')}</span>
                                         <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.exportDesc')}</span>
                                     </div>
@@ -583,10 +655,10 @@ const Settings: React.FC<SettingsProps> = () => {
                             </button>
 
                             {/* Category Budgets (Pro) */}
-                            <div className={`w-full p-4 border-b border-white/5 ${user?.tier !== SubscriptionTier.PRO ? 'opacity-60' : ''}`}>
+                            <div className={`w-full p-4 border-b border-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
                                 <button
                                     onClick={() => {
-                                        if (user?.tier !== SubscriptionTier.PRO) {
+                                        if (!isProMode) {
                                             setShowPaywall(true);
                                             return;
                                         }
@@ -602,12 +674,12 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <div className="text-left">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.categoryBudgets')}</span>
-                                                {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
+                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.categoryBudgetsDesc')}</span>
                                         </div>
                                     </div>
-                                    {user?.tier !== SubscriptionTier.PRO ? <Lock size={14} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-600" />}
+                                    {!isProMode ? <Lock size={14} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-600" />}
                                 </button>
 
                                 <div id="category-budgets" className="hidden mt-4 space-y-3 bg-black/20 p-4 rounded-xl border border-white/5">
@@ -634,84 +706,12 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
                             </div>
 
-                            {/* Goals & Habits (Pro) */}
-                            <div className={`w-full p-4 ${user?.tier !== SubscriptionTier.PRO ? 'opacity-60' : ''}`}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-purple-500/20 p-2 rounded-xl text-purple-400">
-                                            <Target size={18} />
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.goals')}</span>
-                                                {user?.tier !== SubscriptionTier.PRO && <Lock size={12} className="text-amber-500" />}
-                                            </div>
-                                            <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.goalsDesc')}</span>
-                                        </div>
-                                    </div>
-                                    {user?.tier !== SubscriptionTier.PRO && <Lock size={14} className="text-slate-500" />}
-                                </div>
 
-                                <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
-                                    {goals.map(goal => (
-                                        <div
-                                            key={goal.id}
-                                            className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5"
-                                            onClick={() => {
-                                                if (user?.tier !== SubscriptionTier.PRO) {
-                                                    setShowPaywall(true);
-                                                } else {
-                                                    HapticsService.impactLight();
-                                                    const updatedGoals = goals.map(g =>
-                                                        g.id === goal.id ? { ...g, isEnabled: !g.isEnabled } : g
-                                                    );
-                                                    setGoals(updatedGoals);
-                                                }
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${goal.isEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
-                                                    {goal.type === GoalType.JUNK_FOOD && <span className="text-lg">🍔</span>}
-                                                    {goal.type === GoalType.ALCOHOL && <span className="text-lg">🍺</span>}
-                                                    {goal.type === GoalType.SMOKING && <span className="text-lg">🚬</span>}
-                                                    {goal.type === GoalType.GAMING && <span className="text-lg">🎮</span>}
-                                                    {goal.type === GoalType.GAMBLING && <span className="text-lg">🎲</span>}
-                                                    {goal.type === GoalType.CAFFEINE && <span className="text-lg">☕</span>}
-                                                    {goal.type === GoalType.SUGAR && <span className="text-lg">🍩</span>}
-                                                    {goal.type === GoalType.ONLINE_SHOPPING && <span className="text-lg">🛍️</span>}
-                                                    {goal.type === GoalType.FAST_FASHION && <span className="text-lg">👗</span>}
-                                                    {goal.type === GoalType.RIDE_SHARING && <span className="text-lg">🚕</span>}
-                                                    {goal.type === GoalType.STREAMING && <span className="text-lg">📺</span>}
-                                                    {goal.type === GoalType.SAVINGS && <span className="text-lg">💰</span>}
-                                                </div>
-                                                <div>
-                                                    <p className={`text-sm font-bold ${goal.isEnabled ? 'text-white' : 'text-slate-400'}`}>{goal.name}</p>
-                                                    <p className="text-[10px] text-slate-500">
-                                                        {goal.isEnabled ? t('settings.proFeatures.trackingStreak', { streak: goal.streak }) : t('settings.proFeatures.enableGoals')}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={goal.isEnabled}
-                                                    readOnly
-                                                    onChange={() => {
-                                                        // Logic moved to parent click
-                                                    }}
-                                                />
-                                                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                                            </label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
                         </div>
-                    </section>
+                    </section >
 
                     {/* Security Settings */}
-                    <section>
+                    < section >
                         <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.security.title')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             {/* Face ID / Biometric Login */}
@@ -759,10 +759,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </label>
                             </div>
                         </div>
-                    </section>
+                    </section >
 
                     {/* Category Management */}
-                    <section>
+                    < section >
                         <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.categories.title')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             <button
@@ -800,14 +800,14 @@ const Settings: React.FC<SettingsProps> = () => {
                                 ))}
                             </div>
                         </div>
-                    </section>
+                    </section >
 
 
 
 
 
                     {/* General Settings */}
-                    <section>
+                    < section >
                         <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.general.title')}</h4>
                         <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
                             {/* Language Selector */}
@@ -930,7 +930,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     try {
                                         const savedReceipts = localStorage.getItem('truetrack_receipts');
                                         if (!savedReceipts) {
-                                            alert('No data to export.');
+                                            alert(t('settings.data.noData'));
                                             return;
                                         }
                                         let receipts = JSON.parse(savedReceipts) as Receipt[];
@@ -952,7 +952,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         await exportService.downloadCSV(csv, filename);
                                     } catch (e) {
                                         console.error('Export failed:', e);
-                                        alert('Failed to export data.');
+                                        alert(t('settings.data.exportFail'));
                                     }
                                 }}
                                 className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
@@ -979,7 +979,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     </div>
                                     <div className="text-left">
                                         <span className="text-slate-200 text-sm font-bold block">{t('settings.modals.legalExport')}</span>
-                                        <span className="text-xs text-slate-500 font-medium">Generate formal report</span>
+                                        <span className="text-xs text-slate-500 font-medium">{t('settings.modals.generateFormalReport')}</span>
                                     </div>
                                 </div>
                                 <ChevronRight className="text-slate-600" size={16} />
@@ -990,7 +990,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     <div className="bg-amber-500/20 p-2 rounded-xl text-amber-400">
                                         <Bell size={18} />
                                     </div>
-                                    <span className="text-slate-200 text-sm font-bold">Notifications</span>
+                                    <span className="text-slate-200 text-sm font-bold">{t('settings.notificationsLabel')}</span>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -998,10 +998,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </label>
                             </div>
                         </div>
-                    </section>
+                    </section >
 
                     {/* Subscription Management Section */}
-                    <section className="mb-6">
+                    < section className="mb-6" >
                         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                             <Crown size={16} className="text-purple-400" />
                             {t('settings.subscription.title')}
@@ -1030,7 +1030,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
                                 {isProMode && (
                                     <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-1">
-                                        <p className="text-xs font-bold text-purple-400">€4.99/mo</p>
+                                        <p className="text-xs font-bold text-purple-400">{t('settings.subscription.pricePerMonth', { price: '4.99' })}</p>
                                     </div>
                                 )}
                             </div>
@@ -1040,10 +1040,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                 <button
                                     onClick={() => {
                                         HapticsService.impactMedium();
-                                        if (confirm('Are you sure you want to cancel your Pro subscription? You will lose access to all Pro features.')) {
+                                        if (confirm(t('settings.subscription.cancelConfirm'))) {
                                             setIsProMode(false);
                                             updateUser({ tier: SubscriptionTier.FREE });
-                                            showToast('Subscription cancelled. You are now on the Free plan.', 'info');
+                                            showToast(t('settings.subscription.cancelSuccess'), 'info');
                                         }
                                     }}
                                     className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 transition-all font-medium text-sm"
@@ -1064,18 +1064,18 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </button>
                             )}
                         </div>
-                    </section>
+                    </section >
 
-                </div>
+                </div >
 
                 {/* Danger Zone - Main Page Footer */}
-                <div className="mt-8 mb-24 space-y-3">
+                < div className="mt-8 mb-24 space-y-3" >
                     {/* Sign Out Button */}
                     {/* Sign Out Button */}
                     <button
                         onClick={() => {
                             HapticsService.impactHeavy();
-                            if (confirm('Are you sure you want to sign out?')) {
+                            if (confirm(t('settings.account.signOutConfirm'))) {
                                 onSignOut();
                             }
                         }}
@@ -1097,10 +1097,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                 await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays);
 
                                 console.log('✅ Widget test completed successfully!');
-                                showToast('Widget data updated! Background the app to refresh widget.', 'success');
+                                showToast(t('settings.uicalc.widgetUpdateSuccess'), 'success');
                             } catch (error: any) {
                                 console.error('❌ Widget test failed:', error);
-                                showToast(`Widget test failed: ${error?.message || 'Unknown error'}`, 'error');
+                                showToast(`${t('settings.uicalc.widgetUpdateFail')} ${error?.message || 'Unknown error'}`, 'error');
                             }
                         }}
                         className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-sm font-medium mb-3"
@@ -1114,12 +1114,12 @@ const Settings: React.FC<SettingsProps> = () => {
                         onClick={async () => {
                             const { keys } = await Preferences.keys();
                             if (keys.length === 0) {
-                                alert("Storage Dump: EMPTY (No keys found)");
+                                alert(t('settings.uicalc.storageDumpEmpty'));
                                 return;
                             }
 
                             // Dump all values
-                            let dump = "Storage Keys:\n";
+                            let dump = t('settings.uicalc.storageKeysTitle') + "\n";
                             for (const key of keys) {
                                 // truncate key for readability
                                 dump += `- ${key}\n`;
@@ -1139,7 +1139,11 @@ const Settings: React.FC<SettingsProps> = () => {
                         <Trash2 size={18} />
                         {t('settings.data.delete')}
                     </button>
-                </div>
+
+                    <div className="pt-8 pb-4 px-6 text-center">
+                        <p className="text-[10px] text-slate-600 font-mono">TrueTrack v1.8 (Build {new Date().toLocaleTimeString()})</p>
+                    </div>
+                </div >
             </motion.div >
             {/* End of Main Content Scroll View */}
 
@@ -1174,7 +1178,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         type="text"
                                         value={newCategoryName}
                                         onChange={(e) => setNewCategoryName(e.target.value)}
-                                        placeholder="e.g. Gaming, Pets, Gifts"
+                                        placeholder={t('settings.categories.placeholder')}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
                                         autoFocus
                                     />
@@ -1228,7 +1232,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         type="text"
                                         value={newExpenseName}
                                         onChange={(e) => setNewExpenseName(e.target.value)}
-                                        placeholder="e.g. Netflix, Gym"
+                                        placeholder={t('settings.recurring.expenseNamePlaceholder')}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
                                     />
                                 </div>
@@ -1240,7 +1244,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             type="number"
                                             value={newExpenseAmount}
                                             onChange={(e) => setNewExpenseAmount(e.target.value)}
-                                            placeholder="0.00"
+                                            placeholder={t('settings.recurring.amountPlaceholder')}
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none transition-colors"
                                         />
                                     </div>
@@ -1251,9 +1255,9 @@ const Settings: React.FC<SettingsProps> = () => {
                                             onChange={(e) => setNewExpenseFrequency(e.target.value as any)}
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
                                         >
-                                            <option value="weekly">Weekly</option>
-                                            <option value="monthly">Monthly</option>
-                                            <option value="yearly">Yearly</option>
+                                            <option value="weekly">{t('settings.recurring.frequencyWeekly')}</option>
+                                            <option value="monthly">{t('settings.recurring.frequencyMonthly')}</option>
+                                            <option value="yearly">{t('settings.recurring.frequencyYearly')}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1265,7 +1269,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         onChange={(e) => setNewExpenseCategory(e.target.value)}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
                                     >
-                                        <option value="">Select Category</option>
+                                        <option value="">{t('settings.categories.selectCategoryPlaceholder')}</option>
                                         {categories.map(cat => (
                                             <option key={cat.id} value={cat.name}>{cat.name}</option>
                                         ))}
@@ -1401,7 +1405,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         value={tempNickname}
                                         onChange={(e) => setTempNickname(e.target.value)}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors font-medium text-lg"
-                                        placeholder="Enter nickname"
+                                        placeholder={t('settings.profile.nicknamePlaceholder')}
                                     />
                                 </div>
 
@@ -1449,7 +1453,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
                                                     if (file.size > 2 * 1024 * 1024) {
-                                                        alert("Image too large. Please select an image under 2MB.");
+                                                        alert(t('settings.profile.imageTooLarge'));
                                                         return;
                                                     }
                                                     const reader = new FileReader();
@@ -1553,7 +1557,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         // generateDummyData is fast (50ms in mock), but let's be safe.
                                         const count = await generateDummyData(seedScenario);
 
-                                        showToast(`Generated ${seedScenario} scenario: ${count} receipts.`, 'success');
+                                        showToast(t('settings.data.seedSuccess', { scenario: seedScenario, count: count }), 'success');
                                     }}
                                     className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2"
                                 >

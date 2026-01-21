@@ -1,8 +1,9 @@
-import React from 'react';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
-import { PieChart as PieChartIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Sector, Tooltip } from 'recharts';
+import { PieChart as PieChartIcon, TrendingUp } from 'lucide-react';
 import { DashboardMetrics } from '../hooks/useDashboardMetrics';
 import { useLanguage } from '../contexts/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SpendingDistributionProps {
     metrics: DashboardMetrics;
@@ -15,6 +16,35 @@ interface SpendingDistributionProps {
     isVisible?: boolean;
 }
 
+const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    return (
+        <g>
+            <Sector
+                cx={cx}
+                cy={cy}
+                innerRadius={innerRadius}
+                outerRadius={outerRadius + 4} // Active scale up
+                startAngle={startAngle}
+                endAngle={endAngle}
+                fill={fill}
+                cornerRadius={4}
+            />
+            <Sector
+                cx={cx}
+                cy={cy}
+                startAngle={startAngle}
+                endAngle={endAngle}
+                innerRadius={innerRadius - 2}
+                outerRadius={outerRadius + 8}
+                fill={fill}
+                opacity={0.1}
+                cornerRadius={6}
+            />
+        </g>
+    );
+};
+
 export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
     metrics,
     pieView,
@@ -26,6 +56,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
     isVisible = true
 }) => {
     const { t } = useLanguage();
+    const [activeIndex, setActiveIndex] = useState<{ [key: string]: number | null }>({});
 
     // Derive Chart Data
     const activeCharts = [
@@ -47,106 +78,149 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
         }] : [])
     ];
 
+    const onPieEnter = (chartId: string, _: any, index: number) => {
+        setActiveIndex(prev => ({ ...prev, [chartId]: index }));
+    };
+
+    const onPieLeave = (chartId: string) => {
+        setActiveIndex(prev => ({ ...prev, [chartId]: null }));
+    };
+
     return (
         <div className="flex flex-col gap-4">
-            {/* Header with Toggles - Shared for the section */}
+            {/* Header with Toggles */}
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
-                    {/* Icon */}
-                    <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
                         <PieChartIcon size={14} />
                     </div>
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t('labels.distribution')}</span>
+                    <span className="text-xs font-bold text-slate-200 uppercase tracking-widest">{t('labels.distribution')}</span>
                 </div>
-                <div className="flex bg-white/5 rounded-lg p-0.5">
+                <div className="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5">
                     {['daily', 'weekly', 'monthly'].map((v) => (
                         <button
                             key={v}
                             onClick={() => setPieView(v as any)}
-                            className={"px-2 py-0.5 rounded-md text-[10px] uppercase font-bold transition-all " + (
-                                pieView === v ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
+                            className={"px-2.5 py-1 rounded-md text-[10px] uppercase font-bold transition-all " + (
+                                pieView === v ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'
                             )}
                         >
-                            {v === 'daily' ? t('days.day') : v === 'weekly' ? t('days.week') : t('days.mo')}
+                            {v === 'daily' ? 'D' : v === 'weekly' ? 'W' : 'M'}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Charts Grid - Side by Side on all screens if Coparenting */}
-            <div className={"grid gap-2 " + (childSupportMode ? "grid-cols-2" : "grid-cols-1")}>
-                {activeCharts.map(chartConfig => (
-                    <div key={chartConfig.id} className="flex flex-col h-full bg-white/[0.02] border border-white/5 rounded-2xl p-2 backdrop-blur-sm relative overflow-hidden">
-                        {activeCharts.length > 1 && (
-                            <h5 className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1 text-center">{chartConfig.title}</h5>
-                        )}
+            {/* Charts Grid */}
+            <div className={"grid gap-3 " + (childSupportMode ? "grid-cols-2" : "grid-cols-1")}>
+                {activeCharts.map(chartConfig => {
+                    const activeIdx = activeIndex[chartConfig.id];
+                    const hasActive = activeIdx !== undefined && activeIdx !== null;
+                    const activeItem = hasActive ? chartConfig.data[activeIdx!] : null;
+                    const displayTotal = activeItem ? activeItem.value : chartConfig.total;
+                    const displayLabel = activeItem ? t(`categories.${activeItem.name.toLowerCase()}`, { defaultValue: activeItem.name }) : t('common.total');
+                    const displayColor = activeItem
+                        ? (chartConfig.id === 'child' ? chartConfig.colors[activeIdx! % chartConfig.colors.length] : getCategoryColor(activeItem.name))
+                        : '#94a3b8';
 
-                        <div className={"flex-1 flex flex-col items-start justify-start " + (childSupportMode ? "gap-1" : "gap-4 md:flex-row")}>
-                            {/* Chart */}
-                            <div className={(childSupportMode ? "w-24 h-24 mx-auto" : "w-32 h-32 md:w-40 md:h-40") + " relative flex-shrink-0"}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart key={"pie-" + isVisible}>
-                                        <Tooltip
-                                            content={({ active, payload }) => {
-                                                if (active && payload && payload.length) {
-                                                    return (
-                                                        <div className="bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl z-50">
-                                                            <p className="text-[10px] font-bold text-white mb-0.5">{t(`categories.${payload[0].name.toLowerCase()}`, { defaultValue: payload[0].name })}</p>
-                                                            <p className="text-[10px] text-slate-300">€{(payload[0].value as number).toFixed(2)}</p>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }}
-                                        />
-                                        <Pie
-                                            data={chartConfig.data}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={childSupportMode ? "65%" : "60%"} // Thinner donut for better fit
-                                            outerRadius={childSupportMode ? "95%" : "100%"}
-                                            paddingAngle={3}
-                                            dataKey="value"
-                                            startAngle={90}
-                                            endAngle={-270}
-                                            stroke="none"
-                                            onClick={(data) => onCategoryClick && onCategoryClick(data.name)}
-                                            isAnimationActive={isVisible} // Trigger animation
-                                        >
-                                            {chartConfig.data.map((entry: any, index: number) => (
-                                                <Cell
-                                                    key={`cell-${index}`}
-                                                    fill={chartConfig.id === 'child' ? chartConfig.colors[index % chartConfig.colors.length] : getCategoryColor(entry.name)}
-                                                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                                                    stroke={selectedCategory === entry.name ? '#fff' : 'none'}
-                                                    strokeWidth={2}
-                                                />
-                                            ))}
-                                        </Pie>
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                {/* Center Label */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <p className="text-[8px] text-slate-500 font-medium uppercase leading-none">{t('common.total')}</p>
-                                    <p className={"font-bold text-white leading-none mt-0.5 " + (childSupportMode ? "text-[10px]" : "text-sm")}>€{chartConfig.total.toFixed(0)}</p>
+                    return (
+                        <div key={chartConfig.id} className="flex flex-col h-full bg-slate-900/40 border border-white/5 rounded-[1.5rem] p-3 backdrop-blur-sm relative overflow-hidden group hover:border-white/10 transition-colors">
+                            {activeCharts.length > 1 && (
+                                <h5 className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 text-center">{chartConfig.title}</h5>
+                            )}
+
+                            <div className={"flex-1 flex flex-col items-center justify-start " + (childSupportMode ? "gap-2" : "gap-6 md:flex-row")}>
+                                {/* Chart */}
+                                <div className={(childSupportMode ? "w-28 h-28" : "w-36 h-36 md:w-32 md:h-32") + " relative flex-shrink-0"}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart key={`${chartConfig.id}-${pieView}-${isVisible}`}>
+                                            <Pie
+                                                activeIndex={hasActive ? activeIdx! : -1}
+                                                activeShape={renderActiveShape}
+                                                data={chartConfig.data}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={childSupportMode ? "70%" : "70%"}
+                                                outerRadius={childSupportMode ? "95%" : "100%"}
+                                                paddingAngle={4}
+                                                cornerRadius={4}
+                                                dataKey="value"
+                                                startAngle={90}
+                                                endAngle={-270}
+                                                stroke="none"
+                                                onMouseEnter={(_, index) => onPieEnter(chartConfig.id, _, index)}
+                                                onMouseLeave={() => onPieLeave(chartConfig.id)}
+                                                onClick={(data) => onCategoryClick && onCategoryClick(data.name)}
+                                                isAnimationActive={isVisible}
+                                                animationDuration={1500}
+                                                animationBegin={0}
+                                            >
+                                                {chartConfig.data.map((entry: any, index: number) => (
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={chartConfig.id === 'child' ? chartConfig.colors[index % chartConfig.colors.length] : getCategoryColor(entry.name)}
+                                                        className="cursor-pointer transition-all duration-300"
+                                                        strokeWidth={0}
+                                                    />
+                                                ))}
+                                            </Pie>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+
+                                    {/* Dynamic Center Label */}
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-all duration-300">
+                                        <AnimatePresence mode="wait">
+                                            <motion.div
+                                                key={hasActive ? 'active' : 'total'}
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="flex flex-col items-center"
+                                            >
+                                                <p className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: hasActive ? displayColor : '#64748b' }}>
+                                                    {displayLabel}
+                                                </p>
+                                                <p className={"font-bold text-white leading-none " + (childSupportMode ? "text-sm" : "text-base")}>
+                                                    €{displayTotal.toFixed(0)}
+                                                </p>
+                                            </motion.div>
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+
+                                {/* Legend */}
+                                <div className="flex flex-col gap-1.5 w-full min-w-0 px-1">
+                                    {chartConfig.data.slice(0, childSupportMode ? 3 : 4).map((entry: any, i: number) => {
+                                        const entryColor = chartConfig.id === 'child' ? chartConfig.colors[i % chartConfig.colors.length] : getCategoryColor(entry.name);
+                                        const isActive = activeIdx === i;
+                                        const percent = chartConfig.total > 0 ? (entry.value / chartConfig.total) * 100 : 0;
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={"flex justify-between items-center text-xs group/item cursor-pointer rounded-lg p-1 transition-all " + (isActive ? "bg-white/5" : "hover:bg-white/5")}
+                                                onMouseEnter={() => onPieEnter(chartConfig.id, null, i)}
+                                                onMouseLeave={() => onPieLeave(chartConfig.id)}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className={"w-2 h-2 rounded-full shrink-0 transition-transform " + (isActive ? "scale-125" : "")} style={{ backgroundColor: entryColor }}></div>
+                                                    <div className="flex flex-col">
+                                                        <span className={"font-medium truncate max-w-[70px] leading-none " + (isActive ? "text-white" : "text-slate-400")}>{t(`categories.${entry.name.toLowerCase()}`, { defaultValue: entry.name })}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className={"font-bold tabular-nums leading-none " + (isActive ? "text-white" : "text-slate-300")}>€{entry.value.toFixed(0)}</span>
+                                                    <span className="text-[9px] text-slate-500 tabular-nums">{percent.toFixed(0)}%</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-
-                            {/* Legend - Hide on small side-by-side to save space, or make compact */}
-                            <div className="flex flex-col gap-1 w-full min-w-0 mt-1">
-                                {chartConfig.data.slice(0, 3).map((entry: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center text-[9px]">
-                                        <div className="flex items-center gap-1 min-w-0">
-                                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: chartConfig.id === 'child' ? chartConfig.colors[i % chartConfig.colors.length] : getCategoryColor(entry.name) }}></div>
-                                            <span className="text-slate-400 truncate max-w-[50px]">{t(`categories.${entry.name.toLowerCase()}`, { defaultValue: entry.name })}</span>
-                                        </div>
-                                        <span className="text-slate-500 tabular-nums">€{entry.value.toFixed(0)}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

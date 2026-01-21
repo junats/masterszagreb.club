@@ -336,7 +336,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
             {/* ... Rest of existing UI ... */}
 
 
-            <div className="flex-1 overflow-y-auto p-4 pb-32">
+            <div className="flex-1 overflow-y-auto p-4 pb-20">
 
                 {/* Month Navigation */}
                 <div className="flex items-center justify-between mb-6 bg-surface p-4 rounded-2xl border border-white/5">
@@ -413,7 +413,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                 </div>
 
                 {/* Legend */}
-                <div className="mt-8 flex justify-center gap-6">
+                <div className="mt-2 flex justify-center gap-6">
                     <div className="flex items-center gap-2">
                         <User size={14} className="text-emerald-400" />
                         <span className="text-xs text-slate-400">{t('coParenting.me')}</span>
@@ -448,7 +448,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                         <div className="p-4 space-y-4">
                             {/* Existing Activities */}
                             <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-1">{t('coParenting.activities')}</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide px-1">{t('coParenting.activities')}</label>
                                 {((custodyDays || []).find(d => d.date === selectedDate)?.activities || []).length > 0 ? (
                                     ((custodyDays || []).find(d => d.date === selectedDate)?.activities || []).map(activity => (
                                         <div key={activity.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/5 group">
@@ -468,7 +468,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                                 <div>
                                                     <p className="text-xs font-bold text-slate-200">{activity.title}</p>
                                                     {(activity.startTime || activity.endTime) && (
-                                                        <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                                                        <p className="text-xs text-slate-500 flex items-center gap-1">
                                                             <Clock size={8} />
                                                             {activity.startTime || '??:??'} {activity.endTime ? `- ${activity.endTime}` : ''}
                                                         </p>
@@ -499,7 +499,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                 />
                                 <div className="flex gap-2">
                                     <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg px-2 flex-1">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">{t('coParenting.from')}</span>
+                                        <span className="text-xs text-slate-500 font-bold uppercase">{t('coParenting.from')}</span>
                                         <input
                                             type="time"
                                             value={newActivityStartTime}
@@ -508,7 +508,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                         />
                                     </div>
                                     <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg px-2 flex-1">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">{t('coParenting.to')}</span>
+                                        <span className="text-xs text-slate-500 font-bold uppercase">{t('coParenting.to')}</span>
                                         <input
                                             type="time"
                                             value={newActivityEndTime}
@@ -537,7 +537,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                                                         }`}
                                                 >
                                                     {t.icon}
-                                                    <span className="text-[9px] font-bold">{t.label}</span>
+                                                    <span className="text-xs font-bold">{t.label}</span>
                                                 </button>
                                             ))}
                                         </div>

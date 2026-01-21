@@ -10,6 +10,8 @@ export interface InsightMessage {
     severity: InsightSeverity;
     icon: any;
     category?: string;
+    action?: 'budget' | 'calendar' | 'history' | 'goals';
+    actionLabel?: string;
 }
 
 // Translation function type
@@ -96,7 +98,9 @@ export const generateInsights = (
             text: `High Junk Food Intake`,
             subtext: `You bought ${lowNutriCount} items with low nutritional value this month (e.g. ${lowNutriExamples[0]}).`,
             severity: 'danger',
-            icon: AlertTriangle
+            icon: AlertTriangle,
+            action: 'history',
+            actionLabel: 'Review Items'
         });
     }
 
@@ -107,7 +111,9 @@ export const generateInsights = (
             text: `Low Value Spending`,
             subtext: `You spent €${lowValueSpend.toFixed(0)} on items rated as poor value (e.g. ${lowValueExamples[0]}).`,
             severity: 'warning',
-            icon: Wallet
+            icon: Wallet,
+            action: 'history',
+            actionLabel: 'Review Items'
         });
     }
 
@@ -177,7 +183,9 @@ export const generateInsights = (
             text: t('insights.weekendSplurgeTitle'),
             subtext: t('insights.weekendSplurgeSubtext'),
             severity: 'warning',
-            icon: Calendar
+            icon: Calendar,
+            action: 'history',
+            actionLabel: 'Analyze'
         });
     }
 
@@ -235,7 +243,9 @@ export const generateInsights = (
                 text: t('insights.budgetExceededTitle', { amount: (currentSpent - monthlyBudget).toFixed(0) }),
                 subtext: t('insights.budgetExceededSubtext'),
                 severity: 'danger',
-                icon: AlertTriangle
+                icon: AlertTriangle,
+                action: 'budget',
+                actionLabel: 'Fix Budget'
             });
         } else if (ratio > 0.85 && daysRemaining > 10) {
             insights.push({
@@ -245,7 +255,9 @@ export const generateInsights = (
                     dailyLimit: ((monthlyBudget - currentSpent) / daysRemaining).toFixed(0)
                 }),
                 severity: 'warning',
-                icon: Wallet
+                icon: Wallet,
+                action: 'budget',
+                actionLabel: 'View Budget'
             });
         }
     }
@@ -267,7 +279,9 @@ export const generateInsights = (
                     : t('insights.custodyUpcomingTitle', { days: dayDiff }),
                 subtext: t('insights.custodySubtext'),
                 severity: 'info',
-                icon: User
+                icon: User,
+                action: 'calendar',
+                actionLabel: 'Schedule'
             });
         }
     }

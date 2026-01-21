@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Scan, History, Settings as SettingsIcon, LifeBuoy, HeartHandshake, Bell } from 'lucide-react';
+import { Home, Scan, History, Settings as SettingsIcon, LifeBuoy, HeartHandshake } from 'lucide-react';
 import { ViewState } from '../types';
 import { HapticService } from '../services/HapticService';
 import { ImpactStyle } from '@capacitor/haptics';
@@ -11,10 +11,9 @@ interface NavigationProps {
   isVisible: boolean;
   childSupportMode?: boolean;
   helpEnabled: boolean;
-  unreadCount?: number;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible, childSupportMode, helpEnabled, unreadCount = 0 }) => {
+const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible, childSupportMode, helpEnabled }) => {
   const { t } = useLanguage();
 
   if (!isVisible) return null;
@@ -22,7 +21,6 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
   const navItems = [
     { id: 'dashboard', label: t('navigation.dashboard'), icon: Home, hidden: false },
     { id: 'scan', label: t('navigation.scan'), icon: Scan, hidden: false },
-    { id: 'notifications', label: t('navigation.alerts'), icon: Bell, hidden: false },
     { id: 'support', label: t('navigation.help'), icon: LifeBuoy, hidden: !helpEnabled },
     { id: 'settings', label: t('navigation.settings'), icon: SettingsIcon, hidden: false },
   ] as const;
@@ -48,19 +46,9 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
                 <div className={`absolute inset-1 bg-primary/20 rounded-full blur-sm transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'} `}></div>
                 <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
 
-                {/* Notification Badge for Alerts - Only show if unread > 0 */}
-                {item.id === 'notifications' && unreadCount > 0 && (
-                  <div className="absolute -top-0.5 -right-0.5 z-20">
-                    <div className="relative">
-                      {/* Pulsing glow */}
-                      <div className="absolute inset-0 bg-red-500 rounded-full blur-sm animate-pulse"></div>
-                      {/* Badge */}
-                      <div className="relative w-2 h-2 bg-red-500 rounded-full border border-[#0B1221] animate-[ping_2s_ease-in-out_infinite]"></div>
-                    </div>
-                  </div>
-                )}
+
               </div>
-              <span className={`text-[10px] font-medium truncate w-full text-center transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-400'
+              <span className={`text-xs font-medium truncate w-full text-center transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-400'
                 } `}>
                 {item.label}
               </span>

@@ -10,6 +10,8 @@ interface AnimatedSectionProps {
     threshold?: number;
     noSlide?: boolean;
     layout?: boolean | "position" | "size";
+    rootMargin?: string;
+    disableEntrance?: boolean;
 }
 
 const defaultVariants: Variants = {
@@ -42,6 +44,12 @@ const staticVariants: Variants = {
     }
 };
 
+// New variant for explicitly disabled entrance
+const disabledVariants: Variants = {
+    hidden: { opacity: 1, y: 0 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0 } }
+};
+
 export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     children,
     className = "",
@@ -50,12 +58,14 @@ export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     variants,
     threshold = 0.2,
     noSlide = false,
-    layout
+    layout,
+    rootMargin,
+    disableEntrance = false
 }) => {
     const ref = useRef(null);
-    const isInView = useInView(ref, { once: triggerOnce, amount: threshold });
+    const isInView = useInView(ref, { once: triggerOnce, amount: threshold, margin: rootMargin });
 
-    const activeVariants = variants || (noSlide ? staticVariants : defaultVariants);
+    const activeVariants = disableEntrance ? disabledVariants : (variants || (noSlide ? staticVariants : defaultVariants));
 
     return (
         <motion.div

@@ -48,7 +48,87 @@
         "weekdayTotal": "Totale giorni feriali",
         "weekendTotal": "Totale weekend",
         "smartSuggestions": "Suggerimenti Smart",
-        "performance": "Prestazioni & Tendenze"
+        "performance": "Prestazioni & Tendenze",
+        "coparenting": {
+            "yearToDate": "Year to Date",
+            "daysWithYou": "Days with You",
+            "trendAnalysis": "Trend Analysis",
+            "thisWeek": "This Week",
+            "thisMonth": "This Month",
+            "yearOverall": "Year Overall",
+            "weekendSplit": "Weekend Split",
+            "you": "You",
+            "partner": "Partner",
+            "aiInsight": "AI Insight",
+            "myShare": "My Share",
+            "me": "Me",
+            "me_uc": "ME"
+        },
+        "pulse": {
+            "title": "Parenting Pulse",
+            "steady": {
+                "title": "Steady Pulse",
+                "message": "Your co-parenting rhythm is stable. Consistency builds security for everyone."
+            },
+            "critical": {
+                "title": "Action Needed",
+                "message": "Schedule is currently lopsided. Consider renegotiating days for better balance."
+            },
+            "attention": {
+                "title": "Uneven Rhythm",
+                "message": "Minor friction detected. A small adjustment could help."
+            },
+            "optimum": {
+                "title": "In Sync",
+                "message": "Outstanding cooperation! Healthy partnership."
+            },
+            "equity": "Equity",
+            "stability": "Stability",
+            "harmony": "Harmony"
+        },
+        "activity": {
+            "recent": "Recent Activity",
+            "upcoming": "Upcoming Events",
+            "noActivities": "No upcoming activities.",
+            "justNow": "Just now",
+            "added": "Added",
+            "updated": "Updated",
+            "removed": "Removed",
+            "custody": "Custody",
+            "changed": "Changed",
+            "event": "Event",
+            "moreEvents": "+{{count}} more"
+        },
+        "status": {
+            "safe": "Safe",
+            "risk": "Risk"
+        },
+        "insightsData": {
+            "smartSuggestions": "Smart Suggestions",
+            "coparenting": {
+                "strong": "You're maintaining strong custody time across all periods. Keep up the consistent presence!",
+                "promising": "Recent improvements are promising! This week and month show positive trends, though the year overall needs attention. Continue this momentum.",
+                "belowTarget": "Custody time is below target across all periods. Consider discussing schedule adjustments with your co-parent.",
+                "mixed": "Mixed trends detected. Focus on maintaining consistency week-to-week for better long-term balance.",
+                "lowerWeek": "This week is lower than usual, but your year-to-date average is solid. Temporary dip or pattern change?"
+            }
+        },
+        "actions": {
+            "share": "Share",
+            "insights": "Insights"
+        },
+        "metrics": {
+            "trends": "Spending Trends",
+            "financialSnapshot": "Financial Snapshot",
+            "performance": "Performance & Forecast"
+        },
+        "chart": {
+            "week": "W",
+            "month": "M",
+            "year": "Y",
+            "dailyAvg": "Daily Avg",
+            "weeklyAvg": "Weekly Avg"
+        }
     },
     "insights": {
         "lateNightTitle": "Critico: €{{amount}} spesi tra le 23:00 e le 05:00.",
@@ -95,7 +175,9 @@
             "chooseAvatar": "Scegli Avatar",
             "upload": "Carica immagine",
             "reset": "Reimposta Avatar",
-            "save": "Salva modifiche"
+            "save": "Salva modifiche",
+            "imageTooLarge": "Image too large. Please select an image under 2MB.",
+            "nicknamePlaceholder": "Enter nickname"
         },
         "budget": {
             "monthly": "Budget Mensile"
@@ -122,7 +204,10 @@
             "trackingStreak": "Tracciamento da {{streak}} giorni",
             "active": "Attivo",
             "coParentingFeatures": "Funzioni Co-Genitorialità",
-            "coParentingDesc": "Calendario condiviso, spese condivise & custodia"
+            "coParentingDesc": "Calendario condiviso, spese condivise & custodia",
+            "exportDialogTitle": "Export Data",
+            "exportTitle": "TrueTrack Export",
+            "exportMessage": "Here is my spending data from TrueTrack."
         },
         "security": {
             "title": "Sicurezza",
@@ -144,7 +229,9 @@
             "add": "Aggiungi Categoria",
             "name": "Nome categoria",
             "color": "Colore",
-            "deleteConfirm": "Eliminare questa categoria?"
+            "deleteConfirm": "Are you sure you want to delete this category?",
+            "placeholder": "e.g. Gaming, Pets, Gifts",
+            "selectCategoryPlaceholder": "Select Category"
         },
         "recurring": {
             "title": "Spese Ricorrenti",
@@ -155,7 +242,12 @@
             "amount": "Importo",
             "frequency": "Frequenza",
             "date": "Data",
-            "deleteConfirm": "Eliminare spesa?"
+            "deleteConfirm": "Delete this recurring expense?",
+            "expenseNamePlaceholder": "e.g. Netflix, Gym",
+            "amountPlaceholder": "0.00",
+            "frequencyWeekly": "Settimanale",
+            "frequencyMonthly": "Mensile",
+            "frequencyYearly": "Annuale"
         },
         "data": {
             "title": "Gestione Dati",
@@ -165,12 +257,15 @@
             "delete": "Elimina Tutti i Dati",
             "deleteDesc": "Azione irreversibile",
             "exportError": "Impossibile esportare i dati.",
-            "noData": "Nessun dato da esportare.",
-            "resetApp": "Reimposta App"
+            "noData": "No data to export.",
+            "resetApp": "Reimposta App",
+            "exportFail": "Failed to export data.",
+            "seedSuccess": "Generated {{scenario}} scenario: {{count}} receipts."
         },
         "account": {
             "signOut": "Esci",
-            "signOutDesc": "Termina sessione"
+            "signOutDesc": "Termina sessione",
+            "signOutConfirm": "Are you sure you want to sign out?"
         },
         "language": {
             "title": "Lingua",
@@ -206,7 +301,10 @@
                 "insights": "Approfondimenti Spese Dettagliati",
                 "cloud": "Backup Cloud & Sincronizzazione",
                 "support": "Supporto Prioritario"
-            }
+            },
+            "cancelConfirm": "Are you sure you want to cancel your Pro subscription? You will lose access to all Pro features.",
+            "cancelSuccess": "Subscription cancelled. You are now on the Free plan.",
+            "pricePerMonth": "€{{price}}/mo"
         },
         "uicalc": {
             "devTools": "Strumenti Sviluppatore",
@@ -214,7 +312,11 @@
             "debugStorage": "Debug Archiviazione",
             "dataDump": "Cancella Tutti i Dati",
             "widgetSuccess": "Dati widget aggiornati!",
-            "widgetFail": "Test widget fallito"
+            "widgetFail": "Test widget fallito",
+            "widgetUpdateSuccess": "Widget data updated! Background the app to refresh widget.",
+            "widgetUpdateFail": "Widget test failed:",
+            "storageDumpEmpty": "Storage Dump: EMPTY (No keys found)",
+            "storageKeysTitle": "Storage Keys:"
         },
         "modals": {
             "addCategory": "Aggiungi Nuova Categoria",
@@ -232,8 +334,11 @@
             "overwriteTitle": "Sovrascrivere Dati?",
             "overwriteDesc": "Questo cancellerà tutti i dati esistenti e genererà nuovi dati dello scenario {{scenario}}. Non può essere annullato.",
             "overwriteData": "Sovrascrivi Dati",
-            "cancel": "Annulla"
-        }
+            "cancel": "Annulla",
+            "generateFormalReport": "Generate formal report"
+        },
+        "biometricPrompt": "Please enter your current password to enable Face ID login:",
+        "notificationsLabel": "Notifiche"
     },
     "common": {
         "save": "Salva",
@@ -261,7 +366,48 @@
         "title": "Scansiona Ricevuta",
         "tapToScan": "Tocca per scansionare",
         "processing": "Elaborazione...",
-        "scanAnother": "Scansiona un'altra"
+        "scanAnother": "Scansiona un'altra",
+        "uploadPrompt": "Upload a Receipt or Bill.",
+        "parentalModeActive": "Parental Mode Active",
+        "retryScan": "Retry Scan",
+        "analyzing": {
+            "title": "Analyzing Receipt...",
+            "description": "Extracting merchant, date, and totals.",
+            "progress": "Processing {{current}} of {{total}}"
+        },
+        "camera": "Camera",
+        "uploadFile": "Upload File",
+        "scanItem": "Scan Item",
+        "manual": "Manual",
+        "supports": "Supports Receipts, Invoices, and Kindergarten Bills.",
+        "tip": "Ensure text is clear and well-lit.",
+        "cancel": "Cancel",
+        "review": {
+            "title": "Review Scan",
+            "count": "Receipt {{current}} of {{total}}",
+            "store": "Store",
+            "date": "Date",
+            "totalAmount": "Total Amount",
+            "items": "Items ({{count}})",
+            "tapToEdit": "Tap to edit details",
+            "child": "Child",
+            "save": "Save {{count}} Receipts",
+            "saveSingle": "Save Receipt",
+            "previous": "Previous",
+            "next": "Next"
+        },
+        "insights": {
+            "utilityItem": "UTILITY ITEM",
+            "nutri": "Nutri",
+            "value": "Value:",
+            "unrecognized": "⚠️ Unrecognized. Please take a photo of the package for safety analysis.",
+            "verify": "Verify item details"
+        },
+        "unknownStore": "Unknown Store",
+        "quickScan": "Quick Scan",
+        "unknownProduct": "Unknown Product ({{code}})",
+        "documentUpload": "Document Upload",
+        "manualEntry": "Manual Entry"
     },
     "history": {
         "title": "Cronologia",
@@ -325,10 +471,26 @@
         "childFirst": "Hai tracciato 20+ spese relative ai bambini.",
         "eventMaster": "Hai pianificato 3+ eventi speciali.",
         "healthConscious": "Hai speso €50+ in salute.",
-        "educationInvestor": "Hai investito €100+ in istruzione."
+        "educationInvestor": "Hai investito €100+ in istruzione.",
+        "weekender": {
+            "title": "Weekender",
+            "description": "Active during the weekend."
+        },
+        "streak": {
+            "title": "Streak",
+            "description": "You're on a roll!"
+        },
+        "budget": {
+            "title": "Budget",
+            "description": "Budget related achievement."
+        },
+        "saving": {
+            "title": "Saving",
+            "description": "Saving related achievement."
+        }
     },
     "evidence": {
-        "title": "Prove",
+        "title": "Evidence Score",
         "building": "In costruzione",
         "fair": "Giusto",
         "good": "Buono",
@@ -606,13 +768,13 @@
         "healthScore": "Punteggio Salute",
         "nutrition": "Nutrizione",
         "value": "Valore",
-        "forecast": "Previsione",
+        "forecast": "Forecast",
         "projected": "Proiettato",
         "store": "Negozio",
         "unavailable": "Non disponibile",
-        "live": "DAL VIVO",
-        "currentStatus": "Stato Attuale",
-        "realTimeOverview": "Panoramica Tempo Reale",
+        "live": "Live",
+        "currentStatus": "Current Status",
+        "realTimeOverview": "Real-time Overview",
         "utilityItem": "Articolo UTILE",
         "nutri": "Nutri"
     },
@@ -648,10 +810,10 @@
         "verified": "Verificato",
         "monthlyTrend": "Tendenza Mensile",
         "dailyActivity": "Attività Giornaliera",
-        "topVendors": "Migliori Venditori",
+        "topVendors": "Top Vendors",
         "spendingBreakdown": "Ripartizione Spese",
-        "noData": "Nessun dato",
-        "noSpending": "Ancora nessuna spesa.",
+        "noData": "No data available.",
+        "noSpending": "No spending data available for this period.",
         "downloadPdf": "Scarica Rapporto PDF",
         "shareTitle": "Rapporto Spese",
         "shareText": "Ecco il mio rapporto",
@@ -764,5 +926,15 @@
             }
         },
         "quote": "Sii forte."
+    },
+    "goals": {
+        "trackHabits": "Track Habits",
+        "title": "Track Goals",
+        "enableDesc": "Monitor your spending habits and set limits.",
+        "upgradeDesc": "Upgrade to Pro to track spending habits.",
+        "breakdown": "Goal Breakdown",
+        "target": "Target",
+        "achievements": "Achievements",
+        "unlocked": "Unlocked"
     }
 }

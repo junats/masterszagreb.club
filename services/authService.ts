@@ -3,15 +3,12 @@ import { User, SubscriptionTier } from '../types';
 import { Preferences } from '@capacitor/preferences';
 
 // Mock Data Storage Key
-// Mock Data Storage Key
 const MOCK_STORAGE_KEY = 'truetrack_mock_users';
 const SESSION_KEY = 'truetrack_session';
 
 // --- MOCK IMPLEMENTATION (Runs if no API Keys) ---
 const mockAuthService = {
   async signUp(email: string, password: string, name: string): Promise<{ user: User | null; error: string | null }> {
-    // await new Promise(resolve => setTimeout(resolve, 1000)); // Removed delay
-
     const { value: stored } = await Preferences.get({ key: MOCK_STORAGE_KEY });
     const users = stored ? JSON.parse(stored) : [];
     const normalizedEmail = email.toLowerCase().trim();
@@ -36,22 +33,16 @@ const mockAuthService = {
   },
 
   async signIn(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
-    // await new Promise(resolve => setTimeout(resolve, 1000)); // Removed delay
-
     const { value: stored } = await Preferences.get({ key: MOCK_STORAGE_KEY });
     const users = stored ? JSON.parse(stored) : [];
     const normalizedEmail = email.toLowerCase().trim();
     const rawPassword = password;
-
-    console.log(`MockAuth: Attempting sign in for '${normalizedEmail}'`);
 
     let usersList = users;
     if (!Array.isArray(usersList)) {
       console.warn("MockAuth: Users storage was corrupt (not an array). Resetting.");
       usersList = [];
     }
-
-    console.log(`MockAuth: Stored users count: ${usersList.length}`);
 
     if (usersList.length === 0) {
       console.log("MockAuth: Empty database. Auto-registering first user.");
@@ -69,25 +60,16 @@ const mockAuthService = {
       await Preferences.set({ key: MOCK_STORAGE_KEY, value: JSON.stringify(usersList) });
       await Preferences.set({ key: SESSION_KEY, value: JSON.stringify(newUser) });
 
-      console.log("MockAuth: Auto-registration successful.");
       return { user: newUser, error: null };
     }
 
-    // Debug: Log available emails
     const userExists = usersList.find((u: any) => u.email === normalizedEmail);
 
     if (!userExists) {
-      console.log('MockAuth: Email not found in database.');
       return { user: null, error: "Email not registered." };
     }
 
-    console.log(`MockAuth: Checking password for ${normalizedEmail}`);
-    console.log(`MockAuth: Input password length: ${rawPassword.length}`);
-    console.log(`MockAuth: Stored password length: ${userExists.password.length}`);
-    // console.log(`MockAuth: Input: '${rawPassword}', Stored: '${userExists.password}'`); // Uncomment if desperate
-
     // Simple mock auth check
-    // Note: We compare against raw password now
     const foundUser = usersList.find((u: any) => u.email === normalizedEmail && u.password === rawPassword);
 
     if (foundUser) {
@@ -96,7 +78,6 @@ const mockAuthService = {
       return { user: safeUser, error: null };
     }
 
-    console.log('MockAuth: Password incorrect.');
     return { user: null, error: "Incorrect password." };
   },
 
@@ -105,9 +86,7 @@ const mockAuthService = {
   },
 
   async getUser(): Promise<User | null> {
-    console.log('MockAuth: getUser called');
     const { value: session } = await Preferences.get({ key: SESSION_KEY });
-    console.log('MockAuth: getUser session found:', !!session);
     return session ? JSON.parse(session) : null;
   },
 
@@ -214,14 +193,11 @@ const realAuthService = {
 
     if (data.user && data.session) {
       // MANUAL PERSISTENCE BACKUP
-      // The Supabase client's internal persistence is failing for some reason.
-      // We manually save verification data.
       try {
         await Preferences.set({
           key: 'truetrack-backup-session',
           value: JSON.stringify(data.session)
         });
-        console.log("AuthService: Manual session backup saved.");
       } catch (e) {
         console.error("AuthService: Failed to save manual backup", e);
       }
@@ -257,19 +233,16 @@ const realAuthService = {
     if (dbError) throw dbError;
 
     // 2. Call Edge Function (sends the actual email)
-    // We expect 200 OK even if it fails, with { error: ... } in body
     const { data: funcData, error: funcError } = await supabase.functions.invoke('send-invite', {
       body: { email }
     });
 
     if (funcError) {
-      // This catches network errors or 500s that weren't caught by the function
       console.error("Invite network failed:", funcError);
       throw new Error("Network error sending email. " + (funcError.message || "Unknown"));
     }
 
     if (funcData && funcData.error) {
-      // This matches the error we returned from the function
       console.error("Invite function logic failed:", funcData);
       throw new Error("Email sending failed: " + funcData.error);
     }
@@ -295,7 +268,6 @@ const realAuthService = {
 
   async signInWithGoogle(): Promise<{ user: User | null; error: string | null }> {
     if (!supabase) return { user: null, error: "Database not connected" };
-    // Use the deep link scheme we configured
     const redirectTo = 'com.truetrack.app://login-callback';
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -329,8 +301,6 @@ const realAuthService = {
 
     console.log("AuthService: Processing OAuth Callback URL", url);
 
-    // URL format: com.truetrack.app://login-callback?code=... OR #code=...
-    // We handle both query (?) and hash (#) fragments just in case.
     const codeMatch = url.match(/[?&#]code=([^&#]+)/);
 
     if (codeMatch && codeMatch[1]) {
@@ -353,7 +323,6 @@ const realAuthService = {
       }
     }
 
-    // Also check for error fragments coming back from provider
     const errorMatch = url.match(/[?&#]error_description=([^&#]+)/) || url.match(/[?&#]error=([^&#]+)/);
     if (errorMatch && errorMatch[1]) {
       const err = decodeURIComponent(errorMatch[1]);
@@ -374,13 +343,11 @@ let cachedService: typeof mockAuthService | null = null;
 async function getService(): Promise<typeof mockAuthService> {
   if (cachedService) return cachedService;
 
-  // 1. Check if Supabase is even available
   if (!supabase) {
     cachedService = mockAuthService;
     return cachedService;
   }
 
-  // 2. Check Preference for forced mock mode
   try {
     const prefPromise = Preferences.get({ key: MOCK_MODE_KEY });
     const timeoutPromise = new Promise<{ value: string | null }>(resolve => setTimeout(() => resolve({ value: null }), 600));
@@ -422,7 +389,7 @@ export const authService = {
 
   async getCurrentSession() {
     const service = await getService();
-    return service.getUser(); // Both impls use getUser/getCurrentSession interchangeably now
+    return service.getUser();
   },
 
   async signInWithGoogle() {
@@ -445,7 +412,6 @@ export const authService = {
     return { data: { session: null }, error: "Not implemented in current service" };
   },
 
-  // Helper to toggle mode
   async setMockMode(enable: boolean) {
     await Preferences.set({ key: MOCK_MODE_KEY, value: enable ? 'true' : 'false' });
   },
@@ -462,7 +428,6 @@ export const authService = {
       // @ts-ignore
       return service.inviteCoParent(email);
     }
-    // Fallback for mock service if not implemented
     console.warn("AuthService: inviteCoParent not implemented in current service mode.");
   },
 
@@ -472,5 +437,4 @@ export const authService = {
   }
 };
 
-// Export a helper to check mode synchronously (best guess) or async
-export const isMockMode = !supabase; // Default fallback, but use authService.isMockMode() for accuracy
+export const isMockMode = !supabase;
