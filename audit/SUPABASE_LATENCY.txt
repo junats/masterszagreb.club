@@ -1,0 +1,1 @@
+❌ Missing SUPABASE_URL or SUPABASE_ANON_KEY – edit .env with your real values.

@@ -6,7 +6,17 @@ TrueTrack is a precision financial tracking and discipline tool designed for par
 
 ---
 
-## 💎 Coparent Pro Support
+## AI Tooling
+
+This project is tool-agnostic.
+
+Previous iterations used Google Antigravity / Gemini.
+Those tools are now considered legacy and are not required
+to build, refactor, or maintain this codebase.
+
+---
+
+## Why This Exists
 
 Elevate your tracking experience with **Coparent Pro**, a suite of quality-of-life features designed to turn financial discipline into a premium experience.
 

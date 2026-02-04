@@ -17,8 +17,29 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build
+dist/
+build/
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Security & Keys
+*.p8
+*.pem
+*.key
+AuthKey_*.p8
+
+# Editor
+.vscode/
+.idea/
+*.swp

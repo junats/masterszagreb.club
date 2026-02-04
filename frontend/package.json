@@ -1,0 +1,54 @@
+{
+  "name": "truetrack",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:mobile": "vite build && npx cap sync",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^7.5.0",
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/clipboard": "^8.0.0",
+    "@capacitor/core": "^8.0.2",
+    "@capacitor/filesystem": "^8.1.0",
+    "@capacitor/geolocation": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.2",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capgo/capacitor-native-biometric": "^7.6.0",
+    "@google/genai": "^1.30.0",
+    "@supabase/supabase-js": "2.39.3",
+    "framer-motion": "^12.23.25",
+    "heic2any": "0.0.4",
+    "html2canvas": "^1.4.1",
+    "jsonwebtoken": "^9.0.3",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.554.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-is": "^19.2.0",
+    "react-router-dom": "^7.11.0",
+    "recharts": "^3.5.0"
+  },
+  "devDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.53.5",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

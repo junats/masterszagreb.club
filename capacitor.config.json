@@ -1,7 +1,7 @@
 {
   "appId": "com.truetrack.app",
   "appName": "TrueTrack",
-  "webDir": "dist",
+  "webDir": "frontend/dist",
   "server": {},
   "plugins": {
     "CapacitorHttp": {
