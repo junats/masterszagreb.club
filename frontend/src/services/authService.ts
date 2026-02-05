@@ -434,6 +434,27 @@ export const authService = {
   async getServiceMode(): Promise<'mock' | 'real'> {
     const service = await getService();
     return service === mockAuthService ? 'mock' : 'real';
+  },
+
+  async deleteAccount() {
+    const service = await getService();
+    // @ts-ignore
+    if (service.deleteAccount) {
+      // @ts-ignore
+      return service.deleteAccount();
+    }
+
+    // Default implementation if service doesn't have specific override
+    if (service === realAuthService) {
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      await this.signOut();
+      return;
+    } else {
+      // Mock deletion
+      await this.signOut();
+      alert("(Mock Mode) Account deleted.");
+    }
   }
 };
 

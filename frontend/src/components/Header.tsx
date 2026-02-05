@@ -1,4 +1,5 @@
 import React from 'react';
+import { SubscriptionTier } from "@common/types";
 import { User, ViewState } from '@common/types';
 import { ShieldCheck, HeartHandshake, Bell } from 'lucide-react';
 import { useData } from '../contexts/DataContext';

@@ -10,6 +10,7 @@ import { PDFService } from '../services/pdfService';
 import { HapticsService } from '../services/haptics';
 import { WidgetService } from '../services/widgetService';
 import { Preferences } from '@capacitor/preferences';
+import { authService } from '../services/authService';
 import SubscriptionModal from './SubscriptionModal';
 
 import { useData } from '../contexts/DataContext';
@@ -1083,6 +1084,28 @@ const Settings: React.FC<SettingsProps> = () => {
                     >
                         <LogOut size={16} />
                         {t('settings.account.signOut')}
+                    </button>
+
+                    {/* Delete Account Button */}
+                    <button
+                        onClick={() => {
+                            HapticsService.impactHeavy();
+                            if (confirm(t('settings.account.deleteConfirm') || "Are you sure you want to delete your account? This action cannot be undone and will delete all your data.")) {
+                                // Double confirm
+                                if (confirm(t('settings.account.deleteDoubleConfirm') || "LAST WARNING: All your receipts, expenses, and data will be permanently deleted.")) {
+                                    // Call delete account service
+                                    // We'll implement this via context or service directly
+                                    authService.deleteAccount().catch(err => {
+                                        console.error("Account deletion failed", err);
+                                        alert("Failed to delete account: " + err.message);
+                                    });
+                                }
+                            }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all font-bold text-sm shadow-sm"
+                    >
+                        <Trash2 size={16} />
+                        {t('settings.account.delete') || "Delete Account"}
                     </button>
 
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2 mt-8">{t('settings.uicalc.devTools')}</p>

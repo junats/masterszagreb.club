@@ -1,5 +1,5 @@
 PODS:
-  - Capacitor (7.4.4):
+  - Capacitor (7.4.5):
     - CapacitorCordova
   - CapacitorApp (7.1.1):
     - Capacitor
@@ -7,7 +7,7 @@ PODS:
     - Capacitor
   - CapacitorClipboard (7.0.3):
     - Capacitor
-  - CapacitorCordova (7.4.4)
+  - CapacitorCordova (7.4.5)
   - CapacitorFilesystem (7.1.6):
     - Capacitor
     - IONFilesystemLib (~> 1.0.1)
@@ -18,9 +18,9 @@ PODS:
     - Capacitor
   - CapacitorLocalNotifications (7.0.4):
     - Capacitor
-  - CapacitorMlkitBarcodeScanning (8.0.0):
+  - CapacitorMlkitBarcodeScanning (7.0.0):
     - Capacitor
-    - GoogleMLKit/BarcodeScanning (~> 8.0.0)
+    - GoogleMLKit/BarcodeScanning (= 7.0.0)
   - CapacitorPreferences (7.0.3):
     - Capacitor
   - CapacitorShare (7.0.3):
@@ -32,11 +32,11 @@ PODS:
   - GoogleDataTransport (10.1.0):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
-  - GoogleMLKit/BarcodeScanning (8.0.0):
+  - GoogleMLKit/BarcodeScanning (7.0.0):
     - GoogleMLKit/MLKitCore
-    - MLKitBarcodeScanning (~> 7.0.0)
-  - GoogleMLKit/MLKitCore (8.0.0):
-    - MLKitCommon (~> 13.0.0)
+    - MLKitBarcodeScanning (~> 6.0.0)
+  - GoogleMLKit/MLKitCore (7.0.0):
+    - MLKitCommon (~> 12.0.0)
   - GoogleToolboxForMac/Defines (4.2.1)
   - GoogleToolboxForMac/Logger (4.2.1):
     - GoogleToolboxForMac/Defines (= 4.2.1)
@@ -54,23 +54,23 @@ PODS:
   - GTMSessionFetcher/Core (3.5.0)
   - IONFilesystemLib (1.0.1)
   - IONGeolocationLib (1.0.1)
-  - MLImage (1.0.0-beta7)
-  - MLKitBarcodeScanning (7.0.0):
-    - MLKitCommon (~> 13.0)
-    - MLKitVision (~> 9.0)
-  - MLKitCommon (13.0.0):
+  - MLImage (1.0.0-beta6)
+  - MLKitBarcodeScanning (6.0.0):
+    - MLKitCommon (~> 12.0)
+    - MLKitVision (~> 8.0)
+  - MLKitCommon (12.0.0):
     - GoogleDataTransport (~> 10.0)
     - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
     - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
     - GoogleUtilities/Logger (~> 8.0)
     - GoogleUtilities/UserDefaults (~> 8.0)
     - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
-  - MLKitVision (9.0.0):
+  - MLKitVision (8.0.0):
     - GoogleToolboxForMac/Logger (< 5.0, >= 4.2.1)
     - "GoogleToolboxForMac/NSData+zlib (< 5.0, >= 4.2.1)"
     - GTMSessionFetcher/Core (< 4.0, >= 3.3.2)
-    - MLImage (= 1.0.0-beta7)
-    - MLKitCommon (~> 13.0)
+    - MLImage (= 1.0.0-beta6)
+    - MLKitCommon (~> 12.0)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -141,31 +141,31 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capgo/capacitor-native-biometric"
 
 SPEC CHECKSUMS:
-  Capacitor: 358dd1c3fdd71d969547b17e159fd8a7736cb45f
-  CapacitorApp: 1da74825e6be0c4f04c4865363a40d5cad8f8377
-  CapacitorCamera: 5f650ddbb7562b1cd23c0d8a590aa61822cde32d
-  CapacitorClipboard: 9993a93dfa2ddf0c175ba72fc45ec25abc829526
-  CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
-  CapacitorFilesystem: ecdcfc08f539fb9a3201a5c7ab28bc78a8584a37
-  CapacitorGeolocation: 81a3fce9e2594c3d332001c96a2ddcc2a53576f6
-  CapacitorHaptics: 031ff8120c37f93325b4da1f474d3c3686bb224b
-  CapacitorLocalNotifications: fd4ea800078c5b4fb6e0261e58b37724febb9b86
-  CapacitorMlkitBarcodeScanning: 9b5a9716dd306b9f23e1b769377e3d4f28ef2f11
-  CapacitorPreferences: 755df52f9e46122a04318fa6a4a4bd58bc9ac19e
-  CapacitorShare: 9d39e30a620ff31851c7d8bf94f33cd682a63691
-  CapacitorSplashScreen: 17c866bd5f1537797ae6711b0f249dd279f2230b
+  Capacitor: 12914e6f1b7835e161a74ebd19cb361efa37a7dd
+  CapacitorApp: 63b237168fc869e758481dba283315a85743ee78
+  CapacitorCamera: 6746827d82376f31cea9224945c0458c9fd0b0b2
+  CapacitorClipboard: 2a282bc14e8f47d430f2f9698ed95fbe25dcc21c
+  CapacitorCordova: 31bbe4466000c6b86d9b7f1181ee286cff0205aa
+  CapacitorFilesystem: 66f05ee0d8b1ccdc00d509091273a9b3b57c4a0b
+  CapacitorGeolocation: bb6f441b53393984f1c4e8b7e4a826fe3e133309
+  CapacitorHaptics: ce15be8f287fa2c61c7d2d9e958885b90cf0bebc
+  CapacitorLocalNotifications: ba2a08bd92887b08f352e6b2db430575cef0cea3
+  CapacitorMlkitBarcodeScanning: db64496b3e8f41be79e3ef81bfd1bb430adcb0ca
+  CapacitorPreferences: 913eef88272c13eb6445b21e51fe8ef6635412cc
+  CapacitorShare: a4f4f86eabd4b3ff52ba6a11b754713c6926a8d1
+  CapacitorSplashScreen: 000f7591d546907dda5cbb514bd6b6d9e6048cf8
   CapgoCapacitorNativeBiometric: ede2c497c810fcad523b4e3d1895f989d33fe72b
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
-  GoogleMLKit: ddd51d7dff36ff28defa69afedd9cdce684fd857
+  GoogleMLKit: eff9e23ec1d90ea4157a1ee2e32a4f610c5b3318
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   IONGeolocationLib: 20f9d0248a0b5264511fb57a37e25dd2badf797a
-  MLImage: 2ab9c968e75f57911c16f4c9d9e8a8e9604a86a1
-  MLKitBarcodeScanning: 72c6437f13a900833b400136be53a8a5d86f42fa
-  MLKitCommon: 26b779f072a182c1603d4c88a101c350cac837b1
-  MLKitVision: fa8dea9012ac59497c79ddbe9ebf32051047ac4c
+  MLImage: 0ad1c5f50edd027672d8b26b0fee78a8b4a0fc56
+  MLKitBarcodeScanning: 0a3064da0a7f49ac24ceb3cb46a5bc67496facd2
+  MLKitCommon: 07c2c33ae5640e5380beaaa6e4b9c249a205542d
+  MLKitVision: 45e79d68845a2de77e2dd4d7f07947f0ed157b0e
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 

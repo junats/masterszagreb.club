@@ -75,7 +75,7 @@ TrueTrack combines rigorous financial tracking with the "soft power" of wellness
 ## 🛠️ Tech Stack
 
 ### Frontend Core
-*   **Framework:** [React 18](https://react.dev/) (via Vite)
+*   **Framework:** [React 19](https://react.dev/) (via Vite)
 *   **Language:** [TypeScript](https://www.typescriptlang.org/) for strict type safety.
 *   **Styling:** [Tailwind CSS](https://tailwindcss.com/) with a custom Slate-950 Dark Mode palette.
 *   **Icons:** [Lucide React](https://lucide.dev/).
@@ -95,29 +95,40 @@ TrueTrack combines rigorous financial tracking with the "soft power" of wellness
 
 ---
 
+## 🤖 AI Agentic Workflow
+
+TrueTrack includes a suite of local AI tools designed to assist in development and data management.
+
+### 1. MCP Server (`backend/mcp-server`)
+A Model Context Protocol (MCP) server that provides safe, controlled access to the local Supabase database.
+*   **Purpose:** Allows AI agents (like Claude Desktop or IDE assistants) to query the DB schema and user usage data without direct SQL access.
+*   **Tools:** `query_db` (Read-only SELECT), `check_user_usage`.
+
+### 2. Auto-Test Agent (`scripts/agent.ts`)
+A custom TypeScript agent powered by Google Gemini 1.5 Flash.
+*   **Trigger:** Detects modified `.tsx` files in `frontend/src`.
+*   **Action:** Automatically generates comprehensive unit tests (`.test.tsx`) using Vitest and React Testing Library.
+*   **Command:** `npm run agent:test`
+
+### 3. Agent Rules (`LOCAL_AI_RULES.md`)
+A set of operational guidelines for AI assistants working on this codebase, ensuring architectural integrity (e.g., "Do not touch multiple layers at once").
+
+---
+
 ## 📂 Project Structure
 
 ```text
 /
-├── index.html              # Entry point (includes Font & Tailwind config)
-├── src/
-│   ├── App.tsx             # Main Application Logic & Routing
-│   ├── types.ts            # TypeScript Interfaces (Receipt, User, AnalysisResult)
-│   ├── lib/
-│   │   └── supabaseClient.ts # Database Connection (Crash-proof implementation)
-│   ├── services/
-│   │   ├── authService.ts    # Authentication Logic (Mock + Real)
-│   │   ├── widgetService.ts  # iOS Native Widget Integration
-│   │   └── geminiService.ts  # AI Integration for Receipt Analysis
-│   └── components/
-│       ├── AuthScreen.tsx      # Login/Signup UI
-│       ├── Dashboard.tsx       # Main Bento Grid, Analytics & Charts
-│       ├── ReceiptScanner.tsx  # Camera/Gallery Interface & Image Optimization
-│       ├── HistoryView.tsx     # List, Search, Detail View & Manual Editing
-│       ├── Settings.tsx        # Pro Controls, Budgeting, Habits
-│       ├── SupportView.tsx     # Geolocation-based Help Resources
-│       ├── Navigation.tsx      # Bottom Tab Bar
-│       └── SubscriptionModal.tsx # Paywall UI
+├── frontend/               # React Native/Capacitor App
+│   ├── src/                # UI Source Code
+│   ├── index.html          # Entry point
+│   ├── capacitor.config.json
+│   └── package.json
+├── backend/                # Server-side logic
+│   └── supabase/           # Supabase Cloud functions & config
+├── common/                 # Shared resources (types, configs)
+├── README.md
+└── package.json            # Root scripts
 ```
 
 ---
