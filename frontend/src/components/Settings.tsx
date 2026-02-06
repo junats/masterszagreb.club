@@ -375,27 +375,28 @@ const Settings: React.FC<SettingsProps> = () => {
 
                 <div className="space-y-6">
                     {/* Pro Controls (Moved to Top & Consolidated) */}
+                    {/* Pro Controls (Moved to Top & Consolidated) */}
                     <section>
-                        <div className="flex items-center justify-between mb-3 ml-1">
-                            <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider">{t('settings.proFeatures.title')}</h4>
+                        <div className="flex items-center justify-between mb-2 ml-4">
+                            <h4 className="text-[13px] text-systemGray uppercase tracking-wide">{t('settings.proFeatures.title')}</h4>
                             {isProMode && (
                                 <div className="flex items-center gap-1">
-                                    <Shield size={10} className="text-amber-500" />
-                                    <span className="text-[10px] text-amber-500 font-bold tracking-wide">{t('settings.proFeatures.active')}</span>
+                                    <Shield size={12} className="text-systemOrange" />
+                                    <span className="text-[11px] text-systemOrange font-medium">{t('settings.proFeatures.active')}</span>
                                 </div>
                             )}
                         </div>
 
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                        <div className="bg-card rounded-[20px] overflow-hidden border border-white/5 shadow-sm">
                             {/* Co-Parenting Features */}
-                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${childSupportMode ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <Users size={18} />
+                                    <div className={`p-2 rounded-[10px] ${childSupportMode ? 'bg-systemBlue/10 text-systemBlue' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <Users size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.coParentingFeatures')}</span>
-                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.coParentingDesc')}</span>
+                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.coParentingFeatures')}</span>
+                                        <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.coParentingDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -408,19 +409,19 @@ const Settings: React.FC<SettingsProps> = () => {
                                             setChildSupportMode(e.target.checked);
                                         }}
                                     />
-                                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.3)]"></div>
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemGreen after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
                                 </label>
                             </div>
 
                             {/* Enable Goals/Pro Features */}
-                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${goalsEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <Target size={18} />
+                                    <div className={`p-2 rounded-[10px] ${goalsEnabled ? 'bg-systemPurple/10 text-systemPurple' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <Target size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.goals')}</span>
-                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.goalsDesc')}</span>
+                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.goals')}</span>
+                                        <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.goalsDesc')}</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -437,17 +438,17 @@ const Settings: React.FC<SettingsProps> = () => {
                                             setGoalsEnabled(e.target.checked);
                                         }}
                                     />
-                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${isProMode ? 'peer-checked:bg-purple-500' : ''}`}></div>
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemGreen after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
                                 </label>
                             </div>
 
-                            {/* Goals List (Collapsible) */}
+                            {/* Goals List (Collapsible) - Keeping logic but styling */}
                             {goalsEnabled && isProMode && (
-                                <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar p-2 bg-black/20 border-t border-white/5 mx-2 mb-2 rounded-xl">
+                                <div className="bg-secondarySystemBackground dark:bg-secondarySystemBackground-dark p-0 m-0 border-b border-black/5 dark:border-white/5">
                                     {goals.map(goal => (
                                         <div
                                             key={goal.id}
-                                            className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"
+                                            className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5 last:border-0 pl-12"
                                             onClick={() => {
                                                 HapticsService.impactLight();
                                                 const updatedGoals = goals.map(g =>
@@ -457,264 +458,42 @@ const Settings: React.FC<SettingsProps> = () => {
                                             }}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${goal.isEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
-                                                    <div className="text-xl">{goal.emoji}</div>
-                                                </div>
-                                                <span className="text-slate-300 text-sm font-medium">{goal.name}</span>
+                                                <span className="text-[17px]">{goal.emoji}</span>
+                                                <span className="text-black dark:text-white text-[15px]">{goal.name}</span>
                                             </div>
-                                            <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={goal.isEnabled}
-                                                    readOnly
-                                                />
-                                                <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                                            </label>
+                                            <div className="w-5 h-5 rounded-full border-2 border-systemGray4 flex items-center justify-center">
+                                                {goal.isEnabled && <div className="w-3 h-3 bg-systemGreen rounded-full"></div>}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
 
-                            {/* Financial Snapshot Toggle */}
-                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
+                            {/* Financial Snapshot */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${financialSnapshotEnabled ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <Activity size={18} />
+                                    <div className={`p-2 rounded-[10px] ${financialSnapshotEnabled ? 'bg-systemCyan/10 text-systemCyan' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <Activity size={20} />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-slate-200 text-sm font-bold block">Financial Snapshot</span>
-                                            {!isProMode && <Lock size={12} className="text-amber-500" />}
+                                            <span className="text-white text-[17px] font-normal block">Financial Snapshot</span>
+                                            {!isProMode && <Lock size={12} className="text-systemOrange" />}
                                         </div>
-                                        <span className="text-xs text-slate-500 font-medium block">Show financial metrics on dashboard</span>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={financialSnapshotEnabled}
-                                        onChange={(e) => {
-                                            if (!isProMode) {
-                                                setShowPaywall(true);
-                                                return;
-                                            }
-                                            HapticsService.impactMedium();
-                                            setFinancialSnapshotEnabled(e.target.checked);
-                                        }}
-                                    />
-                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${isProMode ? 'peer-checked:bg-cyan-500 peer-checked:shadow-[0_0_15px_rgba(6,182,212,0.3)]' : ''}`}></div>
+                                    <input type="checkbox" className="sr-only peer" checked={financialSnapshotEnabled} onChange={(e) => { if (!isProMode) return setShowPaywall(true); setFinancialSnapshotEnabled(e.target.checked); }} />
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemGreen after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
                                 </label>
                             </div>
-
-                            {/* Help & Support (Pro) */}
-                            {setHelpEnabled && (
-                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl ${helpEnabled ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            <LifeBuoy size={18} />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.lifeSupport')}</span>
-                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
-                                            </div>
-                                            <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.lifeSupportDesc')}</span>
-                                        </div>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={helpEnabled}
-                                            onChange={(e) => {
-                                                if (!isProMode) {
-                                                    setShowPaywall(true);
-                                                    return;
-                                                }
-                                                HapticsService.impactMedium();
-                                                setHelpEnabled(e.target.checked);
-                                            }}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500 peer-checked:shadow-[0_0_15px_rgba(244,63,94,0.3)]"></div>
-                                    </label>
-                                </div>
-                            )}
-
-                            {/* Ambient Mode Toggle */}
-                            {setAmbientMode && (
-                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl ${ambientMode ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            <Star size={18} />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.ambient')}</span>
-                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
-                                            </div>
-                                            <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.ambientDesc')}</span>
-                                        </div>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={ambientMode}
-                                            onChange={(e) => {
-                                                if (!isProMode) {
-                                                    setShowPaywall(true);
-                                                    return;
-                                                }
-                                                HapticsService.impactMedium();
-                                                setAmbientMode(e.target.checked);
-                                            }}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 peer-checked:shadow-[0_0_15px_rgba(168,85,247,0.3)]"></div>
-                                    </label>
-                                </div>
-                            )}
-
-                            {/* Global App Background Toggle (Sub-option) */}
-                            {setAmbientMode && setShowGlobalAmbient && ambientMode && (
-                                <div className={`w-full flex items-center justify-between p-4 border-b border-white/5 pl-8 bg-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl ${showGlobalAmbient ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            <Sparkles size={18} />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.appBg')}</span>
-                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
-                                            </div>
-                                            <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.appBgDesc')}</span>
-                                        </div>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={showGlobalAmbient}
-                                            onChange={(e) => {
-                                                if (!isProMode) {
-                                                    setShowPaywall(true);
-                                                    return;
-                                                }
-                                                HapticsService.impactMedium();
-                                                setShowGlobalAmbient(e.target.checked);
-                                            }}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]"></div>
-                                    </label>
-                                </div>
-                            )}
-
-                            {/* Parental Control */}
-                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${isProMode ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <Lock size={18} />
-                                    </div>
-                                    <div className={!isProMode ? 'opacity-50' : ''}>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.parental')}</span>
-                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.proFeatures.parentalDesc')}</span>
-                                    </div>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={ageRestricted}
-                                        onChange={(e) => {
-                                            if (!isProMode) {
-                                                setShowPaywall(true);
-                                                return;
-                                            }
-                                            HapticsService.impactMedium();
-                                            handleToggleRestricted(e);
-                                        }}
-                                    />
-                                    <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${isProMode ? 'peer-checked:bg-rose-500 peer-checked:shadow-[0_0_15px_rgba(244,63,94,0.3)]' : ''}`}></div>
-                                </label>
-                            </div>
-
-                            {/* Data Export (Proof) */}
-                            <button
-                                onClick={handleExportData}
-                                className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${isProMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <FileDown size={18} />
-                                    </div>
-                                    <div className={`text-left ${!isProMode ? 'opacity-50' : ''}`}>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.export')}</span>
-                                        <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.exportDesc')}</span>
-                                    </div>
-                                </div>
-                            </button>
-
-                            {/* Category Budgets (Pro) */}
-                            <div className={`w-full p-4 border-b border-white/5 ${!isProMode ? 'opacity-60' : ''}`}>
-                                <button
-                                    onClick={() => {
-                                        if (!isProMode) {
-                                            setShowPaywall(true);
-                                            return;
-                                        }
-                                        const el = document.getElementById('category-budgets');
-                                        if (el) el.classList.toggle('hidden');
-                                    }}
-                                    className="w-full flex items-center justify-between transition-colors duration-300"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
-                                            <PieChart size={18} />
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.categoryBudgets')}</span>
-                                                {!isProMode && <Lock size={12} className="text-amber-500" />}
-                                            </div>
-                                            <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.categoryBudgetsDesc')}</span>
-                                        </div>
-                                    </div>
-                                    {!isProMode ? <Lock size={14} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-600" />}
-                                </button>
-
-                                <div id="category-budgets" className="hidden mt-4 space-y-3 bg-black/20 p-4 rounded-xl border border-white/5">
-                                    {categories.map(cat => (
-                                        <div key={cat.id} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 w-24">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                                <span className="text-slate-400 text-xs font-medium truncate">{cat.name}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 flex-1">
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="1000"
-                                                    step="10"
-                                                    value={categoryBudgets[cat.id] || 0}
-                                                    onChange={(e) => setCategoryBudgets({ ...categoryBudgets, [cat.id]: Number(e.target.value) })}
-                                                    className="flex-1 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                                                />
-                                                <span className="text-white font-mono text-xs w-12 text-right">€{categoryBudgets[cat.id] || 0}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-
                         </div>
-                    </section >
+                    </section>
 
                     {/* Security Settings */}
                     < section >
                         <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.security.title')}</h4>
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                        <div className="bg-card rounded-3xl overflow-hidden border border-slate-800 shadow-lg hover:border-slate-700 transition-all duration-300">
                             {/* Face ID / Biometric Login */}
                             <div className="w-full flex items-center justify-between p-4 border-b border-white/5">
                                 <div className="flex items-center gap-3">
@@ -734,7 +513,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         onChange={handleToggleBiometric}
                                         disabled={!biometricAvailable}
                                     />
-                                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]"></div>
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemBlue after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
                                 </label>
                             </div>
 
@@ -756,7 +535,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         checked={true}
                                         readOnly
                                     />
-                                    <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemGreen after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
                                 </label>
                             </div>
                         </div>
@@ -765,7 +544,7 @@ const Settings: React.FC<SettingsProps> = () => {
                     {/* Category Management */}
                     < section >
                         <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.categories.title')}</h4>
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                        <div className="bg-card rounded-3xl overflow-hidden border border-slate-800 shadow-lg hover:border-slate-700 transition-all duration-300">
                             <button
                                 onClick={() => setShowCategoryModal(true)}
                                 className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
@@ -810,7 +589,7 @@ const Settings: React.FC<SettingsProps> = () => {
                     {/* General Settings */}
                     < section >
                         <h4 className="text-xs font-heading font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1">{t('settings.general.title')}</h4>
-                        <div className="bg-surface rounded-2xl overflow-hidden border border-white/5 shadow-sm hover:border-white/10 transition-all duration-300">
+                        <div className="bg-card rounded-3xl overflow-hidden border border-slate-800 shadow-lg hover:border-slate-700 transition-all duration-300">
                             {/* Language Selector */}
                             <div className="w-full p-4 border-b border-white/5">
                                 <div className="flex items-center justify-between mb-3">

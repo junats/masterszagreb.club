@@ -95,23 +95,142 @@ TrueTrack combines rigorous financial tracking with the "soft power" of wellness
 
 ---
 
-## 🤖 AI Agentic Workflow
+## 🤖 Developer Workflow (GSD + Local AI)
 
-TrueTrack includes a suite of local AI tools designed to assist in development and data management.
+This project uses the **GSD (Get Shit Done)** methodology combined with **Local AI Tools** to maximize productivity while minimizing cloud API costs.
 
-### 1. MCP Server (`backend/mcp-server`)
-A Model Context Protocol (MCP) server that provides safe, controlled access to the local Supabase database.
-*   **Purpose:** Allows AI agents (like Claude Desktop or IDE assistants) to query the DB schema and user usage data without direct SQL access.
-*   **Tools:** `query_db` (Read-only SELECT), `check_user_usage`.
+### Core Philosophy
 
-### 2. Auto-Test Agent (`scripts/agent.ts`)
-A custom TypeScript agent powered by Google Gemini 1.5 Flash.
-*   **Trigger:** Detects modified `.tsx` files in `frontend/src`.
-*   **Action:** Automatically generates comprehensive unit tests (`.test.tsx`) using Vitest and React Testing Library.
-*   **Command:** `npm run agent:test`
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| **Planning** | Cloud Agent (Gemini/Claude) | Architecture, complex reasoning, multi-file changes |
+| **Execution** | Local Ollama (`fix`, `debate`) | Simple refactors, code fixes, brainstorming |
+| **Testing** | Local Ollama (`gentest`, `autofix`) | Generate tests, auto-fix failures |
 
-### 3. Agent Rules (`LOCAL_AI_RULES.md`)
-A set of operational guidelines for AI assistants working on this codebase, ensuring architectural integrity (e.g., "Do not touch multiple layers at once").
+---
+
+### 🔧 Setup (One-Time)
+
+```bash
+# Install Ollama (if not already installed)
+brew install ollama
+
+# Pull the coding model
+ollama pull qwen2.5-coder:7b
+
+# Install the terminal shortcuts
+./scripts/setup_alias.sh
+source ~/.zshrc
+```
+
+---
+
+### ⌨️ Terminal Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `fix <file> "<instruction>"` | Refactor a file using local AI | `fix src/App.tsx "Add dark mode toggle"` |
+| `debate "<question>"` | Two AI personas debate, then synthesize | `debate "Should we use Redux or Context?"` |
+| `gentest <file>` | Generate Vitest tests for a file | `gentest src/utils/format.ts` |
+| `autofix <file> "<test_cmd>"` | Run tests → fix failures → repeat (3x max) | `autofix src/App.tsx "npm test"` |
+
+---
+
+### 📋 GSD Slash Commands (Chat with Agent)
+
+| Command | Mode | Purpose |
+|---------|------|---------|
+| `/plan "<feature>"` | PLANNING | Create implementation roadmap in `.gsd/ROADMAP.md` |
+| `/execute` | EXECUTION | Implement a specific phase from the roadmap |
+| `/verify` | VERIFICATION | Validate work with empirical evidence (screenshots, test output) |
+| `/pause` | — | Dump state to `.gsd/STATE.md` for clean session handoff |
+| `/resume` | — | Restore context from previous session |
+| `/progress` | — | Show current position in roadmap |
+| `/debug` | — | Systematic debugging with state persistence |
+
+---
+
+### 📁 GSD State Files
+
+```
+.gsd/
+├── SPEC.md       # Finalized requirements (must exist before coding)
+├── ROADMAP.md    # Phased implementation plan
+├── STATE.md      # Current position, what was accomplished, next steps
+├── JOURNAL.md    # Session log with decisions and milestones
+└── DECISIONS.md  # Architectural decision records
+```
+
+---
+
+### 🔄 Typical Workflow
+
+```
+1. PLAN   →  /plan "Add receipt export feature"
+              (Agent creates ROADMAP.md with phases)
+
+2. DEBATE →  debate "PDF vs CSV for export format?"
+              (Local AI debates, outputs synthesis)
+
+3. CODE   →  fix src/export.ts "Implement CSV export as planned"
+              (Local AI writes code, saves tokens)
+
+4. TEST   →  gentest src/export.ts
+              (Local AI generates test file)
+
+5. FIX    →  autofix src/export.ts "npm test"
+              (Loops: test → fail → fix → test)
+
+6. VERIFY →  /verify
+              (Agent confirms with empirical evidence)
+```
+
+---
+
+### ⚠️ GSD Rules (Enforced)
+
+| Rule | Description |
+|------|-------------|
+| **Planning Lock 🔒** | No implementation code until `SPEC.md` is FINALIZED |
+| **State Persistence 💾** | Agent updates `STATE.md` after every task |
+| **Context Hygiene 🧹** | After 3 failed debug attempts → state dump + fresh session |
+| **Empirical Validation ✅** | No "trust me" → verify with screenshots/commands |
+
+---
+
+### 🧠 When to Use Which Tool?
+
+| Task | ☁️ Cloud Agent | 💻 Local `fix` |
+|------|:--------------:|:--------------:|
+| Plan a new feature | ✅ | ❌ |
+| Create new files | ✅ | ❌ |
+| Debug complex crashes | ✅ | ❌ |
+| Rename variables | ❌ | ✅ |
+| Add comments | ❌ | ✅ |
+| Fix typos | ❌ | ✅ |
+| Simple refactors | ❌ | ✅ |
+---
+
+### 🎭 Multi-Agent Orchestration
+
+Modern AI tools support **parallel subagents** for complex tasks:
+
+| Tool | Feature | Capability |
+|------|---------|------------|
+| Claude Code | Subagents | Up to 50 parallel agents |
+| Cursor | Background Agents | Async task execution |
+| Windsurf | Cascade | Auto-parallelization |
+
+**Trigger orchestration with:**
+```
+"Execute in parallel:
+ - Agent 1: Implement backend API
+ - Agent 2: Build frontend UI
+ - Agent 3: Generate tests
+ Then synthesize results."
+```
+
+**GSD Command:** `/orchestrate "task description"`
 
 ---
 
@@ -152,6 +271,45 @@ A set of operational guidelines for AI assistants working on this codebase, ensu
 
 ### 4. Data Export
 *   **Legal Proof:** Generates a structured CSV export containing dates, stores, itemized lists, and prices, ready for printing or emailing to attorneys.
+
+---
+
+## 🎉 Recent Enhancements (February 2026)
+
+### Co-Parenting Custody Card Redesign
+The Co-Parenting widget on the dashboard has been completely redesigned with modern calendar visualization and AI-powered insights.
+
+#### 📅 Monthly Calendar Grid (M Tab)
+*   **Visual Calendar:** Full month calendar grid showing all days of the current month
+*   **Color-Coded Days:** 
+    - 🟣 Purple: Your custody days
+    - 🔵 Blue: Partner's custody days  
+    - 🔷 Cyan: Split custody days
+    - ⚫ Gray: Days with no custody data
+*   **Today Highlight:** Current day highlighted with a ring effect for easy identification
+*   **Event Indicators:** Orange dots on days with scheduled activities
+*   **Summary Cards:** Quick stats showing:
+    - Your total days and percentage for the month
+    - Partner's total days and percentage for the month
+*   **AI Suggestion:** Top AI-powered co-parenting tip displayed below the calendar
+
+#### 💬 Daily Insights View (D Tab) - NEW
+*   **AI-Powered Suggestions:** Personalized daily co-parenting tips based on:
+    - Today's custody status (with you, with partner, or split)
+    - Upcoming events in the next 7 days
+    - General communication and co-parenting best practices
+*   **Smart Recommendations:** Context-aware suggestions like:
+    - "Quality Time Today" when you have custody
+    - "Stay Connected" reminders when partner has custody
+    - Upcoming event notifications
+    - Communication tips for effective co-parenting
+*   **Beautiful Animations:** Staggered card animations for smooth, premium feel
+
+#### 🔧 Technical Improvements
+*   **Removed Legacy UI:** Eliminated old SHARE/INSIGHTS toggle system
+*   **Cleaner State Management:** Simplified component architecture
+*   **Helper Functions:** New utility functions for calendar generation and AI insights
+*   **Responsive Design:** Calendar grid adapts perfectly to mobile and desktop screens
 
 ---
 

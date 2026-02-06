@@ -10,14 +10,14 @@ interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
 export const SpotlightCard: React.FC<SpotlightCardProps> = ({
     children,
     className = "",
-    spotlightColor = "rgba(56, 189, 248, 0.1)", // Slightly more subtle default
+    spotlightColor = "rgba(255, 255, 255, 0.05)",
     ...props
 }) => {
     return (
-        <div className={`relative overflow-hidden ${className}`} {...props}>
-            {/* Subtle Auto-Animating Spotlight */}
+        <div className={`relative overflow-hidden rounded-3xl bg-card shadow-lg border border-slate-800 ${className}`} {...props}>
+            {/* Optional Spotlight - made extremely subtle/native feel or removed for strict HIG. Keeping specific to "TrueTrack" identity but toning it down. */}
             <motion.div
-                className="pointer-events-none absolute -inset-full opacity-50"
+                className="pointer-events-none absolute -inset-full opacity-0 dark:opacity-30" // Only visible in dark mode for "glow" effect
                 animate={{
                     x: ["-25%", "25%", "-25%"],
                     y: ["-25%", "25%", "-25%"],

@@ -45,52 +45,53 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
     const { title, subtitle } = getHeaderInfo(currentView);
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-[60] bg-[#0B1221]/90 backdrop-blur-3xl border-b border-white/10 transition-all duration-300 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+        <header className="fixed top-0 left-0 right-0 z-[60] bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-black/5 dark:border-white/10 transition-all duration-300"
             style={{ height: 'calc(var(--header-height) + var(--safe-area-top))' }}>
             {/* Safe Area Spacer */}
             <div style={{ height: 'var(--safe-area-top)' }} />
 
             {/* Content Area - Vertically Centered */}
-            <div className="flex items-center justify-between px-6" style={{ height: 'var(--header-height)' }}>
+            <div className="flex items-center justify-between px-4" style={{ height: 'var(--header-height)' }}>
                 <div className="flex items-center gap-3">
-                    <img src="/logo.png" alt="TrueTrack Logo" className="w-8 h-8 rounded-lg" />
+                    {/* <img src="/logo.png" alt="TrueTrack Logo" className="w-8 h-8 rounded-lg shadow-sm" /> */}
                     <div>
-                        <h1 className="text-xl font-heading font-bold text-white tracking-tight leading-none">{title}</h1>
-                        <p className="text-xs uppercase tracking-wider font-bold text-slate-400 mt-1">{subtitle}</p>
+                        <h1 className="text-[17px] font-semibold text-black dark:text-white tracking-tight leading-none">{title}</h1>
+                        {/* Subtitle often omitted in iOS Large Title nav bars, but keeping small if needed */}
+                        {subtitle && <p className="text-[11px] font-medium text-systemGray mt-0.5 uppercase tracking-wide">{subtitle}</p>}
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     {/* Notification Bell */}
                     <button
                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 transition-colors"
+                        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-secondarySystemBackground hover:bg-tertiarySystemBackground transition-colors"
                     >
-                        <Bell className="w-5 h-5 text-slate-400" />
+                        <Bell className="w-5 h-5 text-systemBlue" />
                         {unreadNotificationCount > 0 && (
-                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0B1221]" />
+                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-systemRed rounded-full border-2 border-white dark:border-black" />
                         )}
                     </button>
 
                     {/* Avatar / Profile Link */}
                     <div className="relative group cursor-pointer" onClick={onAvatarClick}>
-                        <div className={`w-9 h-9 rounded-full border border-white/10 flex items-center justify-center overflow-hidden transition-transform active:scale-95 ${user?.tier === SubscriptionTier.PRO ? 'ring-2 ring-amber-500/30' : ''} ${childSupportMode ? 'ring-2 ring-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : ''} shadow-lg`}>
+                        <div className={`w-9 h-9 rounded-full border border-black/5 dark:border-white/10 flex items-center justify-center overflow-hidden transition-transform active:scale-95 ${user?.tier === SubscriptionTier.PRO ? 'ring-2 ring-systemYellow/50' : ''} ${childSupportMode ? 'ring-2 ring-systemGreen shadow-sm' : ''}`}>
                             {user?.avatarUrl ? (
                                 <img src={user.avatarUrl} alt={user.name || 'User'} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white">
+                                <div className="w-full h-full bg-systemGray4 dark:bg-systemGray2 flex items-center justify-center text-xs font-bold text-black dark:text-white">
                                     {(user?.name || 'U').charAt(0).toUpperCase()}
                                 </div>
                             )}
                         </div>
                         {childSupportMode && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0B1221] flex items-center justify-center">
-                                <HeartHandshake size={8} className="text-black" />
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-systemGreen rounded-full border-2 border-white dark:border-black flex items-center justify-center">
+                                <HeartHandshake size={8} className="text-white" />
                             </div>
                         )}
                     </div>
                     {ageRestricted && (
-                        <div className="bg-amber-500/10 border border-amber-500/20 px-2 py-1.5 rounded-lg flex items-center justify-center">
-                            <ShieldCheck className="text-amber-500 w-4 h-4" />
+                        <div className="bg-systemOrange/10 px-2 py-1 rounded-md flex items-center justify-center">
+                            <ShieldCheck className="text-systemOrange w-4 h-4" />
                         </div>
                     )}
                 </div>

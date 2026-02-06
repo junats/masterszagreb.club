@@ -26,8 +26,8 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
   ] as const;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-3xl bg-[#0B1221]/40 border-t border-white/10 pb-safe pt-2 px-2 h-auto min-h-[80px] z-50 transition-all duration-300 shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
-      <div className="flex justify-between items-center max-w-md mx-auto h-full pb-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-t border-black/5 dark:border-white/10 pb-safe pt-2 px-2 h-auto min-h-[85px] z-50">
+      <div className="flex justify-between items-center max-w-md mx-auto h-full pb-1">
         {navItems.filter(item => !item.hidden).map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;
@@ -38,18 +38,18 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
                 HapticService.selection();
                 setView(item.id as ViewState);
               }}
-              className={`group flex flex-col items-center justify-center space-y-1.5 flex-1 min-w-0 outline-none active:scale-95 transition-transform duration-100`}
+              className="group flex flex-col items-center justify-start space-y-1 flex-1 min-w-0 outline-none active:opacity-50 transition-opacity duration-200"
             >
-              <div className={`p-2 rounded-full transition-all duration-500 ease-out relative ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'
-                } `}>
-                {/* Active Glow Background */}
-                <div className={`absolute inset-1 bg-primary/20 rounded-full blur-sm transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'} `}></div>
-                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
-
-
+              <div className="relative p-1">
+                {/* Notification Dot Logic (Optional) */}
+                {/* <div className="absolute top-0 right-0 w-2 h-2 bg-systemRed rounded-full"></div> */}
+                <Icon
+                  size={26}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={`transition-colors duration-200 ${isActive ? 'text-systemBlue' : 'text-systemGray'}`}
+                />
               </div>
-              <span className={`text-xs font-medium truncate w-full text-center transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-400'
-                } `}>
+              <span className={`text-[10px] font-medium tracking-wide transition-colors duration-200 ${isActive ? 'text-systemBlue' : 'text-systemGray'}`}>
                 {item.label}
               </span>
             </button>

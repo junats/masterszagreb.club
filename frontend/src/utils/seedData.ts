@@ -188,7 +188,8 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
         custodyDays.push({
             date: dateStr,
             status: status,
-            note: ''
+            note: '',
+            withYou: status === 'me'
         });
     }
 

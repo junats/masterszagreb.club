@@ -177,7 +177,7 @@ export const generateDemoData = (type: 'good' | 'bad') => {
                 date: dateStr,
                 total: total,
                 items: items,
-                isVerified: true,
+                scannedAt: new Date().toISOString(),
                 categoryId: category.toLowerCase()
             });
         }
@@ -222,7 +222,8 @@ export const generateDemoData = (type: 'good' | 'bad') => {
             date: dateStr,
             status: status,
             note: '',
-            activities: activities
+            activities: activities,
+            withYou: status === 'me'
         });
     }
 

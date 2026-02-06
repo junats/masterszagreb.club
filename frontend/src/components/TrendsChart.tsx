@@ -39,41 +39,43 @@ export const TrendsChart = React.memo(({ activeData, categories, isVisible, char
     }, [activeData, categories]);
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
-            {isVisible ? (
-                <AreaChart
-                    data={activeData}
-                    key={chartView + (layoutId || '')} // Force re-render when view or layout changes
-                    margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
-                >
-                    <defs>
+        <div className="w-full h-full min-h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+                {isVisible ? (
+                    <AreaChart
+                        data={activeData}
+                        key={chartView + (layoutId || '')} // Force re-render when view or layout changes
+                        margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                    >
+                        <defs>
+                            {categories.map((cat) => (
+                                <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
+                                </linearGradient>
+                            ))}
+                        </defs>
+                        <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                        <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} domain={[0, chartMax]} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
+                        <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                         {categories.map((cat) => (
-                            <linearGradient key={cat.id} id={`gradient-trend-${cat.name}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={cat.color} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={cat.color} stopOpacity={0} />
-                            </linearGradient>
+                            <Area
+                                key={cat.id}
+                                type="monotone"
+                                dataKey={cat.name}
+                                name={t(`categories.${cat.id}`)}
+                                stackId="1"
+                                stroke={cat.color}
+                                fill={`url(#gradient-trend-${cat.name})`}
+                                strokeWidth={2}
+                                animationDuration={1500}
+                                isAnimationActive={true}
+                            />
                         ))}
-                    </defs>
-                    <XAxis dataKey="label" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                    <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `€${val}`} width={40} domain={[0, chartMax]} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} wrapperStyle={{ zIndex: 100 }} />
-                    <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                    {categories.map((cat) => (
-                        <Area
-                            key={cat.id}
-                            type="monotone"
-                            dataKey={cat.name}
-                            name={t(`categories.${cat.id}`)}
-                            stackId="1"
-                            stroke={cat.color}
-                            fill={`url(#gradient-trend-${cat.name})`}
-                            strokeWidth={2}
-                            animationDuration={1500}
-                            isAnimationActive={true}
-                        />
-                    ))}
-                </AreaChart>
-            ) : null}
-        </ResponsiveContainer>
+                    </AreaChart>
+                ) : null}
+            </ResponsiveContainer>
+        </div>
     );
 });

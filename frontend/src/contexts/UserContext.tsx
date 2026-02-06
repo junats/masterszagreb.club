@@ -10,17 +10,17 @@ import { App } from '@capacitor/app'; // Added for Depp Links
 // In UserContext.tsx, add this function to the provider:
 
 interface UserContextType {
-  user: User | null;
-  isAuthLoading: boolean;
-  setUser: (user: User | null) => void;
-  signIn: (user: User) => void;
-  updateUser: (updates: Partial<User>) => Promise<void>;
-  signOut: () => Promise<void>;
-  upgradeToPro: () => void;
-  showDevBanner: boolean;
-  setShowDevBanner: (show: boolean) => void;
-  isMockMode: boolean;
-  generateDummyData: () => void; // This line should already be there
+    user: User | null;
+    isAuthLoading: boolean;
+    setUser: (user: User | null) => void;
+    signIn: (user: User) => void;
+    updateUser: (updates: Partial<User>) => Promise<void>;
+    signOut: () => Promise<void>;
+    upgradeToPro: () => void;
+    showDevBanner: boolean;
+    setShowDevBanner: (show: boolean) => void;
+    isMockMode: boolean;
+    generateDummyData: () => void; // This line should already be there
 }
 
 
@@ -35,6 +35,21 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Initial Auth Check
     useEffect(() => {
+        // Safety timeout - If initAuth hangs for more than 10 seconds, force clear and show login
+        const safetyTimeout = setTimeout(async () => {
+            console.warn("UserContext: Auth Timed Out (10s). FORCE CLEARING SESSION and Entry.");
+
+            // Force clear potentially stuck session
+            await Preferences.remove({ key: 'truetrack_session' });
+            await Preferences.remove({ key: 'truetrack-backup-session' });
+            await supabase?.auth.signOut(); // Best effort signout
+
+            setIsAuthLoading(false);
+            try {
+                await SplashScreen.hide();
+            } catch (e) { }
+        }, 10000); // Increased to 10s to give more time
+
         const initAuth = async () => {
             console.log('UserContext: initAuth starting...');
             try {
@@ -60,6 +75,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                     setUser(currentUser);
                                     setIsAuthLoading(false);
                                     await SplashScreen.hide();
+                                    clearTimeout(safetyTimeout); // Clear timeout on success
                                     return;
                                 }
                             } else {
@@ -78,6 +94,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                         setIsAuthLoading(false);
                         await SplashScreen.hide();
+                        clearTimeout(safetyTimeout); // Clear timeout even if no session
                         return;
                     }
 
@@ -104,6 +121,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             } finally {
                 setIsAuthLoading(false);
                 console.log('UserContext: initAuth finished');
+                clearTimeout(safetyTimeout); // Always clear timeout when initAuth completes
                 try { await SplashScreen.hide(); } catch (e) { }
             }
         };
@@ -174,21 +192,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         });
 
-        // Safety timeout - If we are stuck, it's safer to clear everything and start fresh
-        const safetyTimeout = setTimeout(async () => {
-            console.warn("UserContext: Auth Timed Out. FORCE CLEARING SESSION and Entry.");
-
-            // Force clear potentially stuck session
-            await Preferences.remove({ key: 'truetrack_session' });
-            await Preferences.remove({ key: 'truetrack-backup-session' });
-            await supabase?.auth.signOut(); // Best effort signout
-
-            setIsAuthLoading(false);
-            try {
-                await SplashScreen.hide();
-            } catch (e) { }
-        }, 8000);
-
         // Cleanup subscription
         return () => {
             if (subscription) subscription.unsubscribe();
@@ -196,6 +199,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             clearTimeout(safetyTimeout);
         };
     }, []);
+
 
 
     const updateUser = async (updates: Partial<User>) => {

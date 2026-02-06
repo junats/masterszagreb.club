@@ -131,10 +131,18 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
 
                             <div className={"flex-1 flex flex-col items-center justify-start " + (childSupportMode ? "gap-2" : "gap-6 md:flex-row")}>
                                 {/* Chart */}
-                                <div className={(childSupportMode ? "w-28 h-28" : "w-36 h-36 md:w-32 md:h-32") + " relative flex-shrink-0"}>
+                                <div
+                                    className={(childSupportMode ? "w-28 h-28" : "w-36 h-36 md:w-32 md:h-32") + " relative flex-shrink-0"}
+                                    style={{
+                                        width: childSupportMode ? '112px' : '144px', // w-28 : w-36
+                                        height: childSupportMode ? '112px' : '144px',
+                                        minWidth: childSupportMode ? '112px' : '128px', // MD breakpoint fallback logic is tricky in inline styles, so we prioritize the base size or ensure it doesn't collapse.
+                                    }}
+                                >
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart key={`${chartConfig.id}-${pieView}-${isVisible}`}>
                                             <Pie
+                                                // @ts-ignore
                                                 activeIndex={hasActive ? activeIdx! : -1}
                                                 activeShape={renderActiveShape}
                                                 data={chartConfig.data}
@@ -222,6 +230,6 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                     );
                 })}
             </div>
-        </div>
+        </div >
     );
 };

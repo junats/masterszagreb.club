@@ -131,7 +131,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
     const handleAddActivity = () => {
         if (!selectedDate || !newActivityTitle.trim()) return;
 
-        const currentData = (custodyDays || []).find(d => d.date === selectedDate) || { date: selectedDate, status: 'none', activities: [] };
+        const currentData = (custodyDays || []).find(d => d.date === selectedDate) || { date: selectedDate, status: 'none', activities: [], withYou: false };
         const newActivity: CalendarActivity = {
             id: Math.random().toString(36).substr(2, 9),
             title: newActivityTitle,
@@ -280,7 +280,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
                         />
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                            className="relative bg-surface border border-white/10 p-6 rounded-2xl w-full max-w-sm shadow-xl"
+                            className="relative bg-card border border-slate-800 p-6 rounded-3xl w-full max-w-sm shadow-2xl"
                         >
                             <h3 className="text-lg font-bold text-white mb-2">{t('coParenting.inviteTitle')}</h3>
                             <p className="text-white/60 text-sm mb-4">{t('coParenting.inviteDesc')}</p>
@@ -432,7 +432,7 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
             {/* Activity Modal */}
             {showActivityModal && selectedDate && (
                 <div className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 pb-24 animate-in fade-in duration-200">
-                    <div className="bg-surface w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+                    <div className="bg-card w-full max-w-sm rounded-3xl border border-slate-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
                         <div className="p-3 border-b border-white/10 flex items-center justify-between bg-white/5">
                             <h3 className="font-heading font-bold text-lg text-white">
                                 {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })}

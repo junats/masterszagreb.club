@@ -289,10 +289,15 @@ export const GoalBreakdown: React.FC<GoalBreakdownProps> = ({
                                                         const achievement: Achievement = {
                                                             id: badge.id,
                                                             title: badge.label,
+                                                            label: badge.label,
                                                             description: getAchievementDescription(badge.id),
                                                             date: new Date().toISOString(),
                                                             icon: badge.icon,
-                                                            type: badge.id.includes('budget') ? 'budget' : badge.id.includes('streak') || badge.id.includes('consistent') ? 'streak' : 'saving'
+                                                            type: badge.id.includes('budget') ? 'budget' : badge.id.includes('streak') || badge.id.includes('consistent') ? 'streak' : 'saving',
+                                                            unlocked: badge.unlocked,
+                                                            color: badge.color,
+                                                            bgColor: badge.bgColor,
+                                                            borderColor: badge.borderColor
                                                         };
                                                         setSelectedAchievement(achievement);
                                                     }}

@@ -5,12 +5,15 @@ import { X, Trophy, Lock, CheckCircle2 } from 'lucide-react';
 interface Achievement {
     id: string;
     label: string;
-    icon: React.ReactNode;
+    icon?: React.ReactNode;
     unlocked: boolean;
     color: string;
     bgColor: string;
     borderColor: string;
+    description?: string; // Also add description as optional based on usage
 }
+// ...
+
 
 interface AchievementDetailsModalProps {
     isOpen: boolean;
@@ -54,7 +57,7 @@ export const AchievementDetailsModal: React.FC<AchievementDetailsModalProps> = (
                                     ? `${achievement.bgColor} ${achievement.borderColor} ${achievement.color}`
                                     : 'bg-slate-800 border-slate-700 text-slate-600'}`}>
                                     {/* Clone icon with larger size */}
-                                    {React.cloneElement(achievement.icon as React.ReactElement, { size: 40 })}
+                                    {achievement.icon && React.cloneElement(achievement.icon as React.ReactElement, { size: 40 } as any)}
                                 </div>
 
                                 <h2 className="text-xl font-heading font-bold text-white mb-1">{achievement.label}</h2>

@@ -2,7 +2,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import * as dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load env vars
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -55,7 +59,7 @@ async function generateTest(filePath: string) {
 async function main() {
     // Get changed files (staged and unstaged)
     try {
-        const changedFiles = execSync('git diff --name-only HEAD tsx')
+        const changedFiles = execSync('git diff --name-only HEAD')
             .toString()
             .split('\n')
             .filter(f => f.startsWith('frontend/src/') && f.endsWith('.tsx') && !f.includes('.test.'));

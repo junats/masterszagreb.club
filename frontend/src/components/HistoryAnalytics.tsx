@@ -49,7 +49,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
                 (r.items || []).forEach(item => {
                     if (ageRestricted && item.isRestricted) return;
 
-                    const isEssential = [Category.FOOD, Category.NECESSITY, Category.HEALTH, Category.EDUCATION, Category.HOUSEHOLD, Category.TRANSPORT].includes(item.category);
+                    const isEssential = [Category.FOOD, Category.NECESSITY, Category.HEALTH, Category.EDUCATION, Category.HOUSEHOLD, Category.TRANSPORT].includes(item.category as Category);
 
                     if (isEssential) {
                         data[key].essentials += item.price;
@@ -203,7 +203,7 @@ const HistoryAnalytics: React.FC<HistoryAnalyticsProps> = ({ receipts, ageRestri
             </div>
 
             {/* Chart Container */}
-            <div className="bg-surface border border-white/5 rounded-3xl p-4 shadow-sm min-h-[256px] relative">
+            <div className="bg-card border border-slate-800 rounded-3xl p-4 shadow-lg min-h-[256px] relative">
 
                 {activeTab === 'trend' && (
                     <AnimatedSection className="h-64 w-full" animateContainer={true}>

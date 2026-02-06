@@ -136,7 +136,7 @@ const SupportView: React.FC = () => {
 
 
       {/* Location Status */}
-      <div className="mb-6 bg-surface border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+      <div className="mb-6 bg-card border border-slate-800 rounded-xl p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-full ${location ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
             <MapPin className="w-5 h-5" />
@@ -188,7 +188,7 @@ const SupportView: React.FC = () => {
 
             <div className="grid gap-3">
               {section.items.map((item, i) => (
-                <div key={i} className="bg-surface border border-slate-700/50 rounded-xl p-4">
+                <div key={i} className="bg-card border border-slate-800 rounded-xl p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="text-slate-200 font-medium text-sm">{item.name}</h3>

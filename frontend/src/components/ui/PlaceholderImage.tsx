@@ -16,7 +16,7 @@ export const PlaceholderImage: React.FC<PlaceholderImageProps> = ({ className = 
                 <ImageOff className="w-6 h-6 text-slate-500" />
             </div>
             <p className="text-xs text-slate-500 font-medium">
-                {text || t('common.noImage', 'No Image')}
+                {text || t('common.noImage') || 'No Image'}
             </p>
         </div>
     );

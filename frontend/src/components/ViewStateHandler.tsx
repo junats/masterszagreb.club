@@ -42,7 +42,7 @@ const slideVariants = {
 };
 
 const ViewStateHandler: React.FC<ViewStateHandlerProps> = ({ currentView, setCurrentView, direction }) => {
-    const { setSelectedReceipt, addReceipts, selectedReceipt } = useData();
+    const { setSelectedReceipt, addReceipts, selectedReceipt, receipts } = useData();
 
     const handleScanComplete = (receipts: Receipt[]) => {
         addReceipts(receipts);
@@ -113,7 +113,7 @@ const ViewStateHandler: React.FC<ViewStateHandlerProps> = ({ currentView, setCur
                                 return <SupportView />;
                             case 'settlement':
                                 return (
-                                    <SettlementView onBack={() => setCurrentView('dashboard')} />
+                                    <SettlementView onBack={() => setCurrentView('dashboard')} receipts={receipts} />
                                 );
                             case 'provision':
                                 return (

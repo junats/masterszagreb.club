@@ -20,7 +20,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const translationFiles: Record<string, Translations> = {
+const translationFiles: Record<string, any> = {
     en,
     hr,
     sv,

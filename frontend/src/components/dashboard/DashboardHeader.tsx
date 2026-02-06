@@ -59,11 +59,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             initial="hidden"
             animate="visible"
             style={ambientMode ? ambientStyle : {}}
-            className={"relative rounded-3xl border mb-4 transition-all duration-1000 " + (ambientMode ? 'border-transparent' : 'border-slate-800 shadow-lg')}
+            className={"relative transition-all duration-1000 mb-4"} // Removed hardcoded borders/radius to let Card handle it
         >
             <SpotlightCard
-                className="relative w-full h-full rounded-3xl overflow-hidden bg-card p-4 group"
-                spotlightColor="rgba(56, 189, 248, 0.15)"
+                className="p-4 group h-full" // Removed bg-card, rounded-3xl
+                spotlightColor="rgba(0, 122, 255, 0.15)" // System Blue tint
             >
 
                 <BudgetOverview

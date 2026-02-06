@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:mobile": "vite build && npx cap sync",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "dependencies": {
     "@capacitor-mlkit/barcode-scanning": "^7.5.0",
@@ -45,6 +46,9 @@
     "@rollup/rollup-darwin-arm64": "^4.53.5",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "vite": "^6.2.0"
   },

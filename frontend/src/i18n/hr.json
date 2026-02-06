@@ -451,33 +451,130 @@
         "custodyUpdated": "Skrbništvo ažurirano"
     },
     "achievements": {
-        "goalSetter": "Omogućili ste praćenje ciljeva. Nastavite tako!",
-        "budgetMaster": "Izvrstan posao! Ostali ste ispod 90% proračuna.",
-        "budgetHero": "Izvanredno! Koristite manje od 75% proračuna.",
-        "frugalGenius": "Nevjerojatno! Iskoristili ste manje od pola proračuna.",
-        "trendSetter": "Vaša potrošnja je niža nego prošli tjedan.",
-        "downwardSpiral": "Smanjili ste potrošnju za više od 20%!",
-        "consistentTracker": "Dosljedno pratite troškove. Bravo!",
-        "dailyLogger": "Pratite troškove redovito. Ključ je u dosljednosti!",
-        "weekWarrior": "Zabilježili ste 10+ računa ovog tjedna.",
-        "cleanSheet": "Zadržali ste ciljne troškove pod kontrolom.",
-        "goalCrusher": "Održali ste nizove ciljeva. Disciplina!",
-        "highRoller": "Kupnja preko 100 €. Pratite velike troškove!",
-        "bigSpender": "Kupnja od 200+ €. Provjerite ciljeve.",
-        "pennyPincher": "10+ malih kupnji. Svaki cent se broji!",
-        "weekendWarrior": "Pratite troškove vikendom. Bravo!",
-        "earlyBird": "Prvih 5 računa. Dobrodošli!",
-        "veteran": "50 računa! TrueTrack veteran.",
-        "centurion": "100 računa! Majstor praćenja.",
-        "coparentHero": "30+ dana skrbništva. Posvećeni ste.",
-        "calendarKeeper": "Koristite kalendar skrbništva. Odlična organizacija!",
-        "activityPlanner": "Isplanirali ste 10+ aktivnosti.",
-        "fairShare": "Jednakost potrošnje je unutar 10%. Pošteno!",
-        "harmonyKeeper": "Ocjena harmonije 80+. Odlični odnosi.",
-        "childFirst": "20+ troškova za dijete. Dijete je na prvom mjestu!",
-        "eventMaster": "Isplanirali ste 3+ posebna događaja.",
-        "healthConscious": "Ulažete u zdravlje.",
-        "educationInvestor": "Ulažete u obrazovanje."
+        "goalSetter": {
+            "title": "Postavljač Ciljeva",
+            "description": "Omogućili ste praćenje ciljeva. Nastavite tako!"
+        },
+        "budgetMaster": {
+            "title": "Majstor Proračuna",
+            "description": "Izvrstan posao! Ostali ste ispod 90% proračuna."
+        },
+        "budgetHero": {
+            "title": "Heroj Proračuna",
+            "description": "Izvanredno! Koristite manje od 75% proračuna."
+        },
+        "frugalGenius": {
+            "title": "Štedljivi Genije",
+            "description": "Nevjerojatno! Iskoristili ste manje od pola proračuna."
+        },
+        "trendSetter": {
+            "title": "Postavljač Trendova",
+            "description": "Vaša potrošnja je niža nego prošli tjedan."
+        },
+        "downwardSpiral": {
+            "title": "Silazna Putanja",
+            "description": "Smanjili ste potrošnju za više od 20%!"
+        },
+        "consistentTracker": {
+            "title": "Dosljedni Pratitelj",
+            "description": "Dosljedno pratite troškove. Bravo!"
+        },
+        "dailyLogger": {
+            "title": "Dnevni Zapisničar",
+            "description": "Pratite troškove redovito. Ključ je u dosljednosti!"
+        },
+        "weekWarrior": {
+            "title": "Tjedni Ratnik",
+            "description": "Zabilježili ste 10+ računa ovog tjedna."
+        },
+        "cleanSheet": {
+            "title": "Čisti Račun",
+            "description": "Zadržali ste ciljne troškove pod kontrolom."
+        },
+        "goalCrusher": {
+            "title": "Razbijač Ciljeva",
+            "description": "Održali ste nizove ciljeva. Disciplina!"
+        },
+        "highRoller": {
+            "title": "Veliki Igrač",
+            "description": "Kupnja preko 100 €. Pratite velike troškove!"
+        },
+        "bigSpender": {
+            "title": "Veliki Potrošač",
+            "description": "Kupnja od 200+ €. Provjerite ciljeve."
+        },
+        "pennyPincher": {
+            "title": "Štedljivac",
+            "description": "10+ malih kupnji. Svaki cent se broji!"
+        },
+        "weekendWarrior": {
+            "title": "Vikend Ratnik",
+            "description": "Pratite troškove vikendom. Bravo!"
+        },
+        "earlyBird": {
+            "title": "Ranoranioc",
+            "description": "Prvih 5 računa. Dobrodošli!"
+        },
+        "veteran": {
+            "title": "Veteran",
+            "description": "50 računa! TrueTrack veteran."
+        },
+        "centurion": {
+            "title": "Centurion",
+            "description": "100 računa! Majstor praćenja."
+        },
+        "coparentHero": {
+            "title": "Heroj Su-roditeljstva",
+            "description": "30+ dana skrbništva. Posvećeni ste."
+        },
+        "calendarKeeper": {
+            "title": "Čuvar Kalendara",
+            "description": "Koristite kalendar skrbništva. Odlična organizacija!"
+        },
+        "activityPlanner": {
+            "title": "Planer Aktivnosti",
+            "description": "Isplanirali ste 10+ aktivnosti."
+        },
+        "fairShare": {
+            "title": "Pošten Udio",
+            "description": "Jednakost potrošnje je unutar 10%. Pošteno!"
+        },
+        "harmonyKeeper": {
+            "title": "Čuvar Harmonije",
+            "description": "Ocjena harmonije 80+. Odlični odnosi."
+        },
+        "childFirst": {
+            "title": "Dijete Prvo",
+            "description": "20+ troškova za dijete. Dijete je na prvom mjestu!"
+        },
+        "eventMaster": {
+            "title": "Majstor Događaja",
+            "description": "Isplanirali ste 3+ posebna događaja."
+        },
+        "healthConscious": {
+            "title": "Zdravstveno Osviješten",
+            "description": "Ulažete u zdravlje."
+        },
+        "educationInvestor": {
+            "title": "Investitor u Obrazovanje",
+            "description": "Ulažete u obrazovanje."
+        },
+        "weekender": {
+            "title": "Vikendaš",
+            "description": "Aktivan tijekom vikenda."
+        },
+        "streak": {
+            "title": "Niz",
+            "description": "Krenulo vas je!"
+        },
+        "budget": {
+            "title": "Proračun",
+            "description": "Postignuće vezano uz proračun."
+        },
+        "saving": {
+            "title": "Štednja",
+            "description": "Postignuće vezano uz štednju."
+        }
     },
     "evidence": {
         "title": "Rezultat dokaza",

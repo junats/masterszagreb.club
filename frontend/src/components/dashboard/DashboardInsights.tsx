@@ -127,7 +127,7 @@ export const DashboardInsights: React.FC<DashboardInsightsProps> = ({
                         <VisibilitySensor threshold={0.2}>
                             {({ isVisible }: { isVisible: boolean }) => (
                                 <InsightsGauges
-                                    insightView={insightView}
+                                    insightView={insightView as any}
                                     metrics={metrics}
                                     isVisible={isVisible}
                                 />

@@ -451,33 +451,114 @@
         "custodyUpdated": "Custody Updated"
     },
     "achievements": {
-        "goalSetter": "You've enabled goal tracking to monitor your spending habits. Keep it up!",
-        "budgetMaster": "Excellent work! You've stayed under 90% of your monthly budget.",
-        "budgetHero": "Outstanding! You're using less than 75% of your budget. You're a budgeting champion!",
-        "frugalGenius": "Incredible! You've used less than half your budget. You're a master of frugality!",
-        "trendSetter": "Your spending this week is lower than last week. Great progress!",
-        "downwardSpiral": "Amazing! You've reduced spending by over 20% this week. Keep the momentum!",
-        "consistentTracker": "You've been consistently tracking your expenses. Well done!",
-        "dailyLogger": "You've tracked expenses on 5 out of the last 7 days. Consistency is key!",
-        "weekWarrior": "You've logged 10+ receipts this week. You're on fire!",
-        "cleanSheet": "Amazing! You've kept all your goal spending under €80 this month.",
-        "goalCrusher": "You've maintained 2+ goal streaks for a week. Incredible discipline!",
-        "highRoller": "You've made a purchase over €100. Remember to track big expenses!",
-        "bigSpender": "Whoa! A €200+ purchase. Make sure it aligns with your goals.",
-        "pennyPincher": "You've made 10+ small purchases under €10. Every penny counts!",
-        "weekendWarrior": "You've tracked expenses on the weekend. Stay consistent!",
-        "earlyBird": "Welcome aboard! You've logged your first 5 receipts.",
-        "veteran": "You've tracked 50 receipts! You're a TrueTrack veteran.",
-        "centurion": "Legendary! 100 receipts tracked. You're a tracking master!",
-        "coparentHero": "You've tracked 30+ custody days! You're committed to co-parenting excellence.",
-        "calendarKeeper": "You've started adding activities to your custody calendar. Great organization!",
-        "activityPlanner": "You've planned 10+ activities for your child. You're an amazing parent!",
-        "fairShare": "Your spending equity is within 10% of 50/50. Fair and balanced!",
-        "harmonyKeeper": "Your harmony score is 80+! You're maintaining excellent co-parenting relations.",
-        "childFirst": "You've tracked 20+ child-related expenses. Your child comes first!",
-        "eventMaster": "You've planned 3+ special events (birthdays, school). Creating memories!",
-        "healthConscious": "You've spent €50+ on health. Investing in wellness!",
-        "educationInvestor": "You've invested €100+ in education. Knowledge is power!",
+        "goalSetter": {
+            "title": "Goal Setter",
+            "description": "You've enabled goal tracking to monitor your spending habits. Keep it up!"
+        },
+        "budgetMaster": {
+            "title": "Budget Master",
+            "description": "Excellent work! You've stayed under 90% of your monthly budget."
+        },
+        "budgetHero": {
+            "title": "Budget Hero",
+            "description": "Outstanding! You're using less than 75% of your budget. You're a budgeting champion!"
+        },
+        "frugalGenius": {
+            "title": "Frugal Genius",
+            "description": "Incredible! You've used less than half your budget. You're a master of frugality!"
+        },
+        "trendSetter": {
+            "title": "Trend Setter",
+            "description": "Your spending this week is lower than last week. Great progress!"
+        },
+        "downwardSpiral": {
+            "title": "Downward Spiral",
+            "description": "Amazing! You've reduced spending by over 20% this week. Keep the momentum!"
+        },
+        "consistentTracker": {
+            "title": "Consistent Tracker",
+            "description": "You've been consistently tracking your expenses. Well done!"
+        },
+        "dailyLogger": {
+            "title": "Daily Logger",
+            "description": "You've tracked expenses on 5 out of the last 7 days. Consistency is key!"
+        },
+        "weekWarrior": {
+            "title": "Week Warrior",
+            "description": "You've logged 10+ receipts this week. You're on fire!"
+        },
+        "cleanSheet": {
+            "title": "Clean Sheet",
+            "description": "Amazing! You've kept all your goal spending under €80 this month."
+        },
+        "goalCrusher": {
+            "title": "Goal Crusher",
+            "description": "You've maintained 2+ goal streaks for a week. Incredible discipline!"
+        },
+        "highRoller": {
+            "title": "High Roller",
+            "description": "You've made a purchase over €100. Remember to track big expenses!"
+        },
+        "bigSpender": {
+            "title": "Big Spender",
+            "description": "Whoa! A €200+ purchase. Make sure it aligns with your goals."
+        },
+        "pennyPincher": {
+            "title": "Penny Pincher",
+            "description": "You've made 10+ small purchases under €10. Every penny counts!"
+        },
+        "weekendWarrior": {
+            "title": "Weekend Warrior",
+            "description": "You've tracked expenses on the weekend. Stay consistent!"
+        },
+        "earlyBird": {
+            "title": "Early Bird",
+            "description": "Welcome aboard! You've logged your first 5 receipts."
+        },
+        "veteran": {
+            "title": "Veteran",
+            "description": "You've tracked 50 receipts! You're a TrueTrack veteran."
+        },
+        "centurion": {
+            "title": "Centurion",
+            "description": "Legendary! 100 receipts tracked. You're a tracking master!"
+        },
+        "coparentHero": {
+            "title": "Co-Parent Hero",
+            "description": "You've tracked 30+ custody days! You're committed to co-parenting excellence."
+        },
+        "calendarKeeper": {
+            "title": "Calendar Keeper",
+            "description": "You've started adding activities to your custody calendar. Great organization!"
+        },
+        "activityPlanner": {
+            "title": "Activity Planner",
+            "description": "You've planned 10+ activities for your child. You're an amazing parent!"
+        },
+        "fairShare": {
+            "title": "Fair Share",
+            "description": "Your spending equity is within 10% of 50/50. Fair and balanced!"
+        },
+        "harmonyKeeper": {
+            "title": "Harmony Keeper",
+            "description": "Your harmony score is 80+! You're maintaining excellent co-parenting relations."
+        },
+        "childFirst": {
+            "title": "Child First",
+            "description": "You've tracked 20+ child-related expenses. Your child comes first!"
+        },
+        "eventMaster": {
+            "title": "Event Master",
+            "description": "You've planned 3+ special events (birthdays, school). Creating memories!"
+        },
+        "healthConscious": {
+            "title": "Health Conscious",
+            "description": "You've spent €50+ on health. Investing in wellness!"
+        },
+        "educationInvestor": {
+            "title": "Education Investor",
+            "description": "You've invested €100+ in education. Knowledge is power!"
+        },
         "weekender": {
             "title": "Weekender",
             "description": "Active during the weekend."

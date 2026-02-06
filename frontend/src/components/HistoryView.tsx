@@ -196,7 +196,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 if (ageRestricted && i.isRestricted) return;
 
                 total += i.price;
-                const isChildOrHome = [Category.EDUCATION, Category.HEALTH, Category.FOOD, Category.NECESSITY, Category.HOUSEHOLD].includes(i.category);
+                const isChildOrHome = [Category.EDUCATION, Category.HEALTH, Category.FOOD, Category.NECESSITY, Category.HOUSEHOLD].includes(i.category as Category);
 
                 if (isChildOrHome) {
                     childTotal += i.price;

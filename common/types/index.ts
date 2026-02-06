@@ -101,12 +101,7 @@ export interface CalendarActivity {
   endTime?: string;
 }
 
-export interface CustodyDay {
-  date: string; // YYYY-MM-DD
-  status: CustodyStatus;
-  note?: string;
-  activities?: CalendarActivity[];
-}
+
 
 export enum GoalType {
   JUNK_FOOD = 'junk_food',
@@ -145,6 +140,7 @@ export interface Achievement {
   color: string;
   bgColor: string;
   borderColor: string;
+  icon?: any; // ReactNode not available in types easily without import, using any or generic
 }
 
 export interface CustodyDay {

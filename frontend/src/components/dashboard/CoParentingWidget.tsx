@@ -24,6 +24,75 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
     const [showCoParentingModal, setShowCoParentingModal] = useState(false);
 
     const today = new Date();
+
+    // Helper: Generate AI-powered daily insights
+    const generateDailyInsights = () => {
+        const insights: Array<{ icon: string; title: string; suggestion: string }> = [];
+        const todayStr = today.toISOString().split('T')[0];
+        const todayDay = custodyDays.find(d => d.date === todayStr);
+        const todayStatus = todayDay?.status;
+
+        if (todayStatus === 'me') {
+            insights.push({
+                icon: '👨‍👧‍👦',
+                title: 'Quality Time Today',
+                suggestion: 'Make today special! Plan a fun activity or simply enjoy being present together.'
+            });
+        } else if (todayStatus === 'partner') {
+            insights.push({
+                icon: '📞',
+                title: 'Stay Connected',
+                suggestion: 'Send a quick message or schedule a video call to stay connected with your child.'
+            });
+        }
+
+        const upcomingEvents = custodyDays
+            .filter(d => {
+                const date = new Date(d.date);
+                return date > today && date <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            })
+            .flatMap(d => d.activities || [])
+            .slice(0, 1);
+
+        if (upcomingEvents.length > 0) {
+            insights.push({
+                icon: '📅',
+                title: 'Upcoming Event',
+                suggestion: `Don't forget: ${upcomingEvents[0].title} is coming up soon!`
+            });
+        }
+
+        insights.push({
+            icon: '💬',
+            title: 'Communication Tip',
+            suggestion: 'Keep your co-parent informed about important updates or changes in routine.'
+        });
+
+        return insights.slice(0, 3);
+    };
+
+    // Helper: Generate calendar grid for monthly view
+    const generateMonthCalendar = () => {
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+
+        const calendar: (Date | null)[] = [];
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            calendar.push(null);
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+            calendar.push(new Date(year, month, day));
+        }
+        return calendar;
+    };
+
+    const dailyInsights = generateDailyInsights();
+    const monthCalendar = generateMonthCalendar();
+
     const currentDay = today.getDay(); // 0 = Sunday
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1)); // Mon start
@@ -116,7 +185,41 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
 
                         {/* Toggleable Body */}
                         <AnimatePresence mode="wait">
-                            {custodyView === 'weekly' ? (
+                            {custodyView === 'daily' ? (
+                                <motion.div
+                                    key="daily"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="w-full"
+                                >
+                                    <div className="flex flex-col gap-2">
+                                        {dailyInsights.map((insight, idx) => (
+                                            <motion.div
+                                                key={idx}
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: idx * 0.1 }}
+                                                className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 p-3 rounded-xl border border-purple-500/20"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <span className="text-2xl">{insight.icon}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-white mb-1">{insight.title}</p>
+                                                        <p className="text-xs text-slate-400 leading-relaxed">{insight.suggestion}</p>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                        {dailyInsights.length === 0 && (
+                                            <div className="bg-slate-800/20 p-4 rounded-xl border border-white/5 text-center">
+                                                <p className="text-sm text-slate-400">No insights for today. Check back tomorrow!</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ) : custodyView === 'weekly' ? (
                                 <motion.div
                                     key="weekly"
                                     initial={{ opacity: 0, y: 10 }}
@@ -136,9 +239,10 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                                                     <span className="text-xxs font-medium text-slate-500 uppercase">{dayLabel}</span>
                                                     <div
                                                         className={"w-7 h-7 rounded-full flex items-center justify-center text-xxs font-bold border transition-all " + (
-                                                            status === 'me' ? 'bg-purple-500 border-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)] scale-110' :
-                                                                (status === 'partner' || status === 'split') ? 'bg-blue-500/20 border-blue-500/50 text-blue-300' :
-                                                                    'bg-slate-800/50 border-slate-700 text-slate-500'
+                                                            status === 'me' ? 'bg-blue-500 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)] scale-110' :
+                                                                status === 'partner' ? 'bg-purple-500/20 border-purple-500/50 text-purple-300' :
+                                                                    status === 'split' ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' :
+                                                                        'bg-slate-800/50 border-slate-700 text-slate-500'
                                                         ) + (isToday ? ' ring-2 ring-white/20' : '')}
                                                     >
                                                         {status === 'me' ? <Check size={14} strokeWidth={4} /> : status ? d.getDate() : d.getDate()}
@@ -191,251 +295,97 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                                     </div>
                                 </motion.div>
                             ) : (
-                                <AnimatedSection triggerOnce={false} noSlide className="w-full">
-                                    {({ isInView }: { isInView?: boolean } = {}) => (
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex bg-slate-800/50 p-0.5 rounded-lg w-fit self-center">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setMonthViewMode('share'); }}
-                                                    className={"px-3 py-1 text-xxs font-bold uppercase tracking-wide rounded-md transition-all " + (monthViewMode === 'share' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
-                                                >
-                                                    {t('dashboard.actions.share')}
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setMonthViewMode('insights'); }}
-                                                    className={"px-3 py-1 text-xxs font-bold uppercase tracking-wide rounded-md transition-all " + (monthViewMode === 'insights' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200')}
-                                                >
-                                                    {t('dashboard.actions.insights')}
-                                                </button>
+                                <motion.div
+                                    key="monthly"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="w-full"
+                                >
+                                    <div className="flex flex-col gap-3">
+                                        <div className="bg-slate-800/20 p-3 rounded-xl border border-white/5">
+                                            <p className="text-xs font-bold text-white text-center mb-2">
+                                                {today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                            </p>
+                                            <div className="grid grid-cols-7 gap-1 mb-1">
+                                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+                                                    <div key={idx} className="text-center text-xxs font-medium text-slate-500">{day}</div>
+                                                ))}
                                             </div>
-
-                                            {monthViewMode === 'share' ? (
-                                                <div className="flex items-center justify-between gap-4 bg-slate-800/20 p-3 rounded-xl border border-white/5 animate-in fade-in slide-in-from-right-2">
-                                                    <div className="flex flex-col gap-2 flex-1">
-                                                        <div>
-                                                            <p className="text-xxs text-slate-500 font-medium uppercase tracking-wide">{t('dashboard.coparenting.myShare')}</p>
-                                                            <div className="flex items-baseline gap-1">
-                                                                <p className="text-2xl font-heading font-bold text-white">{monthDaysCount}</p>
-                                                                <span className="text-xxs text-slate-500">days</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="h-20 w-20 relative shrink-0">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <PieChart key={"custody-pie-" + isInView}>
-                                                                <Pie
-                                                                    data={[
-                                                                        { name: t('dashboard.coparenting.me'), value: monthDaysCount },
-                                                                        { name: t('dashboard.coparenting.partner'), value: new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - monthDaysCount }
-                                                                    ]}
-                                                                    cx="50%"
-                                                                    cy="50%"
-                                                                    innerRadius={22}
-                                                                    outerRadius={35}
-                                                                    paddingAngle={3}
-                                                                    dataKey="value"
-                                                                    startAngle={90}
-                                                                    endAngle={-270}
-                                                                    stroke="none"
-                                                                    isAnimationActive={isInView}
-                                                                    animationDuration={1500}
-                                                                >
-                                                                    <Cell key="me" fill="#10b981" />
-                                                                    <Cell key="partner" fill="#3b82f6" />
-                                                                </Pie>
-                                                            </PieChart>
-                                                        </ResponsiveContainer>
-                                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                            <span className="text-xxs font-bold text-slate-300">
-                                                                <CountUp value={(monthDaysCount / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) * 100} suffix="%" decimals={0} />
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                // Insights View - Weekend Split & Parenting Pulse
-                                                <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-2">
-                                                    {/* Weekend Split */}
-                                                    <div>
-                                                        <p className="text-xxs text-slate-500 font-medium uppercase tracking-wide mb-2">{t('dashboard.coparenting.weekendSplit')}</p>
-                                                        {(() => {
-                                                            const weekendDays = custodyDays.filter(d => {
-                                                                const date = new Date(d.date);
-                                                                const day = date.getDay();
-                                                                return day === 0 || day === 6; // Sun or Sat
-                                                            });
-                                                            const totalWeekends = weekendDays.length || 1;
-                                                            const myWeekends = weekendDays.filter(d => d.status === 'me').length;
-                                                            const partnerWeekends = weekendDays.filter(d => d.status === 'partner').length;
-
-                                                            return (
-                                                                <div className="flex h-2 rounded-full overflow-hidden w-full bg-slate-800">
-                                                                    <div style={{ width: ((myWeekends / totalWeekends) * 100) + "%" }} className="bg-emerald-500 h-full" />
-                                                                    <div style={{ width: ((partnerWeekends / totalWeekends) * 100) + "%" }} className="bg-blue-500 h-full" />
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                        <div className="flex justify-between text-xxs text-slate-400 mt-1">
-                                                            <span>{t('dashboard.coparenting.you')}</span>
-                                                            <span>{t('dashboard.coparenting.partner')}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Parenting Pulse / Evidence Score */}
-                                                    {(() => {
-                                                        // Metrics Calculation
-                                                        const now = new Date();
-                                                        const currentMonth = now.getMonth();
-                                                        const currentYear = now.getFullYear();
-
-                                                        // Get Week currentWeekStart
-                                                        const currentWeekStart = new Date(now);
-                                                        const day = currentWeekStart.getDay() || 7;
-                                                        if (day !== 1) currentWeekStart.setHours(-24 * (day - 1));
-                                                        currentWeekStart.setHours(0, 0, 0, 0);
-
-                                                        // Filter Custody Days
-                                                        const filteredDays = custodyDays.filter(d => {
-                                                            const dDate = new Date(d.date);
-                                                            // Handle manual parse
-                                                            let targetDate = dDate;
-                                                            if (d.date.includes('-') && !d.date.includes('T')) {
-                                                                const parts = d.date.split('-');
-                                                                targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                            <div className="grid grid-cols-7 gap-1">
+                                                {monthCalendar.map((date, idx) => {
+                                                    if (!date) return <div key={`empty-${idx}`} className="aspect-square" />;
+                                                    const status = getDayStatus(date);
+                                                    const isToday = date.toDateString() === today.toDateString();
+                                                    const dateStr = date.toISOString().split('T')[0];
+                                                    const hasEvent = (custodyDays.find(d => d.date === dateStr)?.activities || []).length > 0;
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className={
+                                                                "aspect-square rounded-md flex flex-col items-center justify-center text-xxs font-medium border transition-all " +
+                                                                (status === 'me' ? 'bg-blue-500/20 border-blue-500/50 text-blue-300' :
+                                                                    status === 'partner' ? 'bg-purple-500/20 border-purple-500/50 text-purple-300' :
+                                                                        status === 'split' ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' :
+                                                                            'bg-slate-800/30 border-slate-700/50 text-slate-500') +
+                                                                (isToday ? ' ring-2 ring-white/40 scale-110' : '')
                                                             }
-
-                                                            if (custodyView === 'monthly') {
-                                                                return targetDate.getMonth() === currentMonth && targetDate.getFullYear() === currentYear;
-                                                            } else {
-                                                                return targetDate >= currentWeekStart;
-                                                            }
-                                                        });
-
-                                                        const totalDays = filteredDays.length;
-                                                        const myDays = filteredDays.filter(d => d.status === 'me').length;
-                                                        const balance = totalDays > 0 ? myDays / totalDays : 0.5;
-
-                                                        // 1. Equity Score (Target 50/50)
-                                                        const equityRaw = 1 - (Math.abs(balance - 0.5) * 2);
-                                                        const equityScore = Math.round(equityRaw * 100);
-
-                                                        // 2. Stability Score (Weekend Consistency)
-                                                        let stabilityScore = 85;
-                                                        if (balance > 0.8 || balance < 0.2) stabilityScore = 40;
-
-                                                        // 3. Evidence Score (Gamification)
-                                                        const thisMonthReceipts = receipts.filter(r => {
-                                                            const d = new Date(r.date);
-                                                            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                                                        });
-                                                        const receiptPoints = Math.min(50, thisMonthReceipts.length * 10); // Max 50 pts (5 receipts)
-
-                                                        const daysWithNotes = filteredDays.filter(d => d.activities && d.activities.length > 0).length;
-                                                        const notePoints = Math.min(50, daysWithNotes * 10); // Max 50 pts (5 notes)
-
-                                                        const evidenceScore = receiptPoints + notePoints;
-
-
-                                                        // 4. Harmony Score (Avg of all)
-                                                        const harmonyScore = Math.round((equityScore + stabilityScore + evidenceScore) / 3);
-
-                                                        let status: 'optimum' | 'good' | 'attention' | 'critical' = 'good';
-                                                        let title = t('dashboard.pulse.steady.title');
-                                                        let message = t('dashboard.pulse.steady.message');
-                                                        let color = 'text-emerald-400';
-                                                        let bgColor = 'bg-emerald-500/10';
-                                                        let borderColor = 'border-emerald-500/20';
-
-                                                        if (harmonyScore < 50) {
-                                                            status = 'critical';
-                                                            title = t('dashboard.pulse.critical.title');
-                                                            message = t('dashboard.pulse.critical.message');
-                                                            color = 'text-red-400';
-                                                            bgColor = 'bg-red-500/10';
-                                                            borderColor = 'border-red-500/20';
-                                                        } else if (harmonyScore < 75) {
-                                                            status = 'attention';
-                                                            title = t('dashboard.pulse.attention.title');
-                                                            message = t('dashboard.pulse.attention.message');
-                                                            color = 'text-orange-400';
-                                                            bgColor = 'bg-orange-500/10';
-                                                            borderColor = 'border-orange-500/20';
-                                                        } else if (harmonyScore > 90) {
-                                                            status = 'optimum';
-                                                            title = t('dashboard.pulse.optimum.title');
-                                                            message = t('dashboard.pulse.optimum.message');
-                                                            color = 'text-cyan-400';
-                                                            bgColor = 'bg-cyan-500/10';
-                                                            borderColor = 'border-cyan-500/20';
-                                                        }
-
-                                                        const metrics = [
-                                                            { label: t('dashboard.pulse.equity'), score: equityScore, color: 'bg-blue-500' },
-                                                            { label: t('dashboard.pulse.stability'), score: stabilityScore, color: 'bg-purple-500' },
-                                                            { label: t('dashboard.pulse.evidence'), score: evidenceScore, color: 'bg-amber-500' }, // New Metric
-                                                            { label: t('dashboard.pulse.harmony'), score: harmonyScore, color: 'bg-pink-500' },
-                                                        ];
-
-                                                        return (
-                                                            <>
-                                                                <motion.button
-                                                                    whileTap={{ scale: 0.98 }}
-                                                                    onClick={(e) => { e.stopPropagation(); setShowCoParentingModal(true); }}
-                                                                    className={"w-full rounded-2xl p-4 border relative overflow-hidden group mt-4 transition-all hover:bg-opacity-20 text-left " + bgColor + " " + borderColor}
-                                                                >
-                                                                    <div className="flex items-start gap-3 mb-4">
-                                                                        <div className={"p-2 rounded-lg border " + bgColor + " " + borderColor}>
-                                                                            <Activity className={"w-4 h-4 " + color} />
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="flex items-center gap-2 mb-0.5">
-                                                                                <h4 className={"text-sm font-bold " + color}>{title}</h4>
-                                                                                <span className={"text-xxs px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold " + bgColor + " " + borderColor + " " + color}>{status}</span>
-                                                                            </div>
-                                                                            <p className="text-xxs text-slate-400 leading-tight max-w-[200px]">{message}</p>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="space-y-3">
-                                                                        {metrics.map((m) => (
-                                                                            <div key={m.label} className="group/bar">
-                                                                                <div className="flex justify-between items-end mb-1">
-                                                                                    <div className="flex items-center">
-                                                                                        <span className="text-xxs font-medium text-slate-500 group-hover/bar:text-slate-300 transition-colors uppercase tracking-wide">{m.label}</span>
-                                                                                        {m.label === t('dashboard.pulse.evidence') && (
-                                                                                            <span className="ml-2 text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 font-bold">
-                                                                                                LVL {Math.ceil(m.score / 20) || 1}
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </div>
-                                                                                    <span className="text-xxs font-bold text-slate-300 tabular-nums">{m.score}/100</span>
-                                                                                </div>
-                                                                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
-                                                                                    <motion.div
-                                                                                        initial={{ width: 0 }}
-                                                                                        whileInView={{ width: m.score + "%" }}
-                                                                                        transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
-                                                                                        className={"h-full rounded-full " + m.color}
-                                                                                    />
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </motion.button>
-                                                                <CoParentingDetailsModal
-                                                                    isOpen={showCoParentingModal}
-                                                                    onClose={() => setShowCoParentingModal(false)}
-                                                                    metrics={{ equity: equityScore, stability: stabilityScore, harmony: harmonyScore }}
-                                                                    custodyDays={custodyDays}
-                                                                />
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            )}
+                                                        >
+                                                            <span>{date.getDate()}</span>
+                                                            {hasEvent && <div className="w-1 h-1 rounded-full bg-orange-400 mt-0.5" />}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    )}
-                                </AnimatedSection>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
+                                                <p className="text-xxs text-blue-300 font-medium uppercase tracking-wide mb-1">You</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <p className="text-xl font-heading font-bold text-white">{monthDaysCount}</p>
+                                                    <span className="text-xxs text-slate-500">days</span>
+                                                </div>
+                                                <p className="text-xxs text-blue-400 mt-0.5">{Math.round((monthDaysCount / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) * 100)}%</p>
+                                            </div>
+                                            <div className="bg-purple-500/10 p-2 rounded-lg border border-purple-500/20">
+                                                <p className="text-xxs text-purple-300 font-medium uppercase tracking-wide mb-1">Partner</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <p className="text-xl font-heading font-bold text-white">
+                                                        {(() => {
+                                                            const partnerDays = custodyDays.filter(d => {
+                                                                const dDate = new Date(d.date);
+                                                                return dDate.getMonth() === today.getMonth() && dDate.getFullYear() === today.getFullYear() && d.status === 'partner';
+                                                            }).length;
+                                                            return partnerDays;
+                                                        })()}
+                                                    </p>
+                                                    <span className="text-xxs text-slate-500">days</span>
+                                                </div>
+                                                <p className="text-xxs text-purple-400 mt-0.5">
+                                                    {(() => {
+                                                        const partnerDays = custodyDays.filter(d => {
+                                                            const dDate = new Date(d.date);
+                                                            return dDate.getMonth() === today.getMonth() && dDate.getFullYear() === today.getFullYear() && d.status === 'partner';
+                                                        }).length;
+                                                        return Math.round((partnerDays / new Date(today.getFullYear(), today.getFullYear(), today.getMonth() + 1, 0).getDate()) * 100);
+                                                    })()}%
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {dailyInsights.length > 0 && (
+                                            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 p-3 rounded-xl border border-purple-500/20">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-lg">{dailyInsights[0].icon}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-white mb-1">{dailyInsights[0].title}</p>
+                                                        <p className="text-xxs text-slate-400 leading-relaxed">{dailyInsights[0].suggestion}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
                             )}
                         </AnimatePresence>
                     </div>

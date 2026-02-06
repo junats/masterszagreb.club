@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { Receipt, CategoryDefinition, Goal, RecurringExpense, CustodyDay, GoalType, Achievement } from '@common/types'; // Adjust imports
+import { Receipt, CategoryDefinition, Goal, RecurringExpense, CustodyDay, GoalType, Achievement, User } from '@common/types'; // Adjust imports
 import { Preferences } from '@capacitor/preferences';
 import { WidgetService } from '../services/widgetService';
 import { authService } from '../services/authService';
@@ -72,7 +72,9 @@ interface DataContextType {
     addGoal: (goal: Goal) => void;
     updateGoal: (goalId: string, updates: Partial<Goal>) => void;
     achievements: Achievement[];
+    user: User | null;
     lastPartnerChanges?: any; // Define proper type
+    setLastPartnerChanges: (msg: string | null) => void;
     receipts: Receipt[];
     setReceipts: React.Dispatch<React.SetStateAction<Receipt[]>>;
     addReceipts: (newReceipts: Receipt[]) => void;
@@ -969,6 +971,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return thisMonthTotal / monthlyBudget;
     }, [receipts, monthlyBudget]);
 
+    const addGoal = (goal: Goal) => {
+        setGoals(prev => [...prev, goal]);
+    };
+
     return (
         <DataContext.Provider value={{
             receipts, setReceipts, addReceipts, updateReceipt, deleteReceipt, deleteAllReceipts,
@@ -997,14 +1003,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             unreadNotificationCount,
             markAllNotificationsAsRead,
             lastPartnerChanges,
-            setLastPartnerChanges,
             isDataLoaded,
             dataVersion,
             generateDummyData,
             spendRatio,
             syncCustody,
             recentChanges,
-            setRecentChanges
+            setRecentChanges,
+            user: contextUser,
+            setLastPartnerChanges,
+            userSettings: {}, // Placeholder
+            addGoal,
+            updateGoal: (id, updates) => {
+                setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+            },
+            achievements: [] // Placeholder
         }}>
             {children}
         </DataContext.Provider>

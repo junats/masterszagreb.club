@@ -12,7 +12,10 @@ export interface ProductDetails {
 export const fetchProductByBarcode = async (barcode: string): Promise<ProductDetails | null> => {
     try {
         console.log(`🔍 Product Lookup via API for barcode: ${barcode}`);
+        console.warn('⚠️ Barcode lookup API is currently DISABLED to save tokens.');
+        return null;
 
+        /*
         const { data, error } = await supabase.functions.invoke('api', {
             body: {
                 action: 'product-lookup',
@@ -31,6 +34,7 @@ export const fetchProductByBarcode = async (barcode: string): Promise<ProductDet
         }
 
         return null;
+        */
 
     } catch (error) {
         console.error('Error fetching product by barcode:', error);

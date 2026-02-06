@@ -12,6 +12,7 @@ interface AnimatedSectionProps {
     layout?: boolean | "position" | "size";
     rootMargin?: string;
     disableEntrance?: boolean;
+    animateContainer?: boolean;
 }
 
 const defaultVariants: Variants = {
@@ -63,7 +64,7 @@ export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     disableEntrance = false
 }) => {
     const ref = useRef(null);
-    const isInView = useInView(ref, { once: triggerOnce, amount: threshold, margin: rootMargin });
+    const isInView = useInView(ref, { once: triggerOnce, amount: threshold, margin: rootMargin as any });
 
     const activeVariants = disableEntrance ? disabledVariants : (variants || (noSlide ? staticVariants : defaultVariants));
 

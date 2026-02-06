@@ -25,8 +25,18 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
         '@common': path.resolve(__dirname, '../common'),
+        'react': path.resolve(__dirname, './node_modules/react'),
+        'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
       }
     },
-    envDir: path.resolve(__dirname, '..') // Load .env from root
+    envDir: path.resolve(__dirname, '..'), // Load .env from root
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/setupTests.ts',
+      deps: {
+        inline: [/@testing-library/, /react/, /react-dom/],
+      },
+    }
   };
 });

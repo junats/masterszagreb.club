@@ -296,7 +296,7 @@ const AuthScreen: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="bg-surface/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative">
+                <div className="bg-card border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
                     {/* Manual Check Button for Stuck Users */}
 
 
@@ -313,7 +313,7 @@ const AuthScreen: React.FC = () => {
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
                                         required={!isLogin}
                                         autoComplete="name"
-                                       
+
                                     />
                                 </div>
                             </div>
@@ -351,7 +351,7 @@ const AuthScreen: React.FC = () => {
                                     }
                                 }}
                                 autoComplete={isLogin ? "current-password" : "new-password"}
-                           
+
                             />
                             <button
                                 type="button"
