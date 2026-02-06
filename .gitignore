@@ -45,3 +45,7 @@ AuthKey_*.p8
 .vscode/
 .idea/
 *.swp
+
+# Apple Auth Keys (sensitive)
+*.p8
+AuthKey_*.p8
