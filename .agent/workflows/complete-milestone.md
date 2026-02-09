@@ -42,6 +42,19 @@ Verify all must-haves from ROADMAP.md:
 
 ---
 
+## 2.5. Regenerate App Icons
+
+Ensure all icons are up-to-date:
+
+// turbo
+```bash
+./scripts/generate_ios_icons.sh
+```
+
+This ensures icons are regenerated before release.
+
+---
+
 ## 3. Generate Milestone Summary
 
 Create `.gsd/milestones/{name}-SUMMARY.md`:

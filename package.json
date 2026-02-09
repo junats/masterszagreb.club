@@ -8,7 +8,12 @@
     "build": "cd frontend && ../node_modules/.bin/vite build",
     "build:mobile": "cd frontend && ../node_modules/.bin/vite build && cd .. && npx cap sync",
     "agent:test": "npx tsx scripts/agent.ts",
-    "preview": "cd frontend && ../node_modules/.bin/vite preview"
+    "preview": "cd frontend && ../node_modules/.bin/vite preview",
+    "test": "vitest",
+    "fix": "python3 scripts/ai/fix.sh",
+    "debate": "python3 scripts/ai/debate.py",
+    "gentest": "python3 scripts/ai/gentest.py",
+    "autofix": "python3 scripts/ai/autofix.py"
   },
   "dependencies": {
     "@capacitor-mlkit/barcode-scanning": "^7.0.0",

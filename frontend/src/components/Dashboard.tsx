@@ -1,9 +1,8 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
-    CalendarDays, Target, TrendingUp, TrendingDown, Clock, CheckCircle2,
-    Calendar, Activity, ShoppingBag, ArrowUpRight, BarChart3,
-    AlertTriangle, Sparkles, Check
+    Calendar, Target, TrendingUp, TrendingDown, Clock, CheckCircle2,
+    BarChart2, ShoppingCart, ArrowUp, AlertCircle, Star, Check
 } from 'lucide-react';
 
 import { useData } from '../contexts/DataContext';
@@ -203,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             statusLabel = t('status.alert');
             statusValue = t('status.overBudget');
             statusTrend = 'down';
-            statusIcon = AlertTriangle;
+            statusIcon = AlertCircle;
             statusDetail = `Exceeded by €${(metrics.thisMonthTotal - monthlyBudget).toFixed(0)} `;
             statusPopup = {
                 title: t('popups.budgetAlert.title'),
@@ -229,7 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             if (/over budget/i.test(warning.text)) statusValue = t('status.overBudget');
 
             statusTrend = 'down';
-            statusIcon = AlertTriangle;
+            statusIcon = AlertCircle;
             statusDetail = warning.text;
             statusPopup = {
                 title: statusValue,
@@ -267,7 +266,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 value: "€" + dailyAvg.toFixed(0) + " ",
                 trend: dailyTrendDiff > 0 ? 'up' : 'down',
                 trendLabel: dailyTrendDiff > 0 ? t('labels.aboveTarget') : t('status.onTrack'),
-                icon: CalendarDays,
+                icon: Calendar,
                 detail: t('charts.target') + ": €" + dailyTarget.toFixed(0),
                 popup: {
                     title: t('popups.dailySpending.title'),
@@ -294,7 +293,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 value: topCategory,
                 trend: 'neutral',
                 trendLabel: t('labels.dominant'),
-                icon: ShoppingBag,
+                icon: ShoppingCart,
                 detail: (top3Cats[0]?.value || '0%') + " " + t('labels.ofTotal'),
                 popup: {
                     title: t('popups.topCategories.title'),
@@ -308,7 +307,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 value: "€" + biggestPurchase.toFixed(0),
                 trend: 'neutral',
                 trendLabel: t('labels.oneOff'),
-                icon: ArrowUpRight,
+                icon: ArrowUp,
                 detail: biggestReceipt ? biggestReceipt.storeName : '-',
                 popup: {
                     title: t('popups.biggestPurchase.title'),
@@ -339,7 +338,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 value: frequency,
                 trend: parseFloat(frequency) > 3 ? 'up' : 'neutral',
                 trendLabel: parseFloat(frequency) > 3 ? t('labels.high') : t('labels.normal'),
-                icon: Activity,
+                icon: BarChart2,
                 detail: t('labels.transPerDay'),
                 popup: {
                     title: t('popups.spendingFrequency.title'),

@@ -1,10 +1,9 @@
-import { Receipt, Category, Goal, GoalType, CustodyDay } from '@common/types';
+import { Receipt, Category, Goal, GoalType, CustodyDay, CalendarActivity } from '@common/types';
 
 export type SeedScenario = 'good' | 'average' | 'bad';
 
 
 // --- HEALTH/GOOD ---
-// Product Database with strict scenario alignment
 // Product Database with strict scenario alignment
 const dummyProducts: { name: string, price: number, store: string, category: Category, goalType?: GoalType, scenario: string[], isChild?: boolean, isRestricted?: boolean }[] = [
     // BAD SCENARIO ITEMS (High Cost / Unhealthy / Impulsive)
@@ -43,6 +42,17 @@ const dummyProducts: { name: string, price: number, store: string, category: Cat
     { name: 'Toy Store', price: 45.00, store: 'Smyths', category: Category.LUXURY, goalType: undefined, scenario: ['average', 'bad'], isChild: true },
     { name: 'Kids Shoes', price: 35.00, store: 'Clarks', category: Category.NECESSITY, goalType: undefined, scenario: ['average', 'good'], isChild: true },
     { name: 'Swimming Lessons', price: 80.00, store: 'Local Pool', category: Category.EDUCATION, goalType: undefined, scenario: ['good', 'average'], isChild: true },
+    { name: 'Zoo Family Ticket', price: 65.00, store: 'Dublin Zoo', category: Category.LUXURY, goalType: undefined, scenario: ['good', 'average'], isChild: true },
+];
+
+const SAMPLE_ACTIVITIES: { title: string, type: CalendarActivity['type'] }[] = [
+    { title: 'Soccer Training', type: 'sport' },
+    { title: 'Swimming Lesson', type: 'sport' },
+    { title: 'Piano Lesson', type: 'school' },
+    { title: 'Doctor Appointment', type: 'other' },
+    { title: 'Birthday Party', type: 'birthday' },
+    { title: 'School Play', type: 'school' },
+    { title: 'Family Visit', type: 'other' },
 ];
 
 export const generateScenarioData = (scenario: SeedScenario, months: number = 3): { receipts: Receipt[], custodyDays: CustodyDay[], goals: Goal[], monthlyBudget: number } => {
@@ -75,125 +85,158 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
         });
     };
 
-    // 1. GUARANTEE "TODAY" DATA (For Daily View)
+    // 1. GUARANTEE "TODAY" DATA (For Daily View) & INSIGHTS
     // ------------------------------------------------
     const today = new Date(now);
 
-    if (scenario === 'bad') {
-        // Trigger Late Night Insight (2AM today)
-        const lateNight = new Date(today); lateNight.setHours(2, 30);
-        const pizza = dummyProducts.find(p => p.name === 'Late Night Pizza') || dummyProducts[0];
-        mkReceipt(lateNight, pizza, 65.00); // > €50 limit
-
-        // Trigger Goal Violation (Junk Food)
-        const lunch = new Date(today); lunch.setHours(13, 15);
-        mkReceipt(lunch, dummyProducts.find(p => p.name === 'Mega Burger Meal')!);
+    // Inject High Spend on Today for "Spending Insight" test
+    // If scenario is Bad or Average, ensure we have a high spend today
+    if (scenario !== 'good') {
+        const zooTrip = dummyProducts.find(p => p.name === 'Zoo Family Ticket') || dummyProducts[0];
+        mkReceipt(today, zooTrip, 65.00);
     } else {
-        // Good/Average: Just normal healthy lunch today
         const lunch = new Date(today); lunch.setHours(13, 0);
         mkReceipt(lunch, dummyProducts.find(p => p.name === 'Lunch Deal')!);
     }
 
+    if (scenario === 'bad') {
+        // Late Night Trigger
+        const lateNight = new Date(today); lateNight.setHours(2, 30);
+        const pizza = dummyProducts.find(p => p.name === 'Late Night Pizza') || dummyProducts[0];
+        mkReceipt(lateNight, pizza, 65.00);
+    }
+
     // 2. GUARANTEE "THIS WEEK" DATA (For Weekly View)
     // ------------------------------------------------
-    // Add receipts for last 6 days
     for (let i = 1; i < 7; i++) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
         d.setHours(14, 0);
 
         if (scenario === 'bad') {
-            // Daily Splurge
             mkReceipt(d, dummyProducts.find(p => p.name === 'Cinema Tickets')!);
             mkReceipt(d, dummyProducts.find(p => p.name === 'Vodka bottle')!);
         } else if (scenario === 'average') {
-            // Normal spread
             if (i % 2 === 0) mkReceipt(d, dummyProducts.find(p => p.name === 'Weekly Groceries')!);
         } else {
-            // Good: minimal spend
             if (i === 3) mkReceipt(d, dummyProducts.find(p => p.name === 'Weekly Groceries')!);
         }
     }
 
     // 3. INSIGHT TRIGGERS (Historical / Patterns)
     // ------------------------------------------------
-
-    // Weekend Splurge (Average Scenario)
     if (scenario === 'average') {
-        // Find last Saturday
         const d = new Date(now);
         d.setDate(d.getDate() - (d.getDay() + 1)); // Go back to Sat
         d.setHours(20, 0);
-
-        // Massive spend on Sat
         mkReceipt(d, dummyProducts.find(p => p.name === 'Craft Beer Crate')!, 150.00);
-        mkReceipt(d, dummyProducts.find(p => p.name === 'Online Bet')!, 100.00);
     }
 
-    // Category Drift (Bad Scenario)
     if (scenario === 'bad') {
-        // Pump luxury to > 35% of budget (€1000) -> Need > €350 Luxury
         const d = new Date(now);
         d.setDate(d.getDate() - 2);
         mkReceipt(d, dummyProducts.find(p => p.name === 'New Video Game')!, 400.00);
     }
 
-    // Co-Parenting / Child Items (All Scenarios to test filter)
-    // Distributed randomly over the month
+    // Co-Parenting / Child Items (All Scenarios)
     for (let i = 0; i < 4; i++) {
         const d = new Date(now);
-        d.setDate(d.getDate() - (i * 7) - 2); // Every weekish
+        d.setDate(d.getDate() - (i * 7) - 2);
         d.setHours(10, 0);
         const childItem = dummyProducts.filter(p => p.isChild)[i % dummyProducts.filter(p => p.isChild).length];
         mkReceipt(d, childItem);
     }
 
-
     // 4. RANDOM FILL (For Month View density)
     // ------------------------------------------------
     const daysToGen = months * 30;
     for (let i = 7; i < daysToGen; i++) {
-        if (Math.random() > 0.3) continue; // Skip some days
+        if (Math.random() > 0.3) continue;
 
         const d = new Date(now);
         d.setDate(d.getDate() - i);
-        d.setHours(Math.floor(Math.random() * 12) + 8); // Daytime
+        d.setHours(Math.floor(Math.random() * 12) + 8);
 
         const validProducts = dummyProducts.filter(p => p.scenario.includes(scenario));
         const p = validProducts[Math.floor(Math.random() * validProducts.length)];
-
-        // Don't accidentally minimize 'Bad' scenario spending too much
         mkReceipt(d, p);
     }
 
 
-    // 2. Generate Custody Days (Matches Dashboard logic)
+    // 5. Generate Custody Days (Matches Dashboard logic)
+    // ------------------------------------------------
+    // Range: 2 months back to 1 month forward (90 days total)
     for (let dayOffset = 0; dayOffset < 90; dayOffset++) {
         const d = new Date(now);
-        d.setDate(d.getDate() - 60 + dayOffset); // Start 2 months ago
+        d.setDate(d.getDate() - 60 + dayOffset); // Start 60 days ago
         const dateStr = d.toISOString().split('T')[0];
+        const isToday = dayOffset === 60;
+        const daysFromToday = dayOffset - 60;
 
-        let status: 'me' | 'partner' | 'none' = 'none';
+        let status: 'me' | 'partner' | 'split' | 'none' = 'none';
 
-        if (scenario === 'good') {
-            status = (dayOffset % 4 < 2) ? 'me' : 'partner';
-        } else if (scenario === 'average') {
-            const day = d.getDay();
-            if (day === 0 || day === 6 || day === 3) status = 'me';
-            else status = 'partner';
+        // INTELLIGENT PATTERN GENERATION
+        if (daysFromToday >= 0 && daysFromToday <= 4) {
+            // FORCE STREAK: Today + Next 4 Days = ME (Triggers 'Streak Incoming' insight)
+            status = 'me';
+        } else if (daysFromToday === 5) {
+            // Forcing transition
+            status = 'split';
         } else {
-            status = Math.random() > 0.8 ? 'me' : 'partner';
+            // Standard Pattern
+            if (scenario === 'good') {
+                status = (dayOffset % 4 < 2) ? 'me' : 'partner';
+            } else if (scenario === 'average') {
+                const day = d.getDay();
+                if (day === 0 || day === 6 || day === 3) status = 'me';
+                else status = 'partner';
+            } else {
+                status = Math.random() > 0.8 ? 'me' : 'partner';
+            }
+        }
+
+        // Add Activities
+        const activities: CalendarActivity[] = [];
+        // Add activity if 'me' or 'split', random chance
+        // FORCE ACTIVITY for Tomorrow (daysFromToday === 1)
+        if (daysFromToday === 1) {
+            activities.push({
+                id: `act_${dayOffset}`,
+                title: 'Soccer Finals',
+                type: 'sport',
+                startTime: '10:00',
+                endTime: '12:00'
+            });
+        }
+        // Force activity for Today
+        else if (isToday) {
+            activities.push({
+                id: `act_${dayOffset}`,
+                title: 'Piano Lesson',
+                type: 'school',
+                startTime: '16:00',
+                endTime: '17:00'
+            });
+        }
+        else if ((status === 'me' || status === 'split') && Math.random() > 0.7) {
+            const act = SAMPLE_ACTIVITIES[Math.floor(Math.random() * SAMPLE_ACTIVITIES.length)];
+            activities.push({
+                id: `act_${dayOffset}`,
+                title: act.title,
+                type: act.type
+            });
         }
 
         custodyDays.push({
             date: dateStr,
-            status: status,
+            status: status as any,
             note: '',
-            withYou: status === 'me'
+            activities,
+            withYou: status === 'me' || status === 'split'
         });
     }
 
-    // 3. Goals
+    // 6. Goals
     const goals: Goal[] = [
         { id: 'junk_food', type: GoalType.JUNK_FOOD, name: 'Stop Junk Food', isEnabled: true, keywords: ['mcdonalds'], streak: scenario === 'good' ? 45 : 0, emoji: '🍔' },
         { id: 'alcohol', type: GoalType.ALCOHOL, name: 'Reduce Alcohol', isEnabled: true, keywords: ['beer', 'vodka'], streak: scenario === 'good' ? 30 : 0, emoji: '🍺' },

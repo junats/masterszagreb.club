@@ -49,6 +49,11 @@ const AppContent: React.FC = () => {
       import('./services/notificationService').then(({ NotificationService }) => {
         NotificationService.requestPermissions();
       });
+
+      // Initialize Subscription Service (RevenueCat)
+      import('./services/subscriptionService').then(({ subscriptionService }) => {
+        subscriptionService.initialize();
+      });
     };
     init();
   }, []);

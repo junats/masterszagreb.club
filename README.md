@@ -58,6 +58,45 @@ npx cap open ios
 npx cap open android
 ```
 
+## 🍎 Building for iOS (Detailed)
+
+1.  **Sync Changes:**
+    Always run this after making changes to your React code:
+    ```bash
+    npm run build:mobile
+    ```
+
+2.  **Open Xcode:**
+    ```bash
+    npx cap open ios
+    ```
+
+3.  **Setup Signing (First Time Only):**
+    *   In Xcode, click on the **App** project in the left navigator.
+    *   Select the **App** target.
+    *   Go to the **Signing & Capabilities** tab.
+    *   Select your **Team**.
+    *   Ensure "Automatically manage signing" is checked.
+
+4.  **Run on Device:**
+    *   Connect your iPhone via USB.
+    *   Select your device from the top toolbar (Product > Destination).
+    *   Press **Cmd + R** or click the **Play** button.
+
+5.  **Build for App Store:**
+    *   Select **Any iOS Device (arm64)** as the destination.
+    *   Go to **Product > Archive**.
+    *   Once archived, the "Organizer" window will open, allowing you to **Distribute App** to TestFlight/App Store.
+
+### ⚠️ iOS Troubleshooting
+*   **CocoaPods Error:** If you see pod-related errors, try:
+    ```bash
+    cd ios/App
+    pod install
+    cd ../..
+    ```
+*   **Assets Not Updating:** Ensure you ran `npm run build` *before* `npx cap sync`.
+
 ---
 
 ## 💡 The Vision

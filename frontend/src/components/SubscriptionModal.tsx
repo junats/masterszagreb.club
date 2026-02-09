@@ -4,6 +4,7 @@ import { X, Check, Shield, Lock, FileDown, Cloud, Zap, BarChart3 } from 'lucide-
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { subscriptionService } from '../services/subscriptionService';
 
 interface SubscriptionModalProps {
     isOpen: boolean;
@@ -19,34 +20,48 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
 
     if (!isOpen) return null;
 
-    const handlePurchase = () => {
+
+    const handlePurchase = async () => {
         setLoading(true);
-        console.log('🛒 Starting Pro purchase...');
-        // Simulate payment processing (mock Apple Store purchase)
-        setTimeout(() => {
-            console.log('💳 Payment processed, activating Pro...');
-            // Call onUpgrade first to update user.tier in UserContext
-            if (onUpgrade) {
-                console.log('📞 Calling onUpgrade callback');
-                onUpgrade();
+        try {
+            const { success, isPro } = await subscriptionService.purchasePro();
+            if (success && isPro) {
+                if (onUpgrade) onUpgrade();
+                setIsProModeWithTimestamp(true);
+                showToast(t('settings.subscription.success'), 'success');
+                onClose();
             }
-            // Then set Pro mode with activation timestamp
-            console.log('✨ Setting Pro mode with timestamp');
-            setIsProModeWithTimestamp(true);
-
-            // Show success toast
-            console.log('🎉 Showing success toast');
-            showToast('🎉 Pro activated! All features unlocked.', 'success');
-
+        } catch (error) {
+            console.error("Purchase error:", error);
+            showToast(t('settings.subscription.failed'), 'error');
+        } finally {
             setLoading(false);
-            console.log('✅ Pro activation complete, closing modal');
-            onClose();
-        }, 1500);
-    }
+        }
+    };
+
+    const handleRestore = async () => {
+        setLoading(true);
+        try {
+            const { success, isPro } = await subscriptionService.restorePurchases();
+            if (success && isPro) {
+                if (onUpgrade) onUpgrade();
+                setIsProModeWithTimestamp(true);
+                showToast(t('settings.subscription.restoreSuccess'), 'success');
+                onClose();
+            } else {
+                showToast(t('settings.subscription.noPurchasesFound'), 'info');
+            }
+        } catch (error) {
+            console.error("Restore error:", error);
+            showToast(t('settings.subscription.restoreFailed'), 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center px-4 pt-16 pb-4 sm:p-0">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={loading ? undefined : onClose}></div>
 
             <div className="bg-slate-900 w-full max-w-sm sm:max-w-md rounded-3xl border border-white/10 overflow-hidden relative z-10 animate-in slide-in-from-bottom-10 fade-in duration-300 shadow-2xl flex flex-col">
                 {/* Compact Header */}
@@ -61,7 +76,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                         </div>
                     </div>
 
-                    <button onClick={onClose} className="text-white/70 hover:text-white bg-black/20 rounded-full p-1.5 hover:bg-black/30 transition-colors">
+                    <button onClick={onClose} disabled={loading} className="text-white/70 hover:text-white bg-black/20 rounded-full p-1.5 hover:bg-black/30 transition-colors disabled:opacity-50">
                         <X size={18} />
                     </button>
                 </div>
@@ -105,7 +120,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                     </button>
 
                     <div className="mt-3 flex justify-center gap-4 text-[9px] text-slate-500">
-                        <button className="hover:text-slate-300">{t('settings.subscription.restore')}</button>
+                        <button onClick={handleRestore} disabled={loading} className="hover:text-slate-300 disabled:opacity-50">{t('settings.subscription.restore')}</button>
                         <span>•</span>
                         <button className="hover:text-slate-300">{t('settings.subscription.terms')}</button>
                         <span>•</span>
@@ -117,5 +132,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
         document.body
     );
 };
+
 
 export default SubscriptionModal;

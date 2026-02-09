@@ -661,6 +661,28 @@ const Settings: React.FC<SettingsProps> = () => {
                                 <ChevronRight className="text-slate-600" size={16} />
                             </button>
 
+                            {/* 18+ Items Toggle */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-surfaceHighlight transition-colors duration-300">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${ageRestricted ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
+                                        <AlertTriangle size={18} />
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.general.ageRestricted')}</span>
+                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.general.ageRestrictedDesc')}</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={ageRestricted}
+                                        onChange={handleToggleRestricted}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:bg-rose-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
+
                             {/* Comprehensive Seed Data (Dev) */}
                             {/* Comprehensive Seed Data (Dev) */}
                             {onSeedData && (

@@ -28,6 +28,7 @@
     "@capacitor/splash-screen": "^8.0.0",
     "@capgo/capacitor-native-biometric": "^7.6.0",
     "@google/genai": "^1.30.0",
+    "@revenuecat/purchases-capacitor": "^12.1.1",
     "@supabase/supabase-js": "2.39.3",
     "framer-motion": "^12.23.25",
     "heic2any": "0.0.4",

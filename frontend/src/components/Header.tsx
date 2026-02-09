@@ -1,7 +1,7 @@
 import React from 'react';
 import { SubscriptionTier } from "@common/types";
 import { User, ViewState } from '@common/types';
-import { ShieldCheck, HeartHandshake, Bell } from 'lucide-react';
+import { Shield, Heart, Bell } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import NotificationCenter from './NotificationCenter';
@@ -85,13 +85,13 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
                         </div>
                         {childSupportMode && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-systemGreen rounded-full border-2 border-white dark:border-black flex items-center justify-center">
-                                <HeartHandshake size={8} className="text-white" />
+                                <Heart size={8} className="text-white" />
                             </div>
                         )}
                     </div>
                     {ageRestricted && (
                         <div className="bg-systemOrange/10 px-2 py-1 rounded-md flex items-center justify-center">
-                            <ShieldCheck className="text-systemOrange w-4 h-4" />
+                            <Shield className="text-systemOrange w-4 h-4" />
                         </div>
                     )}
                 </div>

@@ -1,12 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Camera as CameraIcon, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine, Edit2, Save, X } from 'lucide-react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 // import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { analyzeReceiptImage } from '../services/geminiService';
 import { storageService } from '../services/storageService';
+import { usageService } from '../services/usageService';
 import { Receipt, AnalysisResult, SubscriptionTier } from '@common/types';
-
+import Paywall from './Paywall';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import heic2any from 'heic2any';
@@ -51,6 +52,36 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [scannedReceipts, setScannedReceipts] = useState<Receipt[]>([]);
   const [currentReceiptIndex, setCurrentReceiptIndex] = useState(0);
+
+  // Paywall and usage tracking state
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<'daily_limit' | 'weekly_limit' | undefined>();
+  const [dailyRemaining, setDailyRemaining] = useState<number>(4);
+  const [weeklyRemaining, setWeeklyRemaining] = useState<number>(10);
+
+  // Load usage stats on mount
+  useEffect(() => {
+    const loadUsage = async () => {
+      const check = await usageService.canUploadReceipt(isProSubscription);
+      setDailyRemaining(check.dailyRemaining);
+      setWeeklyRemaining(check.weeklyRemaining);
+    };
+    loadUsage();
+  }, [isProSubscription]);
+
+  // Check if upload is allowed before proceeding
+  const checkUploadAllowed = async (): Promise<boolean> => {
+    const check = await usageService.canUploadReceipt(isProSubscription);
+    setDailyRemaining(check.dailyRemaining);
+    setWeeklyRemaining(check.weeklyRemaining);
+
+    if (!check.allowed) {
+      setPaywallReason(check.reason);
+      setShowPaywall(true);
+      return false;
+    }
+    return true;
+  };
 
   // Helper to compress image (and convert HEIC if needed)
   const optimizeImage = async (inputBlob: Blob): Promise<Blob> => {
@@ -255,6 +286,9 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
 
   const handleCameraCapture = async () => {
+    // Check upload limit first
+    if (!await checkUploadAllowed()) return;
+
     try {
       const image = await Camera.getPhoto({
         quality: 90,
@@ -290,6 +324,9 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
 
   const handleGallerySelect = async () => {
+    // Check upload limit first
+    if (!await checkUploadAllowed()) return;
+
     try {
       const result = await Camera.pickImages({
         quality: 90,
@@ -411,13 +448,23 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   };
   */
 
-  const finishProcessing = (newReceipts: Receipt[], errors: string[]) => {
+  const finishProcessing = async (newReceipts: Receipt[], errors: string[]) => {
     console.log('🔍 finishProcessing:', { receiptsCount: newReceipts.length, errors });
 
     if (newReceipts.length > 0) {
       if (errors.length > 0) {
         console.warn("Some files failed to process:", errors);
       }
+
+      // Record uploads for free tier tracking
+      for (let i = 0; i < newReceipts.length; i++) {
+        await usageService.recordUpload();
+      }
+      // Update remaining counts
+      const check = await usageService.canUploadReceipt(isProSubscription);
+      setDailyRemaining(check.dailyRemaining);
+      setWeeklyRemaining(check.weeklyRemaining);
+
       // Save ALL receipts for review
       console.log('📝 Setting receipts and showing modal');
       setScannedReceipts(newReceipts);
@@ -562,6 +609,13 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.1)]">
               <CheckCircle size={12} />
               <span>{t('scanner.parentalModeActive')}</span>
+            </div>
+          )}
+
+          {/* Usage remaining indicator for free users */}
+          {!isProSubscription && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-slate-400 text-xs font-medium">
+              <span>{dailyRemaining} left today · {weeklyRemaining} this week</span>
             </div>
           )}
         </div>
@@ -959,6 +1013,15 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           </div>
         )
       }
+
+      {/* Paywall Modal */}
+      <Paywall
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        reason={paywallReason}
+        dailyRemaining={dailyRemaining}
+        weeklyRemaining={weeklyRemaining}
+      />
     </div >
   );
 };

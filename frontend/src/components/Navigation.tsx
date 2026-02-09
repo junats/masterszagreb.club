@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Scan, History, Settings as SettingsIcon, LifeBuoy, HeartHandshake } from 'lucide-react';
+import { Home, Scan, History, Settings as SettingsIcon, LifeBuoy, Heart } from 'lucide-react';
 import { ViewState } from '@common/types';
 import { HapticService } from '../services/HapticService';
 import { ImpactStyle } from '@capacitor/haptics';
