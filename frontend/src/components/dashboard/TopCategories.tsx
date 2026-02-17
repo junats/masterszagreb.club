@@ -4,6 +4,7 @@ import { BarChart3 } from 'lucide-react';
 import { SpotlightCard } from '../SpotlightCard';
 import AnimatedSection from '../AnimatedSection';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { EmptyState } from '../EmptyState';
 
 import { ProBlurGuard } from '../ProBlurGuard';
 import { useUser } from '../../contexts/UserContext';
@@ -56,7 +57,11 @@ export const TopCategories: React.FC<TopCategoriesProps> = ({ metrics, getCatego
                                     </div>
                                 ))}
                                 {metrics.categoryData.length === 0 && (
-                                    <p className="text-xxs text-slate-500 italic text-center py-4">{t('provision.noSpending')}</p>
+                                    <EmptyState
+                                        icon={BarChart3}
+                                        title={t('emptyStates.categories.title')}
+                                        description={t('emptyStates.categories.description')}
+                                    />
                                 )}
                             </div>
                         </SpotlightCard>

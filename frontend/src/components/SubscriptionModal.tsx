@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check, Shield, Lock, FileDown, Cloud, Zap, BarChart3 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { subscriptionService } from '../services/subscriptionService';
+import { useUser } from '../contexts/UserContext';
+import { RevenueCatService } from '../services/revenueCatService';
 
 interface SubscriptionModalProps {
     isOpen: boolean;
@@ -13,19 +14,44 @@ interface SubscriptionModalProps {
 }
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, onUpgrade }) => {
+    const { user } = useUser();
     const [loading, setLoading] = useState(false);
+    const [debugTaps, setDebugTaps] = useState(0);
+    const [showDebug, setShowDebug] = useState(false);
+    const [offerings, setOfferings] = useState<any[]>([]);
+    const [detailedDebug, setDetailedDebug] = useState<any>(null);
     const { setIsProModeWithTimestamp } = useData();
     const { showToast } = useToast();
     const { t } = useLanguage();
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        if (isOpen) {
+            RevenueCatService.getOfferings().then(setOfferings);
+        }
+    }, [isOpen]);
 
+    // Fetch detailed debug when debug panel opens
+    useEffect(() => {
+        if (showDebug) {
+            RevenueCatService.getDetailedDebugInfo().then(setDetailedDebug);
+        }
+    }, [showDebug]);
+
+    if (!isOpen) return null;
 
     const handlePurchase = async () => {
         setLoading(true);
         try {
-            const { success, isPro } = await subscriptionService.purchasePro();
-            if (success && isPro) {
+            const availablePackages = await RevenueCatService.getOfferings();
+            const pkg = availablePackages[0];
+
+            if (!pkg) {
+                showToast('No plans found. Tap "System Info" for details.', 'error');
+                return;
+            }
+
+            const result = await RevenueCatService.purchasePackage(pkg);
+            if (result && RevenueCatService.hasActiveEntitlement(result)) {
                 if (onUpgrade) onUpgrade();
                 setIsProModeWithTimestamp(true);
                 showToast(t('settings.subscription.success'), 'success');
@@ -42,8 +68,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
     const handleRestore = async () => {
         setLoading(true);
         try {
-            const { success, isPro } = await subscriptionService.restorePurchases();
-            if (success && isPro) {
+            const result = await RevenueCatService.restorePurchases();
+            if (result && RevenueCatService.hasActiveEntitlement(result)) {
                 if (onUpgrade) onUpgrade();
                 setIsProModeWithTimestamp(true);
                 showToast(t('settings.subscription.restoreSuccess'), 'success');
@@ -67,7 +93,18 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                 {/* Compact Header */}
                 <div className="h-24 bg-gradient-to-br from-indigo-600 to-purple-700 relative p-6 shrink-0 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20 shadow-lg">
+                        <div
+                            className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20 shadow-lg active:scale-95 transition-transform"
+                            onClick={() => {
+                                setDebugTaps(prev => {
+                                    if (prev + 1 >= 5) {
+                                        setShowDebug(true);
+                                        return 0;
+                                    }
+                                    return prev + 1;
+                                });
+                            }}
+                        >
                             <Shield className="text-white w-5 h-5" fill="currentColor" fillOpacity={0.2} />
                         </div>
                         <div>
@@ -81,8 +118,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                     </button>
                 </div>
 
-                <div className="p-5 overflow-y-auto max-h-[60vh]">
-                    <div className="space-y-3 mb-6">
+                {/* Scrollable Features */}
+                <div className="px-5 pt-5 pb-2 overflow-y-auto max-h-[40vh]">
+                    <div className="space-y-3">
                         {[
                             { text: t('settings.subscription.features.goals'), icon: BarChart3, color: "text-purple-400", bg: "bg-purple-500/10" },
                             { text: t('settings.subscription.features.parental'), icon: Shield, color: "text-pink-400", bg: "bg-pink-500/10" },
@@ -100,6 +138,26 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                         ))}
                     </div>
 
+                    {/* Debug Info */}
+                    {showDebug && (
+                        <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-white/10 text-left text-[9px] font-mono whitespace-pre overflow-x-auto text-slate-300">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-indigo-400 font-bold uppercase tracking-widest">Debug Mode</span>
+                                <button onClick={() => setShowDebug(false)} className="text-slate-500">✕</button>
+                            </div>
+                            {JSON.stringify(
+                                detailedDebug || {
+                                    ...RevenueCatService.getDebugStatus(),
+                                    offeringsCount: offerings.length,
+                                    loading: 'fetching diagnosis...',
+                                }
+                                , null, 2)}
+                        </div>
+                    )}
+                </div>
+
+                {/* Pinned Bottom: Pricing + CTA + Links */}
+                <div className="px-5 pb-5 pt-3 shrink-0 border-t border-white/5 bg-slate-900">
                     <div className="bg-slate-800/50 rounded-2xl p-4 border border-white/5 mb-4 flex items-center justify-between">
                         <div>
                             <span className="block text-white font-bold text-sm">{t('settings.subscription.monthlyPlan')}</span>
@@ -122,9 +180,11 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                     <div className="mt-3 flex justify-center gap-4 text-[9px] text-slate-500">
                         <button onClick={handleRestore} disabled={loading} className="hover:text-slate-300 disabled:opacity-50">{t('settings.subscription.restore')}</button>
                         <span>•</span>
-                        <button className="hover:text-slate-300">{t('settings.subscription.terms')}</button>
+                        <button onClick={() => setShowDebug(true)} className="hover:text-slate-300">System Info</button>
                         <span>•</span>
-                        <button className="hover:text-slate-300">{t('settings.subscription.privacy')}</button>
+                        <button onClick={() => window.open('/terms_of_use.md', '_blank')} className="hover:text-slate-300">{t('settings.subscription.terms')}</button>
+                        <span>•</span>
+                        <button onClick={() => window.open('/privacy_policy.md', '_blank')} className="hover:text-slate-300">{t('settings.subscription.privacy')}</button>
                     </div>
                 </div>
             </div>

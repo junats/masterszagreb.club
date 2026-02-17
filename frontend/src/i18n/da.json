@@ -187,10 +187,10 @@
             "unlockDesc": "Lås op for Ambient, Samforældreskab, Kategoribudgetter, Mål & Vaner",
             "lifeSupport": "Livsstøtte",
             "lifeSupportDesc": "Krisehjælp & bistand",
-            "ambient": "Ambient Effekter",
-            "ambientDesc": "Aktiver dynamiske lyseffekter",
+            "ambient": "Kort Ambient",
+            "ambientDesc": "Glødeffekt på kortkanter",
             "appBg": "App Baggrund",
-            "appBgDesc": "Vis effekt på hovedskærme",
+            "appBgDesc": "Ambientlys på appbaggrund",
             "parental": "Forældrekontrol",
             "parentalDesc": "Skjul 18+ fra Oversigt & Eksport",
             "export": "Eksporter Data",
@@ -206,7 +206,9 @@
             "coParentingDesc": "Delt kalender, delte udgifter & forældremyndighed",
             "exportDialogTitle": "Export Data",
             "exportTitle": "TrueTrack Export",
-            "exportMessage": "Here is my spending data from TrueTrack."
+            "exportMessage": "Here is my spending data from TrueTrack.",
+            "helpSupport": "Hjælp & Support",
+            "helpSupportDesc": "Find juridisk hjælp og støttetjenester i nærheden"
         },
         "security": {
             "title": "Sikkerhed",
@@ -917,5 +919,41 @@
         "target": "Target",
         "achievements": "Achievements",
         "unlocked": "Unlocked"
+    },
+    "onboarding": {
+        "skip": "Spring over",
+        "next": "Fortsæt",
+        "welcome": {
+            "title": "Spor hver krone.\nByg din sag.",
+            "description": "Smart kvitteringssporing til forældre. Scan, kategoriser og skab gennemsigtighed — ubesværet."
+        },
+        "features": {
+            "title": "Alt du har brug for",
+            "scan": "Scan kvitteringer",
+            "scanDesc": "AI-drevet kvitteringsscanning på sekunder",
+            "budget": "Smart budget",
+            "budgetDesc": "Udgiftsindsigt i realtid",
+            "coParenting": "Delt forældreskab",
+            "coParentingDesc": "Forældremyndighedssporing og delte udgifter"
+        },
+        "start": {
+            "title": "Klar til start!",
+            "description": "Begynd med at scanne din første kvittering. Det tager kun et par sekunder.",
+            "cta": "Scan første kvittering"
+        }
+    },
+    "emptyStates": {
+        "categories": {
+            "title": "Ingen kategorier endnu",
+            "description": "Scan din første kvittering for at se udgiftskategorier"
+        },
+        "vendors": {
+            "title": "Ingen butikker endnu",
+            "description": "Dine topbutikker vises her efter scanning"
+        },
+        "metrics": {
+            "title": "Ingen data endnu",
+            "description": "Scan en kvittering for økonomisk indsigt i realtid"
+        }
     }
 }

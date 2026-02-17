@@ -187,10 +187,10 @@
             "unlockDesc": "Lås opp Ambient, Samforeldreskap, Kategoribudsjetter, Mål & Vaner",
             "lifeSupport": "Livsstøtte",
             "lifeSupportDesc": "Krisehjelp & bistand",
-            "ambient": "Ambient Effekter",
-            "ambientDesc": "Aktiver dynamiske lyseffekter",
+            "ambient": "Kort Ambient",
+            "ambientDesc": "Glødeffekt på kortkanter",
             "appBg": "App Bakgrunn",
-            "appBgDesc": "Vis effekt på hovedskjermer",
+            "appBgDesc": "Ambientlys på appbakgrunn",
             "parental": "Foreldrekontroll",
             "parentalDesc": "Skjul 18+ fra Oversikt & Eksport",
             "export": "Eksporter Data",
@@ -206,7 +206,9 @@
             "coParentingDesc": "Delt kalender, delte utgifter & omsorg",
             "exportDialogTitle": "Export Data",
             "exportTitle": "TrueTrack Export",
-            "exportMessage": "Here is my spending data from TrueTrack."
+            "exportMessage": "Here is my spending data from TrueTrack.",
+            "helpSupport": "Hjelp & Støtte",
+            "helpSupportDesc": "Finn juridisk hjelp og støttetjenester i nærheten"
         },
         "security": {
             "title": "Sikkerhet",
@@ -917,5 +919,41 @@
         "target": "Target",
         "achievements": "Achievements",
         "unlocked": "Unlocked"
+    },
+    "onboarding": {
+        "skip": "Hopp over",
+        "next": "Fortsett",
+        "welcome": {
+            "title": "Spor hver krone.\nBygg saken din.",
+            "description": "Smart kvitteringssporing for foreldre. Skann, kategoriser og bygg åpenhet — uanstrengt."
+        },
+        "features": {
+            "title": "Alt du trenger",
+            "scan": "Skann kvitteringer",
+            "scanDesc": "AI-drevet kvitteringsskanning på sekunder",
+            "budget": "Smart budsjett",
+            "budgetDesc": "Utgiftsinnsikt i sanntid",
+            "coParenting": "Delt foreldreskap",
+            "coParentingDesc": "Omsorgssporing og delte utgifter"
+        },
+        "start": {
+            "title": "Klar til start!",
+            "description": "Begynn med å skanne din første kvittering. Det tar bare noen sekunder.",
+            "cta": "Skann første kvittering"
+        }
+    },
+    "emptyStates": {
+        "categories": {
+            "title": "Ingen kategorier ennå",
+            "description": "Skann din første kvittering for å se utgiftskategorier"
+        },
+        "vendors": {
+            "title": "Ingen butikker ennå",
+            "description": "Dine toppbutikker vises her etter skanning"
+        },
+        "metrics": {
+            "title": "Ingen data ennå",
+            "description": "Skann en kvittering for økonomisk innsikt i sanntid"
+        }
     }
 }

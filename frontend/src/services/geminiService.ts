@@ -74,8 +74,26 @@ export const analyzeReceiptImage = async (base64Image: string, categories: { nam
 
     return data;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error analyzing receipt:", error);
+
+    // EXTREME DIAGNOSTICS: Try to get the real error body from Supabase
+    if (error.context instanceof Response) {
+      try {
+        const body = await error.context.clone().json();
+        const serverError = body.error || body.message || JSON.stringify(body);
+        error.message = `Analysis failed Status: ${error.context.status}. Server Error: ${serverError}`;
+      } catch (e) {
+        try {
+          const text = await error.context.clone().text();
+          error.message = `Analysis failed Status: ${error.context.status}. Raw Response: ${text.substring(0, 100)}`;
+        } catch (e2) {
+          error.message = `Analysis failed Status: ${error.context.status}. (Could not read body)`;
+        }
+      }
+    } else if (error.context && !error.message.includes('Status:')) {
+      error.message = `Analysis failed Status: ${error.context.status}. ${error.message}`;
+    }
     throw error;
   }
 };

@@ -131,6 +131,7 @@ TrueTrack combines rigorous financial tracking with the "soft power" of wellness
 ### Utilities
 *   **Image Processing:** Custom HTML5 Canvas compression engine to resize 5MB+ camera photos to <100KB for storage efficiency.
 *   **iOS Support:** `heic2any` library to convert Apple HEIC/HEIF photos to JPEG in the browser.
+*   **Subscription Management:** RevenueCat (native In-App Purchases), handling entitlements, offerings, and cross-platform synchronization.
 
 ---
 
@@ -315,40 +316,32 @@ Modern AI tools support **parallel subagents** for complex tasks:
 
 ## 🎉 Recent Enhancements (February 2026)
 
-### Co-Parenting Custody Card Redesign
-The Co-Parenting widget on the dashboard has been completely redesigned with modern calendar visualization and AI-powered insights.
+### Co-Parenting Widget Rework
+The Co-Parenting card on the dashboard has been completely reworked from a tabbed interface to compact, always-visible widgets.
 
-#### 📅 Monthly Calendar Grid (M Tab)
-*   **Visual Calendar:** Full month calendar grid showing all days of the current month
-*   **Color-Coded Days:** 
-    - 🟣 Purple: Your custody days
-    - 🔵 Blue: Partner's custody days  
-    - 🔷 Cyan: Split custody days
-    - ⚫ Gray: Days with no custody data
-*   **Today Highlight:** Current day highlighted with a ring effect for easy identification
-*   **Event Indicators:** Orange dots on days with scheduled activities
-*   **Summary Cards:** Quick stats showing:
-    - Your total days and percentage for the month
-    - Partner's total days and percentage for the month
-*   **AI Suggestion:** Top AI-powered co-parenting tip displayed below the calendar
+#### 📊 Compact Visualizations (Always Visible)
+*   **GitHub Grid** (50% width): Monthly calendar grid with color-coded custody days
+*   **Orbital Ring** (50% width): Circular donut chart showing custody day distribution
+*   **DNA Helix** (100% width): Animated double-helix showing custody patterns across the month
+*   All three are visible simultaneously — no tabs to switch between
 
-#### 💬 Daily Insights View (D Tab) - NEW
-*   **AI-Powered Suggestions:** Personalized daily co-parenting tips based on:
-    - Today's custody status (with you, with partner, or split)
-    - Upcoming events in the next 7 days
-    - General communication and co-parenting best practices
-*   **Smart Recommendations:** Context-aware suggestions like:
-    - "Quality Time Today" when you have custody
-    - "Stay Connected" reminders when partner has custody
-    - Upcoming event notifications
-    - Communication tips for effective co-parenting
-*   **Beautiful Animations:** Staggered card animations for smooth, premium feel
+#### 🧠 AI Smart Insights (10 Types)
+*   **Spending Correlation:** Flags high-spend custody days
+*   **Custody Streaks:** Warns about upcoming multi-day custody stretches
+*   **Transition Prep:** Reminders when custody switches tomorrow
+*   **Weekly Spend Comparison:** Custody-day vs non-custody spending analysis
+*   **Category Analysis:** Top spending category on custody days
+*   **Monthly Balance:** Alerts when custody split deviates from 50/50
+*   **Recurring Stores:** Identifies frequent custody-day shopping habits
+*   **Weekend/Weekday Patterns:** Detects custody schedule patterns
+*   **Quality Time / Stay Connected:** Context-aware daily suggestions
 
-#### 🔧 Technical Improvements
-*   **Removed Legacy UI:** Eliminated old SHARE/INSIGHTS toggle system
-*   **Cleaner State Management:** Simplified component architecture
-*   **Helper Functions:** New utility functions for calendar generation and AI insights
-*   **Responsive Design:** Calendar grid adapts perfectly to mobile and desktop screens
+#### 📦 Layout
+*   **Header:** Title + edit button + today's event
+*   **Weekly Strip:** Mon→Sun status dots with event indicators
+*   **Month Summary:** 3-column grid (You / Partner / Split counts + percentages)
+*   **Visualizations Row:** GitHub + Orbital side by side, DNA full width below
+*   **Smart Insights:** Up to 4 AI-driven contextual suggestions
 
 ---
 

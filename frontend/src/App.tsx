@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
 
   // Check Tour & Request Permissions
   useEffect(() => {
-    const init = async () => {
+    const initAuth = async () => {
       const { value } = await Preferences.get({ key: 'has_seen_tour' });
       if (!value) {
         setTimeout(() => setShowTour(true), 1000);
@@ -49,13 +49,8 @@ const AppContent: React.FC = () => {
       import('./services/notificationService').then(({ NotificationService }) => {
         NotificationService.requestPermissions();
       });
-
-      // Initialize Subscription Service (RevenueCat)
-      import('./services/subscriptionService').then(({ subscriptionService }) => {
-        subscriptionService.initialize();
-      });
     };
-    init();
+    initAuth();
   }, []);
 
   // Listen for Notification Clicks
@@ -155,7 +150,7 @@ const AppContent: React.FC = () => {
       </main>
 
       <Navigation currentView={currentView} setView={handleSetView} isVisible={true} childSupportMode={childSupportMode} helpEnabled={helpEnabled} />
-      {showTour && <IntroTour onComplete={handleTourComplete} />}
+      {showTour && <IntroTour onComplete={handleTourComplete} onNavigateToScan={() => handleSetView('scan')} />}
     </div>
   );
 };

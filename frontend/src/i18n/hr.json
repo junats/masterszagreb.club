@@ -199,10 +199,10 @@
             "goalsDesc": "Prati životne navike",
             "lifeSupport": "Životna podrška",
             "lifeSupportDesc": "Resursi za krizne situacije",
-            "ambient": "Ambijentalni efekti",
-            "ambientDesc": "Omogući dinamičke svjetlosne efekte",
+            "ambient": "Ambijent Kartice",
+            "ambientDesc": "Efekt sjaja na rubovima kartica",
             "appBg": "Pozadina aplikacije",
-            "appBgDesc": "Prikaži efekte na glavnim ekranima",
+            "appBgDesc": "Ambijentalni sjaj na pozadini aplikacije",
             "parental": "Roditeljska kontrola",
             "parentalDesc": "Sakrij 18+ sadržaj",
             "export": "Izvezi podatke",
@@ -213,7 +213,9 @@
             "trackingStreak": "{{streak}} dana u nizu!",
             "exportDialogTitle": "Izvoz podataka",
             "exportTitle": "TrueTrack Izvoz",
-            "exportMessage": "Ovo su moji podaci o potrošnji iz TrueTrack-a."
+            "exportMessage": "Ovo su moji podaci o potrošnji iz TrueTrack-a.",
+            "helpSupport": "Pomoć i Podrška",
+            "helpSupportDesc": "Pronađi pravnu pomoć i usluge podrške u blizini"
         },
         "security": {
             "title": "Sigurnost",
@@ -1045,6 +1047,42 @@
                 "action": "Pronađi",
                 "query": "Centar"
             }
+        }
+    },
+    "onboarding": {
+        "skip": "Preskoči",
+        "next": "Nastavi",
+        "welcome": {
+            "title": "Prati svaki euro.\nGradi svoj slučaj.",
+            "description": "Pametno praćenje računa za roditelje. Skeniraj, kategoriziraj i gradi transparentnost — bez napora."
+        },
+        "features": {
+            "title": "Sve što trebaš",
+            "scan": "Skeniraj račune",
+            "scanDesc": "AI skeniranje računa u sekundama",
+            "budget": "Pametni budžet",
+            "budgetDesc": "Uvidi u potrošnju u stvarnom vremenu",
+            "coParenting": "Surodništvo",
+            "coParentingDesc": "Praćenje skrbništva i zajednički troškovi"
+        },
+        "start": {
+            "title": "Spreman/na!",
+            "description": "Započni skeniranjem prvog računa. Traje samo nekoliko sekundi.",
+            "cta": "Skeniraj prvi račun"
+        }
+    },
+    "emptyStates": {
+        "categories": {
+            "title": "Nema kategorija",
+            "description": "Skeniraj prvi račun da vidiš kategorije potrošnje"
+        },
+        "vendors": {
+            "title": "Nema trgovina",
+            "description": "Tvoje najčešće trgovine pojavit će se nakon skeniranja"
+        },
+        "metrics": {
+            "title": "Nema podataka",
+            "description": "Skeniraj račun za financijske uvide u stvarnom vremenu"
         }
     }
 }

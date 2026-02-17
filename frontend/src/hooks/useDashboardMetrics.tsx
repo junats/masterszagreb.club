@@ -99,7 +99,9 @@ export const useDashboardMetrics = (
             // If YYYY-MM-DD (local date from input), parse manually to avoid UTC offset issues
             if (dateStr.length === 10 && dateStr.includes('-') && !dateStr.includes('T')) {
                 const parts = dateStr.split('-');
-                return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                d.setHours(0, 0, 0, 0); // Standardize to midnight local
+                return d;
             }
             return new Date(dateStr);
         };
@@ -139,7 +141,7 @@ export const useDashboardMetrics = (
 
         // Date Checks helpers
         const isToday = (dStr: string) => {
-            const d = new Date(dStr);
+            const d = parseDate(dStr);
             return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         };
 
@@ -154,7 +156,7 @@ export const useDashboardMetrics = (
         const currentWeekStart = getWeekStart(new Date());
 
         const isThisWeek = (dStr: string) => {
-            const d = new Date(dStr);
+            const d = parseDate(dStr);
             return d >= currentWeekStart;
         }
 
@@ -433,7 +435,7 @@ export const useDashboardMetrics = (
             .sort((a, b) => b.value - a.value);
 
         const globalThisWeekCategoryData = Object.entries(globalThisWeekCategoryTotals)
-            .map(([name, value]) => ({ name, value, percentage: thisWeekTotal > 0 ? (value / thisWeekTotal) * 100 : 0 }))
+            .map(([name, value]) => ({ name, value, percentage: globalTotalToday > 0 ? (value / globalTotalToday) * 100 : 0 })) // Approximation or use explicit global weekly total
             .sort((a, b) => b.value - a.value);
 
         // Sort drilldown items
@@ -919,7 +921,7 @@ export const useDashboardMetrics = (
             weekData,
             yearData,
             monthData,
-            latestReceipt: recentLogs.length > 0 ? recentLogs[0] : null,
+            latestReceipt: recentLogs.length > 0 ? recentLogs[recentLogs.length - 1] : null,
             thisMonthReceipts,
             sourceReceipts,
             lastWeekTotal: (weeklyActivity[5]?.total || 0) + (weeklyActivity[4]?.total || 0), // Approx
@@ -948,5 +950,5 @@ export const useDashboardMetrics = (
                 (filteredReceipts.reduce((acc, r) => acc + r.items.filter(i => i.insights).length, 0) || 1)
         };
 
-    }, [receipts, monthlyBudget, daysInMonth, childSupportMode, dateFilter, ageRestricted]);
+    }, [receipts, monthlyBudget, daysInMonth, childSupportMode, dateFilter, ageRestricted, t]);
 };

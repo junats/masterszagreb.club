@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		4D4CA8F52F3E973C00CC92F1 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D4CA8F42F3E973C00CC92F1 /* StoreKit.framework */; };
 		4DB8E4532EDD9388003AC006 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DB8E4522EDD9387003AC006 /* WidgetKit.framework */; };
 		4DB8E4552EDD9388003AC006 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DB8E4542EDD9388003AC006 /* SwiftUI.framework */; };
 		4DB8E4642EDD9389003AC006 /* TrueTrackWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4DB8E4512EDD9387003AC006 /* TrueTrackWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -49,6 +50,7 @@
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		4D4CA8F42F3E973C00CC92F1 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		4DB8E44C2EDD931C003AC006 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		4DB8E4512EDD9387003AC006 /* TrueTrackWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TrueTrackWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4DB8E4522EDD9387003AC006 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -84,6 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D4CA8F52F3E973C00CC92F1 /* StoreKit.framework in Frameworks */,
 				A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */,
 				4DB8E4D22EDDE2D3003AC006 /* WidgetKit.framework in Frameworks */,
 			);
@@ -95,6 +98,7 @@
 		27E2DDA53C4D2A4D1A88CE4A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				4D4CA8F42F3E973C00CC92F1 /* StoreKit.framework */,
 				AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */,
 				4DB8E4522EDD9387003AC006 /* WidgetKit.framework */,
 				4DB8E4542EDD9388003AC006 /* SwiftUI.framework */,

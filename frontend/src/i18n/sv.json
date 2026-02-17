@@ -187,10 +187,10 @@
             "unlockDesc": "Lås upp Ambient, Samföräldraskap, Kategoribudgetar, Mål & Vanor",
             "lifeSupport": "Livsstöd",
             "lifeSupportDesc": "Krisresurser & hjälp",
-            "ambient": "Ambient Effekter",
-            "ambientDesc": "Aktivera dynamiska ljuseffekter",
+            "ambient": "Kort Ambient",
+            "ambientDesc": "Glödeffekt på kortkanterna",
             "appBg": "App Bakgrund",
-            "appBgDesc": "Visa effekt på huvudskärmar",
+            "appBgDesc": "Ambientljus på appbakgrund",
             "parental": "Föräldrakontroll",
             "parentalDesc": "Dölj 18+ från Översikt & Export",
             "export": "Exportera Data",
@@ -206,7 +206,9 @@
             "coParentingDesc": "Delad kalender, delade utgifter & vårdnad",
             "exportDialogTitle": "Export Data",
             "exportTitle": "TrueTrack Export",
-            "exportMessage": "Here is my spending data from TrueTrack."
+            "exportMessage": "Here is my spending data from TrueTrack.",
+            "helpSupport": "Hjälp & Support",
+            "helpSupportDesc": "Hitta juridisk hjälp och stödtjänster i närheten"
         },
         "security": {
             "title": "Säkerhet",
@@ -917,5 +919,41 @@
         "target": "Target",
         "achievements": "Achievements",
         "unlocked": "Unlocked"
+    },
+    "onboarding": {
+        "skip": "Hoppa över",
+        "next": "Fortsätt",
+        "welcome": {
+            "title": "Spåra varje krona.\nBygg ditt fall.",
+            "description": "Smart kvittospårning för föräldrar. Skanna, kategorisera och skapa transparens — enkelt."
+        },
+        "features": {
+            "title": "Allt du behöver",
+            "scan": "Skanna kvitton",
+            "scanDesc": "AI-driven kvittoskanning på sekunder",
+            "budget": "Smart budget",
+            "budgetDesc": "Utgiftsinsikter i realtid",
+            "coParenting": "Delat föräldraskap",
+            "coParentingDesc": "Vårdnadsspårning och delade utgifter"
+        },
+        "start": {
+            "title": "Redo att börja!",
+            "description": "Börja med att skanna ditt första kvitto. Det tar bara några sekunder.",
+            "cta": "Skanna första kvittot"
+        }
+    },
+    "emptyStates": {
+        "categories": {
+            "title": "Inga kategorier ännu",
+            "description": "Skanna ditt första kvitto för att se utgiftskategorier"
+        },
+        "vendors": {
+            "title": "Inga butiker ännu",
+            "description": "Dina toppbutiker visas här efter skanning"
+        },
+        "metrics": {
+            "title": "Inga data ännu",
+            "description": "Skanna ett kvitto för ekonomiska insikter i realtid"
+        }
     }
 }

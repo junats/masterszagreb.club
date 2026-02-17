@@ -78,6 +78,7 @@ DROP POLICY IF EXISTS "Users can update own custody days" ON custody_days;
 DROP POLICY IF EXISTS "Users can delete own custody days" ON custody_days;
 
 -- New policies: Allow access only if user is in the pair
+DROP POLICY IF EXISTS "Users can view paired custody days" ON custody_days;
 CREATE POLICY "Users can view paired custody days" ON custody_days
   FOR SELECT USING (
     shared_calendar_id IN (
@@ -86,6 +87,7 @@ CREATE POLICY "Users can view paired custody days" ON custody_days
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert paired custody days" ON custody_days;
 CREATE POLICY "Users can insert paired custody days" ON custody_days
   FOR INSERT WITH CHECK (
     shared_calendar_id IN (
@@ -94,6 +96,7 @@ CREATE POLICY "Users can insert paired custody days" ON custody_days
     )
   );
 
+DROP POLICY IF EXISTS "Users can update paired custody days" ON custody_days;
 CREATE POLICY "Users can update paired custody days" ON custody_days
   FOR UPDATE USING (
     shared_calendar_id IN (
@@ -102,6 +105,7 @@ CREATE POLICY "Users can update paired custody days" ON custody_days
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete paired custody days" ON custody_days;
 CREATE POLICY "Users can delete paired custody days" ON custody_days
   FOR DELETE USING (
     shared_calendar_id IN (

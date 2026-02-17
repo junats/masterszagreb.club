@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2022",
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
@@ -11,7 +12,8 @@
     ],
     "skipLibCheck": true,
     "types": [
-      "node"
+      "node",
+      "vite/client"
     ],
     "moduleResolution": "bundler",
     "isolatedModules": true,
@@ -21,6 +23,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@common/*": [
+        "common/*"
       ]
     },
     "allowImportingTsExtensions": true,

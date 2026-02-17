@@ -31,6 +31,8 @@ import { GoalBreakdown } from './dashboard/GoalBreakdown';
 import { DashboardMetrics_Grid } from './dashboard/DashboardMetrics_Grid';
 import { TopCategories } from './dashboard/TopCategories';
 import { TopVendors } from './dashboard/TopVendors';
+import { PullToRefresh } from './PullToRefresh';
+import { DashboardSkeleton } from './DashboardSkeleton';
 
 interface DashboardProps {
     onViewReceipt: (receipt: Receipt) => void;
@@ -47,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     onCustodyClick,
     onHabitsClick
 }) => {
-    const { receipts, monthlyBudget, goals, custodyDays, userSettings, addGoal, updateGoal, achievements, isProMode, setIsProMode, categories, childSupportMode, ageRestricted, goalsEnabled, financialSnapshotEnabled } = useData();
+    const { receipts, monthlyBudget, goals, custodyDays, userSettings, addGoal, updateGoal, achievements, isProMode, setIsProMode, categories, childSupportMode, ageRestricted, goalsEnabled, financialSnapshotEnabled, isRefreshing, refreshData } = useData();
     const { user } = useUser();
     const { t } = useLanguage();
 
@@ -405,160 +407,163 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
 
     return (
-        <motion.div
-            className="w-full h-full pt-16 px-4 pb-4 scroll-smooth no-scrollbar"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-        >
+        <PullToRefresh onRefresh={refreshData}>
+            {isRefreshing ? (
+                <DashboardSkeleton />
+            ) : (
+                <motion.div
+                    className="w-full h-full pt-2 px-4 pb-4 scroll-smooth no-scrollbar"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
 
-            {/* Main Content Wrapper */}
-            <div className="pt-0 pb-32 space-y-4">
+                    {/* Main Content Wrapper */}
+                    <div className="pt-0 pb-32 space-y-4">
 
-                <DashboardHeader
-                    metrics={metrics}
-                    budgetView={budgetView}
-                    setBudgetView={setBudgetView}
-                    monthlyBudget={monthlyBudget}
-                    suggestions={suggestions}
-                    currentTipIndex={currentTipIndex}
-                    pieView={pieView}
-                    setPieView={setPieView}
-                    getCategoryColor={getCategoryColor}
-                    setSelectedCategory={setSelectedCategory}
-                    selectedCategory={selectedCategory}
-                    childSupportMode={childSupportMode}
-                    ambientMode={ambientMode}
-                    ambientStyle={ambientStyle}
-                    budgetCardRef={budgetCardRef}
-                />
-
-                {/* BENTO GRID LAYOUT */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-
-                    {/* Co-Parenting Section (if enabled) */}
-                    <CoParentingWidget
-                        childSupportMode={childSupportMode}
-                        custodyDays={custodyDays}
-                        onCustodyClick={onCustodyClick}
-                        metrics={metrics}
-                        setShowCoParentingModal={setShowCoParentingModal}
-                    />
-
-                    {/* Dashboard Charts */}
-                    <DashboardCharts
-                        isProMode={isProMode}
-                        setShowSubscriptionModal={setShowSubscriptionModal}
-                        chartView={chartView}
-                        setChartView={setChartView}
-                        metrics={metrics}
-                        categories={categories}
-                        isCoParentingMode={isCoParentingMode}
-                    />
-
-
-
-                    {/* Financial Snapshot */}
-                    {financialSnapshotEnabled && (
-                        <DashboardMetrics_Grid
-                            aiMetrics={aiMetrics}
-                            setSelectedSnapshotMetric={setSelectedSnapshotMetric}
-                            isProMode={isProMode}
-                            setShowSubscriptionModal={setShowSubscriptionModal}
-                        />
-                    )}
-
-                    {/* Top Categories */}
-                    <TopCategories
-                        metrics={metrics}
-                        getCategoryColor={getCategoryColor}
-                        isProMode={isProMode}
-                        setShowSubscriptionModal={setShowSubscriptionModal}
-                    />
-
-                    {/* Top Vendors */}
-                    <TopVendors
-                        metrics={metrics}
-                        isProMode={isProMode}
-                        setShowSubscriptionModal={setShowSubscriptionModal}
-                    />
-
-                    {/* Goal Breakdown */}
-                    {goalsEnabled && (
-                        <GoalBreakdown
-                            goals={goals}
-                            receipts={receipts}
+                        <DashboardHeader
                             metrics={metrics}
-                            isProMode={isProMode}
-                            setShowSubscriptionModal={setShowSubscriptionModal}
-                            onHabitsClick={onHabitsClick}
-                            goalView={goalView}
-                            setGoalView={setGoalView}
-                            setSelectedGoal={setSelectedGoal}
-                            setSelectedAchievement={setSelectedAchievement}
-                            isCoParentingMode={isCoParentingMode}
-                            custodyDays={custodyDays}
+                            budgetView={budgetView}
+                            setBudgetView={setBudgetView}
                             monthlyBudget={monthlyBudget}
+                            suggestions={suggestions}
+                            currentTipIndex={currentTipIndex}
+                            pieView={pieView}
+                            setPieView={setPieView}
+                            getCategoryColor={getCategoryColor}
+                            setSelectedCategory={setSelectedCategory}
+                            selectedCategory={selectedCategory}
+                            childSupportMode={childSupportMode}
+                            ambientMode={ambientMode}
+                            ambientStyle={ambientStyle}
+                            budgetCardRef={budgetCardRef}
                         />
-                    )}
 
-                </div>
-            </div >
+                        {/* BENTO GRID LAYOUT */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
 
-            {/* Goal Details Modal */}
-            < GoalDetailsModal
-                isOpen={!!selectedGoal}
-                onClose={() => setSelectedGoal(null)}
-                goal={selectedGoal}
-                receipts={receipts}
-            />
+                            {/* Co-Parenting Section (if enabled) */}
+                            <CoParentingWidget
+                                custodyDays={custodyDays}
+                                onCustodyClick={onCustodyClick}
+                            />
 
-            {/* Achievement Details Modal */}
-            <AnimatePresence>
-                {
-                    selectedAchievement && (
-                        <AchievementDetailsModal
-                            isOpen={!!selectedAchievement}
-                            achievement={selectedAchievement}
-                            onClose={() => setSelectedAchievement(null)}
-                        />
-                    )
-                }
-            </AnimatePresence >
+                            {/* Dashboard Charts */}
+                            <DashboardCharts
+                                isProMode={isProMode}
+                                setShowSubscriptionModal={setShowSubscriptionModal}
+                                chartView={chartView}
+                                setChartView={setChartView}
+                                metrics={metrics}
+                                categories={categories}
+                                isCoParentingMode={isCoParentingMode}
+                            />
 
-            <AnimatePresence>
-                {selectedSnapshotMetric && (
-                    <SnapshotDetailsModal
-                        metric={selectedSnapshotMetric}
-                        onClose={() => setSelectedSnapshotMetric(null)}
+
+
+                            {/* Financial Snapshot */}
+                            {financialSnapshotEnabled && (
+                                <DashboardMetrics_Grid
+                                    aiMetrics={aiMetrics}
+                                    setSelectedSnapshotMetric={setSelectedSnapshotMetric}
+                                    isProMode={isProMode}
+                                    setShowSubscriptionModal={setShowSubscriptionModal}
+                                />
+                            )}
+
+                            {/* Top Categories */}
+                            <TopCategories
+                                metrics={metrics}
+                                getCategoryColor={getCategoryColor}
+                                isProMode={isProMode}
+                                setShowSubscriptionModal={setShowSubscriptionModal}
+                            />
+
+                            {/* Top Vendors */}
+                            <TopVendors
+                                metrics={metrics}
+                                isProMode={isProMode}
+                                setShowSubscriptionModal={setShowSubscriptionModal}
+                            />
+
+                            {/* Goal Breakdown */}
+                            {goalsEnabled && (
+                                <GoalBreakdown
+                                    goals={goals}
+                                    receipts={receipts}
+                                    metrics={metrics}
+                                    isProMode={isProMode}
+                                    setShowSubscriptionModal={setShowSubscriptionModal}
+                                    onHabitsClick={onHabitsClick}
+                                    goalView={goalView}
+                                    setGoalView={setGoalView}
+                                    setSelectedGoal={setSelectedGoal}
+                                    setSelectedAchievement={setSelectedAchievement}
+                                    isCoParentingMode={isCoParentingMode}
+                                    custodyDays={custodyDays}
+                                    monthlyBudget={monthlyBudget}
+                                />
+                            )}
+
+                        </div>
+                    </div >
+
+                    {/* Goal Details Modal */}
+                    < GoalDetailsModal
+                        isOpen={!!selectedGoal}
+                        onClose={() => setSelectedGoal(null)}
+                        goal={selectedGoal}
+                        receipts={receipts}
                     />
-                )}
-            </AnimatePresence>
 
-            {
-                showCoParentingModal && (
-                    <CoParentingDetailsModal
-                        isOpen={showCoParentingModal}
-                        onClose={() => setShowCoParentingModal(false)}
-                        metrics={{
-                            equity: metrics.equity,
-                            stability: metrics.stability,
-                            harmony: metrics.harmony
+                    {/* Achievement Details Modal */}
+                    <AnimatePresence>
+                        {
+                            selectedAchievement && (
+                                <AchievementDetailsModal
+                                    isOpen={!!selectedAchievement}
+                                    achievement={selectedAchievement}
+                                    onClose={() => setSelectedAchievement(null)}
+                                />
+                            )
+                        }
+                    </AnimatePresence >
+
+                    <AnimatePresence>
+                        {selectedSnapshotMetric && (
+                            <SnapshotDetailsModal
+                                metric={selectedSnapshotMetric}
+                                onClose={() => setSelectedSnapshotMetric(null)}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    {
+                        showCoParentingModal && (
+                            <CoParentingDetailsModal
+                                isOpen={showCoParentingModal}
+                                onClose={() => setShowCoParentingModal(false)}
+                                metrics={{
+                                    equity: metrics.equity,
+                                    stability: metrics.stability,
+                                    harmony: metrics.harmony
+                                }}
+                                custodyDays={custodyDays}
+                            />
+                        )
+                    }
+
+                    {/* Subscription Modal */}
+                    <SubscriptionModal
+                        isOpen={showSubscriptionModal}
+                        onClose={() => setShowSubscriptionModal(false)}
+                        onUpgrade={() => {
+                            setShowSubscriptionModal(false);
                         }}
-                        custodyDays={custodyDays}
                     />
-                )
-            }
-
-            {/* Subscription Modal */}
-            <SubscriptionModal
-                isOpen={showSubscriptionModal}
-                onClose={() => setShowSubscriptionModal(false)}
-                onUpgrade={() => {
-                    setShowSubscriptionModal(false);
-                }}
-            />
-        </motion.div >
+                </motion.div>
+            )}
+        </PullToRefresh>
     );
 };
 

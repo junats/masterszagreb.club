@@ -502,7 +502,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <span className={`font-mono text-sm font-medium tabular-nums ${item.isRestricted ? 'text-slate-500 line-through decoration-red-500' : 'text-slate-300'}`}>
-                                                        €{item.price.toFixed(2)}
+                                                        €{(item.price || 0).toFixed(2)}
                                                     </span>
                                                     {onUpdate && childSupportMode && (
                                                         <button
@@ -767,13 +767,13 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                             <div key={receipt.id} className="relative mb-3">
                                 {/* Delete Background with gradient */}
                                 <motion.div
-                                    className="absolute inset-0 bg-gradient-to-l from-red-500/30 via-red-500/20 to-transparent rounded-2xl flex items-center justify-end px-6 z-0"
+                                    className="absolute inset-0 bg-red-600 rounded-2xl flex items-center justify-end px-6 z-0"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <Trash2 className="text-red-400" size={20} />
-                                        <span className="text-red-400 font-bold text-sm">Delete</span>
+                                        <Trash2 className="text-white" size={20} />
+                                        <span className="text-white font-bold text-sm">Delete</span>
                                     </div>
                                 </motion.div>
 
@@ -828,7 +828,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                     }}
                                     className={`relative z-10 w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group cursor-pointer ${isBill
                                         ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-500/20 hover:border-indigo-500/40'
-                                        : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/10'
+                                        : 'bg-slate-900 border-white/5 hover:bg-slate-800 hover:border-white/10'
                                         } shadow-lg hover:shadow-xl`}
                                 >
                                     <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 group-hover:shadow-lg transition-all duration-300">

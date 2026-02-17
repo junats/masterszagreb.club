@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, SubscriptionTier } from '@common/types'; // Adjust path if needed
 import { authService, isMockMode } from '../services/authService';
+import { RevenueCatService } from '../services/revenueCatService';
 import { supabase } from '../lib/supabaseClient';
 import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -103,6 +104,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.log('UserContext: initAuth currentUser:', currentUser);
                     if (currentUser) {
                         setUser(currentUser);
+                        // Initialize RevenueCat
+                        RevenueCatService.initialize(currentUser.id);
                     } else {
                         // Session exists but no profile? Weird, but safe to logout.
                         console.warn("UserContext: Session valid but no profile found.");
@@ -135,7 +138,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                     // Refresh user profile
                     const u = await authService.getUser();
-                    if (u) setUser(u);
+                    if (u) {
+                        setUser(u);
+                        // Initialize RevenueCat
+                        RevenueCatService.initialize(u.id);
+                    }
                 } else if (event === 'SIGNED_OUT') {
                     setUser(null);
                 }
@@ -179,7 +186,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                             // Get full user and set it before reload for smoother transition
                             const u = await authService.getUser();
-                            if (u) setUser(u);
+                            if (u) {
+                                setUser(u);
+                                // Initialize RevenueCat
+                                RevenueCatService.initialize(u.id);
+                            }
 
                             window.location.reload();
                             return;
@@ -247,6 +258,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const signIn = (user: User) => {
         console.log("UserContext: signIn called for", user.email);
         setUser(user);
+        // Initialize RevenueCat
+        RevenueCatService.initialize(user.id);
     };
 
     const upgradeToPro = () => {

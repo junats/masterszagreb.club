@@ -5,6 +5,7 @@ import { HapticsService } from '../../services/haptics';
 import { SpotlightCard } from '../SpotlightCard';
 import { CountUp } from '../CountUp';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { EmptyState } from '../EmptyState';
 
 interface DashboardMetricsGridProps {
     aiMetrics: any[];
@@ -24,7 +25,27 @@ export const DashboardMetrics_Grid: React.FC<DashboardMetricsGridProps> = ({
 }) => {
     const { t } = useLanguage();
 
-    if (!aiMetrics || aiMetrics.length === 0) return null;
+    if (!aiMetrics || aiMetrics.length === 0) return (
+        <div className="col-span-2">
+            <SpotlightCard className="relative rounded-3xl overflow-hidden shadow-lg border border-slate-800 bg-card">
+                <div className="relative z-10 p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                            <Wallet className="text-indigo-400 w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-white text-xxs font-bold">{t('dashboard.metrics.financialSnapshot')}</span>
+                    </div>
+                    <EmptyState
+                        icon={Wallet}
+                        title={t('emptyStates.metrics.title')}
+                        description={t('emptyStates.metrics.description')}
+                        iconColor="text-indigo-400"
+                        iconBg="bg-indigo-500/10"
+                    />
+                </div>
+            </SpotlightCard>
+        </div>
+    );
 
     const heroMetric = aiMetrics.find(m => ['Alert', 'Status', 'Forecast'].includes(m.label)) || aiMetrics[0];
     const gridMetrics = aiMetrics.filter(m => m !== heroMetric);

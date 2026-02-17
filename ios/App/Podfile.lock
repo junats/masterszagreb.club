@@ -77,6 +77,12 @@ PODS:
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
   - PromisesObjC (2.4.0)
+  - PurchasesHybridCommon (17.21.2):
+    - RevenueCat (= 5.49.2)
+  - RevenueCat (5.49.2)
+  - RevenuecatPurchasesCapacitor (11.2.17):
+    - Capacitor
+    - PurchasesHybridCommon (= 17.21.2)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
@@ -93,6 +99,7 @@ DEPENDENCIES:
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
   - "CapgoCapacitorNativeBiometric (from `../../node_modules/@capgo/capacitor-native-biometric`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
 
 SPEC REPOS:
   trunk:
@@ -109,6 +116,8 @@ SPEC REPOS:
     - MLKitVision
     - nanopb
     - PromisesObjC
+    - PurchasesHybridCommon
+    - RevenueCat
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -139,6 +148,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/splash-screen"
   CapgoCapacitorNativeBiometric:
     :path: "../../node_modules/@capgo/capacitor-native-biometric"
+  RevenuecatPurchasesCapacitor:
+    :path: "../../node_modules/@revenuecat/purchases-capacitor"
 
 SPEC CHECKSUMS:
   Capacitor: 12914e6f1b7835e161a74ebd19cb361efa37a7dd
@@ -168,7 +179,10 @@ SPEC CHECKSUMS:
   MLKitVision: 45e79d68845a2de77e2dd4d7f07947f0ed157b0e
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  PurchasesHybridCommon: 71c94158ff8985657d37d5f3be05602881227619
+  RevenueCat: d185cbff8be9425b5835042afd6889389bb756c8
+  RevenuecatPurchasesCapacitor: d6cca993813f124f48c777d9f2b199c98b69f8f9
 
-PODFILE CHECKSUM: 77140ecabf99f2bbb1bd01ef30bf60730391233d
+PODFILE CHECKSUM: 4465dd1f2374bde7c943369fec454726d1467d3c
 
 COCOAPODS: 1.16.2

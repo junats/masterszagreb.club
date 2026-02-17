@@ -135,6 +135,8 @@ interface DataContextType {
 
     // Meta
     isDataLoaded: boolean;
+    isRefreshing: boolean;
+    refreshData: () => Promise<void>;
     dataVersion: number;
     generateDummyData: (scenario?: 'good' | 'average' | 'bad') => Promise<number>;
     spendRatio: number;
@@ -142,6 +144,7 @@ interface DataContextType {
 
 import { useUser } from './UserContext';
 import { useToast } from './ToastContext';
+import { usePremiumStatus } from '../hooks/usePremiumStatus';
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -172,93 +175,101 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
-    // --- Load Data ---
+    // --- Subscription Tracking ---
+    const { isPremium } = usePremiumStatus(contextUser?.id);
+
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { value: savedReceipts } = await Preferences.get({ key: RECEIPT_STORAGE_KEY });
-                if (savedReceipts) {
-                    const parsed = JSON.parse(savedReceipts);
-                    if (Array.isArray(parsed)) {
-                        const uniqueMap = new Map<string, Receipt>();
-                        parsed.forEach(r => {
-                            const sig = getReceiptSignature(r);
-                            if (!uniqueMap.has(sig)) {
-                                uniqueMap.set(sig, r);
-                            }
-                        });
-                        setReceipts(Array.from(uniqueMap.values()));
-                    }
-                }
+        if (isPremium !== undefined && isDataLoaded) {
+            console.log('💎 Premium status updated from RevenueCat:', isPremium);
+            setIsProMode(isPremium);
+        }
+    }, [isPremium, isDataLoaded]);
 
-                const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
-                if (savedSettings) {
-                    const parsed = JSON.parse(savedSettings);
-
-                    if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
-                    if (parsed.categoryBudgets !== undefined) setCategoryBudgets(parsed.categoryBudgets);
-                    if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
-                    if (parsed.childSupportMode !== undefined) setChildSupportMode(parsed.childSupportMode);
-                    if (parsed.categories !== undefined) setCategories(parsed.categories);
-                    if (parsed.recurringExpenses !== undefined) setRecurringExpenses(parsed.recurringExpenses);
-                    if (parsed.goals !== undefined) setGoals(parsed.goals);
-                    if (parsed.ambientMode !== undefined) setAmbientMode(parsed.ambientMode);
-                    if (parsed.showGlobalAmbient !== undefined) setShowGlobalAmbient(parsed.showGlobalAmbient);
-                    if (parsed.helpEnabled !== undefined) setHelpEnabled(parsed.helpEnabled);
-                    if (parsed.isProMode !== undefined) {
-                        console.log('📦 Loading Pro mode from storage:', parsed.isProMode);
-                        setIsProMode(parsed.isProMode);
-                        // Backwards compatibility: if goalsEnabled wasn't saved but isProMode was, assume goals align with pro mode
-                        if (parsed.goalsEnabled === undefined) {
-                            setGoalsEnabled(parsed.isProMode);
+    // --- Load Data ---
+    const loadData = async () => {
+        try {
+            const { value: savedReceipts } = await Preferences.get({ key: RECEIPT_STORAGE_KEY });
+            if (savedReceipts) {
+                const parsed = JSON.parse(savedReceipts);
+                if (Array.isArray(parsed)) {
+                    const uniqueMap = new Map<string, Receipt>();
+                    parsed.forEach(r => {
+                        const sig = getReceiptSignature(r);
+                        if (!uniqueMap.has(sig)) {
+                            uniqueMap.set(sig, r);
                         }
-                    } else {
-                        console.warn('⚠️ No Pro mode found in storage, defaulting to false');
-                    }
-                    if (parsed.goalsEnabled !== undefined) {
-                        setGoalsEnabled(parsed.goalsEnabled);
-                    }
-                    if (parsed.proActivatedAt !== undefined) {
-                        setProActivatedAt(parsed.proActivatedAt);
-                    }
+                    });
+                    setReceipts(Array.from(uniqueMap.values()));
                 }
-
-                const { value: savedCustody } = await Preferences.get({ key: 'truetrack_custody' });
-                if (savedCustody) {
-                    setCustodyDays(JSON.parse(savedCustody));
-                }
-
-                // Load shown notification IDs
-                const { value: savedNotificationIds } = await Preferences.get({ key: 'truetrack_shown_notifications' });
-                if (savedNotificationIds) {
-                    try {
-                        const parsed = JSON.parse(savedNotificationIds);
-                        if (Array.isArray(parsed)) {
-                            setShownNotificationIds(new Set(parsed));
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse notification IDs:', e);
-                    }
-                }
-
-                // Load unread notification count
-                const { value: savedUnreadCount } = await Preferences.get({ key: 'truetrack_unread_notifications' });
-                if (savedUnreadCount) {
-                    try {
-                        const count = parseInt(savedUnreadCount, 10);
-                        if (!isNaN(count)) {
-                            setUnreadNotificationCount(count);
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse unread count:', e);
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to load data", e);
-            } finally {
-                setIsDataLoaded(true);
             }
-        };
+
+            const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
+            if (savedSettings) {
+                const parsed = JSON.parse(savedSettings);
+
+                if (parsed.budget !== undefined) setMonthlyBudget(parsed.budget);
+                if (parsed.categoryBudgets !== undefined) setCategoryBudgets(parsed.categoryBudgets);
+                if (parsed.ageRestricted !== undefined) setAgeRestricted(parsed.ageRestricted);
+                if (parsed.childSupportMode !== undefined) setChildSupportMode(parsed.childSupportMode);
+                if (parsed.categories !== undefined) setCategories(parsed.categories);
+                if (parsed.recurringExpenses !== undefined) setRecurringExpenses(parsed.recurringExpenses);
+                if (parsed.goals !== undefined) setGoals(parsed.goals);
+                if (parsed.ambientMode !== undefined) setAmbientMode(parsed.ambientMode);
+                if (parsed.showGlobalAmbient !== undefined) setShowGlobalAmbient(parsed.showGlobalAmbient);
+                if (parsed.helpEnabled !== undefined) setHelpEnabled(parsed.helpEnabled);
+                if (parsed.isProMode !== undefined) {
+                    console.log('📦 Loading Pro mode from storage:', parsed.isProMode);
+                    setIsProMode(parsed.isProMode);
+                    if (parsed.goalsEnabled === undefined) {
+                        setGoalsEnabled(parsed.isProMode);
+                    }
+                } else {
+                    console.warn('⚠️ No Pro mode found in storage, defaulting to false');
+                }
+                if (parsed.goalsEnabled !== undefined) {
+                    setGoalsEnabled(parsed.goalsEnabled);
+                }
+                if (parsed.proActivatedAt !== undefined) {
+                    setProActivatedAt(parsed.proActivatedAt);
+                }
+            }
+
+            const { value: savedCustody } = await Preferences.get({ key: 'truetrack_custody' });
+            if (savedCustody) {
+                setCustodyDays(JSON.parse(savedCustody));
+            }
+
+            const { value: savedNotificationIds } = await Preferences.get({ key: 'truetrack_shown_notifications' });
+            if (savedNotificationIds) {
+                try {
+                    const parsed = JSON.parse(savedNotificationIds);
+                    if (Array.isArray(parsed)) {
+                        setShownNotificationIds(new Set(parsed));
+                    }
+                } catch (e) {
+                    console.error('Failed to parse notification IDs:', e);
+                }
+            }
+
+            const { value: savedUnreadCount } = await Preferences.get({ key: 'truetrack_unread_notifications' });
+            if (savedUnreadCount) {
+                try {
+                    const count = parseInt(savedUnreadCount, 10);
+                    if (!isNaN(count)) {
+                        setUnreadNotificationCount(count);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse unread count:', e);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load data", e);
+        } finally {
+            setIsDataLoaded(true);
+        }
+    };
+
+    useEffect(() => {
         loadData();
     }, []);
 
@@ -443,7 +454,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setReceipts(prev => [...prev, ...newReceipts]);
                 setRecurringExpenses(updatedExpenses);
                 if (newReceipts.length > 0) {
-                    alert(`Added ${newReceipts.length} recurring expense(s): \n${newReceipts.map(r => r.storeName).join(', ')} `);
+                    console.log(`📡 [DataContext] Auto-added ${newReceipts.length} recurring expense(s)`);
                 }
             }
         };
@@ -453,6 +464,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // --- Actions ---
     const addReceipts = (newReceipts: Receipt[]) => {
+        console.log(`[DataContext] Attempting to add ${newReceipts.length} receipts`, newReceipts);
         let duplicateCount = 0;
         let confirmedNewReceipts: Receipt[] = [];
 
@@ -471,53 +483,52 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         for (const receipt of newReceipts) {
-            const sig = getReceiptSignature(receipt);
-            const imgHash = receipt.imageHash;
-            const fHash = receipt.fileHash;
-            const txId = receipt.transactionId;
-            const rRef = receipt.referenceCode;
-
-            // Only hard block if it's the exact same file/image, or has same unique Transaction ID/Ref Code
-            const isDuplicateImageHash = imgHash ? existingImageHashes.has(imgHash) : false;
-            const isDuplicateFileHash = fHash ? existingFileHashes.has(fHash) : false;
-            const isDuplicateTxId = txId ? existingTransactionIds.has(txId) : false;
-
-            // Also hard block if Reference Code exists and is identical (strong identifier)
-            const isDuplicateRef = rRef ? receipts.some(existing => existing.referenceCode === rRef && existing.storeName === receipt.storeName) : false;
+            // Priority 1: Exact Hash Match (Absolute Duplicate)
+            const isDuplicateImageHash = receipt.imageHash && receipts.some(r => r.imageHash === receipt.imageHash);
+            const isDuplicateFileHash = receipt.fileHash && receipts.some(r => r.fileHash === receipt.fileHash);
+            const isDuplicateTxId = receipt.transactionId && receipts.some(r => r.transactionId === receipt.transactionId);
+            const isDuplicateRef = receipt.referenceCode && receipts.some(r => r.referenceCode === receipt.referenceCode);
 
             if (isDuplicateImageHash || isDuplicateFileHash || isDuplicateTxId || isDuplicateRef) {
                 duplicateCount++;
-                console.log(`Duplicate blocked: ImgHash=${isDuplicateImageHash}, FileHash=${isDuplicateFileHash}, TxId=${isDuplicateTxId}, Ref=${isDuplicateRef}`);
+                console.log(`[DataContext] Duplicate blocked (Hash/Ref match): ${receipt.storeName} - €${receipt.total}`);
                 continue;
             }
 
+            // Priority 2: Fuzzy Logic / Signature Match
+            const sig = getReceiptSignature(receipt);
+            if (existingSignatures.has(sig)) {
+                duplicateCount++;
+                console.log(`[DataContext] Duplicate blocked (Signature match): ${sig}`);
+                continue;
+            }
+
+            // Priority 3: Weak Match (Similarity) - Needs UI Confirmation?
+            // For now, if it's the SAME date, total, and store name, we treat it as a suspected duplicate
             const weakMatch = findWeakMatch(receipt);
             if (weakMatch) {
-                const confirmMessage = `Potential duplicate detected:\n\nStore: ${receipt.storeName}\nDate: ${receipt.date}\nTotal: €${receipt.total.toFixed(2)}\n\nThis looks identical to an existing record.\n\nDo you want to add it anyway?`;
+                const confirmMessage = `We found a very similar receipt from ${receipt.storeName} for €${receipt.total} on ${receipt.date}. Do you want to add it anyway?`;
                 if (window.confirm(confirmMessage)) {
                     confirmedNewReceipts.push(receipt);
-                    existingSignatures.add(sig);
-                    if (txId) existingTransactionIds.add(txId);
+                    console.log(`[DataContext] Added potentially duplicate receipt via user confirmation: ${receipt.storeName}`);
                 } else {
                     duplicateCount++;
+                    console.log(`[DataContext] Duplicate rejected by user: ${receipt.storeName}`);
                 }
             } else {
                 confirmedNewReceipts.push(receipt);
-                existingSignatures.add(sig);
-                if (txId) existingTransactionIds.add(txId);
             }
         }
 
-        if (duplicateCount > 0) {
-            alert(`${duplicateCount} duplicate receipt(s) were removed.`);
-        }
-
         if (confirmedNewReceipts.length > 0) {
+            console.log(`[DataContext] Successfully adding ${confirmedNewReceipts.length} new receipts`);
             setReceipts(prev => {
                 const updatedReceipts = [...confirmedNewReceipts, ...prev];
                 return updatedReceipts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             });
             setDataVersion(v => v + 1);
+        } else if (duplicateCount > 0) {
+            console.log(`[DataContext] All ${newReceipts.length} receipts were duplicates`);
         }
     };
 
@@ -957,6 +968,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const refreshData = async () => {
+        setIsRefreshing(true);
+        try {
+            await loadData();
+        } finally {
+            // Small delay so skeleton is visible briefly
+            await new Promise(r => setTimeout(r, 400));
+            setIsRefreshing(false);
+        }
+    };
+
     const spendRatio = useMemo(() => {
         if (monthlyBudget <= 0) return 0;
         const now = new Date();
@@ -1004,6 +1028,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             markAllNotificationsAsRead,
             lastPartnerChanges,
             isDataLoaded,
+            isRefreshing,
+            refreshData,
             dataVersion,
             generateDummyData,
             spendRatio,

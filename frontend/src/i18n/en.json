@@ -194,10 +194,10 @@
             "unlockDesc": "Unlock Ambient, Co-Parenting, Category Budgets, Goals & Habits",
             "lifeSupport": "Life Support",
             "lifeSupportDesc": "Crisis resources & aid",
-            "ambient": "Ambient Effects",
-            "ambientDesc": "Enable dynamic lighting effects",
+            "ambient": "Card Ambient",
+            "ambientDesc": "Glow effect on dashboard card borders",
             "appBg": "App Background",
-            "appBgDesc": "Show effect on main screens",
+            "appBgDesc": "Ambient glow on app background",
             "parental": "Parental Control",
             "parentalDesc": "Hide 18+ from Dashboard & Export",
             "export": "Export Data",
@@ -213,7 +213,9 @@
             "coParentingDesc": "Shared calendar, split expenses & custody",
             "exportDialogTitle": "Export Data",
             "exportTitle": "TrueTrack Export",
-            "exportMessage": "Here is my spending data from TrueTrack."
+            "exportMessage": "Here is my spending data from TrueTrack.",
+            "helpSupport": "Help & Support",
+            "helpSupportDesc": "Find nearby legal aid & support services"
         },
         "security": {
             "title": "Security",
@@ -1047,5 +1049,41 @@
             }
         },
         "quote": "Stay strong. You are building a safe future."
+    },
+    "onboarding": {
+        "skip": "Skip",
+        "next": "Continue",
+        "welcome": {
+            "title": "Track Every Dollar.\nBuild Your Case.",
+            "description": "Smart receipt tracking designed for co-parents. Scan, categorize, and build transparency — effortlessly."
+        },
+        "features": {
+            "title": "Everything You Need",
+            "scan": "Scan Receipts",
+            "scanDesc": "AI-powered receipt scanning in seconds",
+            "budget": "Smart Budget",
+            "budgetDesc": "Real-time spending insights & forecasts",
+            "coParenting": "Co-Parenting",
+            "coParentingDesc": "Custody tracking & shared expenses"
+        },
+        "start": {
+            "title": "Ready to Go!",
+            "description": "Start by scanning your first receipt. It only takes a few seconds.",
+            "cta": "Scan First Receipt"
+        }
+    },
+    "emptyStates": {
+        "categories": {
+            "title": "No Categories Yet",
+            "description": "Scan your first receipt to see spending categories appear here"
+        },
+        "vendors": {
+            "title": "No Vendors Yet",
+            "description": "Your top stores will appear here after scanning receipts"
+        },
+        "metrics": {
+            "title": "No Data Yet",
+            "description": "Scan a receipt to unlock real-time financial insights"
+        }
     }
 }

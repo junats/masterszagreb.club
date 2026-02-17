@@ -13,7 +13,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrueTrack needs your location to find nearby support services and legal aid.</string>
 	<key>LSApplicationCategoryType</key>
-	<string></string>
+	<string>public.app-category.finance</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

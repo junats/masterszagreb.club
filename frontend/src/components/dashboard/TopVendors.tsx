@@ -4,6 +4,7 @@ import { ShoppingBag } from 'lucide-react';
 import { SpotlightCard } from '../SpotlightCard';
 import AnimatedSection from '../AnimatedSection';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { EmptyState } from '../EmptyState';
 
 import { ProBlurGuard } from '../ProBlurGuard';
 import { useUser } from '../../contexts/UserContext';
@@ -55,7 +56,11 @@ export const TopVendors: React.FC<TopVendorsProps> = ({ metrics, isProMode, setS
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="text-xxs text-slate-500 text-center py-4">{t('provision.noData')}</div>
+                                    <EmptyState
+                                        icon={ShoppingBag}
+                                        title={t('emptyStates.vendors.title')}
+                                        description={t('emptyStates.vendors.description')}
+                                    />
                                 )}
                             </div>
                         </SpotlightCard>

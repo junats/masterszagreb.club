@@ -388,6 +388,78 @@ const Settings: React.FC<SettingsProps> = () => {
                         </div>
 
                         <div className="bg-card rounded-[20px] overflow-hidden border border-white/5 shadow-sm">
+                            {/* Ambient Mode Toggle (Moved to Top) */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5 hover:bg-surfaceHighlight transition-colors duration-300">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-[10px] ${ambientMode ? 'bg-purple-500/20 text-purple-400' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <Sparkles size={20} />
+                                    </div>
+                                    <div>
+                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.ambient')}</span>
+                                        <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.ambientDesc')}</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={ambientMode}
+                                        onChange={(e) => {
+                                            HapticsService.impactLight();
+                                            setAmbientMode(e.target.checked);
+                                        }}
+                                    />
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-purple-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
+
+                            {/* Global Ambient Background */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5 hover:bg-surfaceHighlight transition-colors duration-300">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-[10px] ${showGlobalAmbient ? 'bg-cyan-500/20 text-cyan-400' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <Activity size={20} />
+                                    </div>
+                                    <div>
+                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.appBg')}</span>
+                                        <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.appBgDesc')}</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={showGlobalAmbient}
+                                        onChange={(e) => {
+                                            HapticsService.impactLight();
+                                            setShowGlobalAmbient(e.target.checked);
+                                        }}
+                                    />
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-cyan-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
+
+                            {/* 18+ Parental Control Toggle (Moved to Top) */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5 hover:bg-surfaceHighlight transition-colors duration-300">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-[10px] ${ageRestricted ? 'bg-rose-500/20 text-rose-400' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <AlertTriangle size={20} />
+                                    </div>
+                                    <div>
+                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.parental')}</span>
+                                        <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.parentalDesc')}</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={ageRestricted}
+                                        onChange={handleToggleRestricted}
+                                    />
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-rose-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
+
                             {/* Co-Parenting Features */}
                             <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
                                 <div className="flex items-center gap-3">
@@ -413,6 +485,30 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </label>
                             </div>
 
+                            {/* Help & Support (Location-Based) */}
+                            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-[10px] ${helpEnabled ? 'bg-systemOrange/10 text-systemOrange' : 'bg-systemGray5 text-systemGray'}`}>
+                                        <LifeBuoy size={20} />
+                                    </div>
+                                    <div>
+                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.helpSupport')}</span>
+                                        <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.helpSupportDesc')}</span>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={helpEnabled}
+                                        onChange={(e) => {
+                                            HapticsService.impactMedium();
+                                            setHelpEnabled(e.target.checked);
+                                        }}
+                                    />
+                                    <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemGreen after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
                             {/* Enable Goals/Pro Features */}
                             <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
                                 <div className="flex items-center gap-3">
@@ -444,7 +540,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
                             {/* Goals List (Collapsible) - Keeping logic but styling */}
                             {goalsEnabled && isProMode && (
-                                <div className="bg-secondarySystemBackground dark:bg-secondarySystemBackground-dark p-0 m-0 border-b border-black/5 dark:border-white/5">
+                                <div className="bg-secondarySystemBackground dark:bg-secondarySystemBackground-dark p-0 m-0 border-b border-black/5 dark:border-white/5 max-h-60 overflow-y-auto custom-scrollbar">
                                     {goals.map(goal => (
                                         <div
                                             key={goal.id}
@@ -661,27 +757,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 <ChevronRight className="text-slate-600" size={16} />
                             </button>
 
-                            {/* 18+ Items Toggle */}
-                            <div className="w-full flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-surfaceHighlight transition-colors duration-300">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${ageRestricted ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>
-                                        <AlertTriangle size={18} />
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.general.ageRestricted')}</span>
-                                        <span className="text-xs text-slate-500 font-medium block">{t('settings.general.ageRestrictedDesc')}</span>
-                                    </div>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={ageRestricted}
-                                        onChange={handleToggleRestricted}
-                                    />
-                                    <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:bg-rose-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
-                                </label>
-                            </div>
+                            {/* Ambient Mode and 18+ toggles moved to Pro Controls section above */}
 
                             {/* Comprehensive Seed Data (Dev) */}
                             {/* Comprehensive Seed Data (Dev) */}

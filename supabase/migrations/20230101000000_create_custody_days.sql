@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS custody_days (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   date DATE NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('me', 'partner', 'split', 'none')),
   note TEXT,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS custody_days (
 );
 
 CREATE TABLE IF NOT EXISTS calendar_activities (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   custody_day_id UUID REFERENCES custody_days(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   type TEXT NOT NULL,

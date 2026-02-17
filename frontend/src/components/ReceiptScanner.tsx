@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { Camera as CameraIcon, Upload, Loader2, CheckCircle, AlertCircle, Images, ScanLine, Edit2, Save, X } from 'lucide-react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 // import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
-import { analyzeReceiptImage } from '../services/geminiService';
+import { analyzeReceiptImage, analyzeItemInsights } from '../services/geminiService';
 import { storageService } from '../services/storageService';
 import { usageService } from '../services/usageService';
 import { Receipt, AnalysisResult, SubscriptionTier } from '@common/types';
@@ -97,9 +98,9 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // Max dimensions
-          const MAX_WIDTH = 1500;
-          const MAX_HEIGHT = 2500;
+          // REDUCED: 800x1200 for better stability on Edge Functions
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 1200;
           let width = img.width;
           let height = img.height;
 
@@ -123,7 +124,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             canvas.toBlob((blob) => {
               if (blob) resolve(blob);
               else reject(new Error("Canvas to Blob failed"));
-            }, 'image/jpeg', 0.7);
+            }, 'image/jpeg', 0.5); // Reduced to 0.5 for stability
           } else {
             reject(new Error("Canvas context failed"));
           }
@@ -203,12 +204,11 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
 
   const processImage = async (blob: Blob, fileName: string = 'camera_capture.jpg') => {
     try {
-      // Safety Timeout Promise - Increased to 3 minutes for slow devices/HEIC
+      // Safety Timeout - 90s (optimized images process fast, HEIC handled separately)
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Analysis timed out. Please try again.")), 180000)
+        setTimeout(() => reject(new Error("Analysis timed out. Please try again.")), 90000)
       );
 
-      // The actual processing logic wrapped in a promise we can race against
       const processingTask = async () => {
         // 1. Optimize Image (Resize & Compress) -> Blob
         const processedBlob = await optimizeImage(blob);
@@ -216,55 +216,47 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         // 2. Convert to Base64 for Gemini Analysis
         const base64ForAI = await blobToBase64(processedBlob);
 
-        // 3. Analyze with Unified Smart Service
+        // 3. Analyze with Gemini AI (main bottleneck - network + AI)
         const result: AnalysisResult = await analyzeReceiptImage(base64ForAI, categories);
 
-        // 4. AI Insights Analysis (Pro feature only)
+        // 4. PARALLEL: Run AI insights + storage upload concurrently
+        const isDisplayable = processedBlob.type === 'image/jpeg' || processedBlob.type === 'image/png';
+
+        // Build parallel tasks
+        const insightsPromise = (isProSubscription && (result.items || []).length > 0)
+          ? analyzeItemInsights(result.items || []).catch((e) => {
+            console.warn('⚠️ Failed to get AI insights:', e);
+            return null;
+          })
+          : Promise.resolve(null);
+
+        const uploadPromise = storageService.uploadReceiptImage(processedBlob, userId)
+          .catch((e) => {
+            console.warn('⚠️ Storage upload failed (continuing):', e);
+            return '';
+          });
+
+        // Run both in parallel
+        const [insights, storagePath] = await Promise.all([insightsPromise, uploadPromise]);
+
+        // Attach insights to items
         let itemsWithInsights = result.items || [];
-        if (isProSubscription && itemsWithInsights.length > 0) {
-          try {
-            console.log('✨ Analyzing items for AI insights (Pro feature)...');
-            const { analyzeItemInsights } = await import('../services/geminiService');
-            const insights = await analyzeItemInsights(itemsWithInsights);
-
-            // Attach insights to items
-            itemsWithInsights = itemsWithInsights.map((item, idx) => ({
-              ...item,
-              insights: insights[idx] || undefined
-            }));
-            console.log('✅ AI insights added to', itemsWithInsights.filter(i => i.insights).length, 'items');
-          } catch (insightsError) {
-            console.warn('⚠️ Failed to get AI insights:', insightsError);
-            // Continue without insights - not critical
-          }
+        if (insights && Array.isArray(insights)) {
+          itemsWithInsights = itemsWithInsights.map((item, idx) => ({
+            ...item,
+            insights: insights[idx] || undefined
+          }));
         }
 
-        // 5. Upload Image via Storage Service (Cloud or Mock)
-        let storagePath = '';
-        let imageUrl = '';
-        try {
-          storagePath = await storageService.uploadReceiptImage(processedBlob, userId);
-          // Store base64 representation as fallback
-          // If processedBlob is still HEIC (conversion failed), browsers can't display it. 
-          // We check the type to decide if we show the image or a placeholder.
-          const isDisplayable = processedBlob.type === 'image/jpeg' || processedBlob.type === 'image/png';
-          imageUrl = isDisplayable ? `data:${processedBlob.type};base64,${base64ForAI}` : '';
-        } catch (uploadError) {
-          console.warn('⚠️ Storage upload failed (continuing anyway):', uploadError);
-          // Fallback
-          const isDisplayable = processedBlob.type === 'image/jpeg' || processedBlob.type === 'image/png';
-          imageUrl = isDisplayable ? `data:${processedBlob.type};base64,${base64ForAI}` : '';
-        }
-
+        const imageUrl = isDisplayable ? `data:${processedBlob.type};base64,${base64ForAI}` : '';
         const imageHash = computeHash(base64ForAI);
-        // Simple hash for original file to detect exact re-uploads
         const fileHash = `${fileName}|${blob.size}`;
 
         return {
           id: generateId(),
           storeName: result.storeName || t('scanner.unknownStore'),
           date: result.date || new Date().toISOString().split('T')[0],
-          total: result.total || (itemsWithInsights).reduce((sum, item) => sum + item.price, 0) || 0,
+          total: result.total || itemsWithInsights.reduce((sum, item) => sum + item.price, 0) || 0,
           items: itemsWithInsights,
           scannedAt: new Date().toISOString(),
           type: result.type || 'receipt',
@@ -276,7 +268,6 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         } as Receipt;
       };
 
-      // Race the processing against the timeout
       return await Promise.race([processingTask(), timeoutPromise]) as Receipt;
 
     } catch (err) {
@@ -545,10 +536,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
               type: 'receipt'
             });
           }
-        } catch (e: any) {
-          console.error(`Failed to process file ${file.name}`, e);
-          // Include actual error message for debugging
-          errors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+        } catch (err: any) {
+          console.error("DEBUG: Scan Error:", err);
+          setError(`${file.name}: ${err.message || 'Unknown error'}`);
+          errors.push(`${file.name}: ${err.message || 'Unknown error'}`);
         }
       }
 
@@ -662,50 +653,38 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+        <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
           {/* Camera */}
           <button
             onClick={handleCameraCapture}
-            className="aspect-square bg-white dark:bg-[#1C1C1E] rounded-[20px] border border-black/5 dark:border-white/5 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-all active:scale-95 shadow-sm"
+            className="py-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex flex-col items-center justify-center gap-2.5 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 shadow-lg shadow-black/20"
           >
-            <div className="w-16 h-16 rounded-full bg-systemBlue/10 flex items-center justify-center ring-1 ring-systemBlue/20">
-              <CameraIcon size={32} className="text-systemBlue" />
+            <div className="w-11 h-11 rounded-full bg-systemBlue/15 flex items-center justify-center ring-1 ring-systemBlue/25">
+              <CameraIcon size={22} className="text-systemBlue" />
             </div>
-            <span className="text-black dark:text-white font-medium">{t('scanner.camera')}</span>
+            <span className="text-white/90 text-xs font-medium">{t('scanner.camera')}</span>
           </button>
 
           {/* Gallery / File */}
           <button
             onClick={() => document.getElementById('file-upload')?.click()}
-            className="aspect-square bg-white dark:bg-[#1C1C1E] rounded-[20px] border border-black/5 dark:border-white/5 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-all active:scale-95 shadow-sm"
+            className="py-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex flex-col items-center justify-center gap-2.5 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 shadow-lg shadow-black/20"
           >
-            <div className="w-16 h-16 rounded-full bg-systemPurple/10 flex items-center justify-center ring-1 ring-systemPurple/20">
-              <Images size={32} className="text-systemPurple" />
+            <div className="w-11 h-11 rounded-full bg-systemPurple/15 flex items-center justify-center ring-1 ring-systemPurple/25">
+              <Images size={22} className="text-systemPurple" />
             </div>
-            <span className="text-black dark:text-white font-medium">{t('scanner.uploadFile')}</span>
+            <span className="text-white/90 text-xs font-medium">{t('scanner.uploadFile')}</span>
           </button>
 
-          {/* Barcode Scan (New) */}
-          {/* Barcode Scan (New) */}
-          {/* <button
-            onClick={handleBarcodeScan}
-            className="aspect-square bg-slate-900 rounded-3xl border border-slate-800 flex flex-col items-center justify-center gap-4 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-black/50"
-          >
-            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
-              <ScanLine size={32} className="text-amber-400" />
-            </div>
-            <span className="text-slate-300 font-medium">{t('scanner.scanItem')}</span>
-          </button> */}
-
-          {/* Manual Entry - Adjusted grid */}
+          {/* Manual Entry */}
           <button
             onClick={() => setShowManualModal(true)}
-            className="aspect-square bg-white dark:bg-[#1C1C1E] rounded-[20px] border border-black/5 dark:border-white/5 flex flex-col items-center justify-center gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-all active:scale-95 shadow-sm"
+            className="py-5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex flex-col items-center justify-center gap-2.5 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 shadow-lg shadow-black/20"
           >
-            <div className="w-16 h-16 rounded-full bg-systemGreen/10 flex items-center justify-center ring-1 ring-systemGreen/20">
-              <Edit2 size={32} className="text-systemGreen" />
+            <div className="w-11 h-11 rounded-full bg-systemGreen/15 flex items-center justify-center ring-1 ring-systemGreen/25">
+              <Edit2 size={22} className="text-systemGreen" />
             </div>
-            <span className="text-black dark:text-white font-medium">{t('scanner.manual')}</span>
+            <span className="text-white/90 text-xs font-medium">{t('scanner.manual')}</span>
           </button>
         </div>
 
@@ -721,80 +700,83 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             {t('scanner.cancel')}
           </button>
         </div>
+      </motion.div>
 
-        {/* Review Modal */}
-        {showReviewModal && scannedReceipts.length > 0 && (
-          <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 flex items-end sm:items-center justify-center">
-            {/* iOS Sheet Container */}
-            <div className="w-full max-w-lg h-[90vh] sm:h-fit sm:max-h-[85vh] bg-secondarySystemBackground dark:bg-[#1C1C1E] rounded-t-[20px] sm:rounded-[20px] shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300 overflow-hidden">
+      {/* Review Modal - Portal to break out of transforms */}
+      {showReviewModal && scannedReceipts.length > 0 && createPortal(
+        <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 flex items-end sm:items-center justify-center">
+          {/* iOS Sheet Container */}
+          <div className="w-full max-w-lg h-[90vh] sm:h-fit sm:max-h-[85vh] bg-secondarySystemBackground dark:bg-[#1C1C1E] rounded-t-[20px] sm:rounded-[20px] shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300 overflow-hidden">
 
-              {/* Drag Handle (Visual only for now) */}
-              <div className="w-full flex justify-center pt-2 pb-1 bg-secondarySystemBackground dark:bg-[#1C1C1E] shrink-0" onClick={() => setShowReviewModal(false)}>
-                <div className="w-10 h-1 bg-systemGray3 rounded-full opacity-50"></div>
+            {/* Drag Handle (Visual only for now) */}
+            <div className="w-full flex justify-center pt-2 pb-1 bg-secondarySystemBackground dark:bg-[#1C1C1E] shrink-0" onClick={() => setShowReviewModal(false)}>
+              <div className="w-10 h-1 bg-systemGray3 rounded-full opacity-50"></div>
+            </div>
+
+            {/* Header */}
+            <div className="px-6 pb-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center shrink-0 bg-secondarySystemBackground dark:bg-[#1C1C1E]">
+              <div className="text-center w-full">
+                <h2 className="text-[17px] font-semibold text-black dark:text-white">{t('scanner.review.title')}</h2>
+                {scannedReceipts.length > 1 && (
+                  <p className="text-[11px] text-systemGray">
+                    {t('scanner.review.count', { current: currentReceiptIndex + 1, total: scannedReceipts.length })}
+                  </p>
+                )}
+              </div>
+              {/* Close Button as "Done" or "Cancel" */}
+              <button onClick={() => setShowReviewModal(false)} className="absolute right-4 text-systemBlue font-medium text-[17px]">
+                {t('common.done') || 'Done'}
+              </button>
+            </div>
+
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 overscroll-contain">
+              {/* Store & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.store')}</label>
+                  <input
+                    type="text"
+                    value={scannedReceipts[0]?.storeName || ''}
+                    onChange={(e) => updateFirstReceipt({ storeName: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.date')}</label>
+                  <input
+                    type="date"
+                    value={scannedReceipts[0]?.date || ''}
+                    onChange={(e) => updateFirstReceipt({ date: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
               </div>
 
-              {/* Header */}
-              <div className="px-6 pb-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center shrink-0 bg-secondarySystemBackground dark:bg-[#1C1C1E]">
-                <div className="text-center w-full">
-                  <h2 className="text-[17px] font-semibold text-black dark:text-white">{t('scanner.review.title')}</h2>
-                  {scannedReceipts.length > 1 && (
-                    <p className="text-[11px] text-systemGray">
-                      {t('scanner.review.count', { current: currentReceiptIndex + 1, total: scannedReceipts.length })}
-                    </p>
-                  )}
+              {/* Total */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.totalAmount')}</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400">€</span>
+                  <input
+                    type="number"
+                    value={scannedReceipts[0]?.total || 0}
+                    onChange={(e) => updateFirstReceipt({ total: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
+                  />
                 </div>
-                {/* Close Button as "Done" or "Cancel" */}
-                <button onClick={() => setShowReviewModal(false)} className="absolute right-4 text-systemBlue font-medium text-[17px]">
-                  {t('common.done') || 'Done'}
-                </button>
               </div>
 
-              {/* Scrollable Content Area */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 overscroll-contain">
-                {/* Store & Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.store')}</label>
-                    <input
-                      type="text"
-                      value={scannedReceipts[0]?.storeName || ''}
-                      onChange={(e) => updateFirstReceipt({ storeName: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.date')}</label>
-                    <input
-                      type="date"
-                      value={scannedReceipts[0]?.date || ''}
-                      onChange={(e) => updateFirstReceipt({ date: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Total */}
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('scanner.review.totalAmount')}</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-400">€</span>
-                    <input
-                      type="number"
-                      value={scannedReceipts[0]?.total || 0}
-                      onChange={(e) => updateFirstReceipt({ total: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Items Preview */}
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
-                    <span>{t('scanner.review.items', { count: scannedReceipts[0]?.items.length || 0 })}</span>
-                    <span className="text-primary text-xs">{t('scanner.review.tapToEdit')}</span>
-                  </label>
-                  <div className="space-y-2">
-                    {(scannedReceipts[0]?.items || []).map((item, idx) => (
+              {/* Items Preview */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex justify-between">
+                  <span>{t('scanner.review.items', { count: scannedReceipts[0]?.items.length || 0 })}</span>
+                  <span className="text-primary text-xs">{t('scanner.review.tapToEdit')}</span>
+                </label>
+                <div className="space-y-2">
+                  {(scannedReceipts[0]?.items || []).map((item, idx) => {
+                    if (!item) return null;
+                    return (
                       <div key={idx} className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0 pr-3">
@@ -808,7 +790,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                               )}
                             </div>
                           </div>
-                          <span className="text-sm font-mono text-slate-300">€{item.price.toFixed(2)}</span>
+                          <span className="text-sm font-mono text-slate-300">€{(item.price || 0).toFixed(2)}</span>
                         </div>
 
                         {/* AI Insights Display */}
@@ -817,103 +799,89 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                             <div className="col-span-2 text-xs text-slate-400 italic">
                               ✨ {item.insights.insight}
                             </div>
-                            <div className="flex items-center gap-2 bg-black/20 rounded p-1.5">
-                              {/* {item.insights.nutritionScore === -1 ? (
-                                    <span className="text-xs text-slate-500 w-full text-center font-medium tracking-wide">{t('scanner.insights.utilityItem')}</span>
-                                  ) : (
-                                    <>
-                                      <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                        <div
-                                          className={`h-full rounded-full ${item.insights.nutritionScore > 70 ? 'bg-emerald-500' : item.insights.nutritionScore > 40 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                          style={{ width: `${item.insights.nutritionScore}%` }}
-                                        />
-                                      </div>
-                                      <span className="text-xs font-bold text-slate-400 w-8 text-right">{t('scanner.insights.nutri')} {item.insights.nutritionScore}</span>
-                                    </>
-                                  )} */}
-                            </div>
                             <div className="flex items-center gap-1 bg-black/20 rounded p-1.5 justify-center">
                               <span className="text-xs text-slate-400">{t('scanner.insights.value')}</span>
                               <div className="flex">
                                 {[1, 2, 3, 4, 5].map(star => (
-                                  <span key={star} className={`text-xs ${star <= item.insights!.valueRating ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
+                                  <span key={star} className={`text-xs ${star <= (item.insights?.valueRating || 0) ? 'text-yellow-400' : 'text-slate-700'}`}>★</span>
                                 ))}
                               </div>
                             </div>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-
-                {/* Extra spacing at bottom to ensure last fields are accessible */}
-                <div className="h-4"></div>
               </div>
 
-              {/* Multi-Receipt Navigation - Only show if multiple receipts */}
-              {scannedReceipts.length > 1 && (
-                <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between shrink-0">
-                  <button
-                    onClick={() => {
-                      // Go to previous receipt
-                      const newIndex = (currentReceiptIndex - 1 + scannedReceipts.length) % scannedReceipts.length;
-                      setCurrentReceiptIndex(newIndex);
-                      const reordered = [...scannedReceipts.slice(newIndex), ...scannedReceipts.slice(0, newIndex)];
-                      setScannedReceipts(reordered);
-                    }}
-                    disabled={scannedReceipts.length <= 1}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    ← {t('scanner.review.previous')}
-                  </button>
+              {/* Extra spacing at bottom to ensure last fields are accessible */}
+              <div className="h-4"></div>
+            </div>
 
-                  {/* Pagination Dots - Now properly tracking current index */}
-                  <div className="flex gap-2">
-                    {Array.from({ length: scannedReceipts.length }).map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          setCurrentReceiptIndex(idx);
-                          const reordered = [...scannedReceipts.slice(idx), ...scannedReceipts.slice(0, idx)];
-                          setScannedReceipts(reordered);
-                        }}
-                        className={`w-2 h-2 rounded-full transition-all ${idx === currentReceiptIndex ? 'bg-primary w-6' : 'bg-slate-600 hover:bg-slate-500'
-                          }`}
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      // Go to next receipt
-                      const newIndex = (currentReceiptIndex + 1) % scannedReceipts.length;
-                      setCurrentReceiptIndex(newIndex);
-                      const reordered = [...scannedReceipts.slice(1), scannedReceipts[0]];
-                      setScannedReceipts(reordered);
-                    }}
-                    disabled={scannedReceipts.length <= 1}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    {t('scanner.review.next')} →
-                  </button>
-                </div>
-              )}
-
-              {/* Footer - Fixed at bottom with extra padding */}
-              <div className="p-6 pb-8 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl shrink-0">
+            {/* Multi-Receipt Navigation - Only show if multiple receipts */}
+            {scannedReceipts.length > 1 && (
+              <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between shrink-0">
                 <button
-                  onClick={handleSave}
-                  className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                  onClick={() => {
+                    // Go to previous receipt
+                    const newIndex = (currentReceiptIndex - 1 + scannedReceipts.length) % scannedReceipts.length;
+                    setCurrentReceiptIndex(newIndex);
+                    const reordered = [...scannedReceipts.slice(newIndex), ...scannedReceipts.slice(0, newIndex)];
+                    setScannedReceipts(reordered);
+                  }}
+                  disabled={scannedReceipts.length <= 1}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <Save size={20} />
-                  {scannedReceipts.length > 1 ? t('scanner.review.save', { count: scannedReceipts.length }) : t('scanner.review.saveSingle')}
+                  ← {t('scanner.review.previous')}
+                </button>
+
+                {/* Pagination Dots - Now properly tracking current index */}
+                <div className="flex gap-2">
+                  {Array.from({ length: scannedReceipts.length }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setCurrentReceiptIndex(idx);
+                        const reordered = [...scannedReceipts.slice(idx), ...scannedReceipts.slice(0, idx)];
+                        setScannedReceipts(reordered);
+                      }}
+                      className={`w-2 h-2 rounded-full transition-all ${idx === currentReceiptIndex ? 'bg-primary w-6' : 'bg-slate-600 hover:bg-slate-500'
+                        }`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    // Go to next receipt
+                    const newIndex = (currentReceiptIndex + 1) % scannedReceipts.length;
+                    setCurrentReceiptIndex(newIndex);
+                    const reordered = [...scannedReceipts.slice(1), scannedReceipts[0]];
+                    setScannedReceipts(reordered);
+                  }}
+                  disabled={scannedReceipts.length <= 1}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  {t('scanner.review.next')} →
                 </button>
               </div>
+            )}
+
+            {/* Footer - Fixed at bottom with extra padding */}
+            <div className="p-6 pb-8 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl shrink-0">
+              <button
+                onClick={handleSave}
+                className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Save size={20} />
+                {scannedReceipts.length > 1 ? t('scanner.review.save', { count: scannedReceipts.length }) : t('scanner.review.saveSingle')}
+              </button>
             </div>
           </div>
-        )}
-      </motion.div>
+        </div>,
+        document.body
+      )}
 
       {/* Hidden File Input */}
       <input
@@ -925,103 +893,105 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         onChange={handleFileUpload}
       />
 
-      {/* Manual Entry Modal */}
-      {
-        showManualModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-surface w-full max-w-lg rounded-3xl border border-white/10 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+      {/* Manual Entry Modal - Portal to break out of transforms */}
+      {showManualModal && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface w-full max-w-lg rounded-3xl border border-white/10 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
 
-              <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                <h2 className="text-xl font-heading font-bold text-white">Manual Entry</h2>
-                <button
-                  onClick={() => setShowManualModal(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
+            <div className="p-6 border-b border-white/10 flex justify-between items-center">
+              <h2 className="text-xl font-heading font-bold text-white">Manual Entry</h2>
+              <button
+                onClick={() => setShowManualModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Store & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
+                  <input
+                    type="text"
+                    value={manualData.store}
+                    onChange={(e) => setManualData({ ...manualData, store: e.target.value })}
+                    placeholder="e.g. Wal-Mart"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
+                  <input
+                    type="date"
+                    value={manualData.date}
+                    onChange={(e) => setManualData({ ...manualData, date: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
               </div>
 
-              <div className="p-6 space-y-4">
-                {/* Store & Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Store</label>
+              {/* Total & Category */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Total Amount</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-slate-400">€</span>
                     <input
-                      type="text"
-                      value={manualData.store}
-                      onChange={(e) => setManualData({ ...manualData, store: e.target.value })}
-                      placeholder="e.g. Wal-Mart"
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
-                    <input
-                      type="date"
-                      value={manualData.date}
-                      onChange={(e) => setManualData({ ...manualData, date: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                      type="number"
+                      value={manualData.total}
+                      onChange={(e) => setManualData({ ...manualData, total: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
-
-                {/* Total & Category */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Total Amount</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-400">€</span>
-                      <input
-                        type="number"
-                        value={manualData.total}
-                        onChange={(e) => setManualData({ ...manualData, total: e.target.value })}
-                        placeholder="0.00"
-                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Category</label>
-                    <select
-                      value={manualData.category}
-                      onChange={(e) => setManualData({ ...manualData, category: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none appearance-none"
-                    >
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Category</label>
+                  <select
+                    value={manualData.category}
+                    onChange={(e) => setManualData({ ...manualData, category: e.target.value })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none appearance-none"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
-
-              </div>
-
-              <div className="p-6 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl">
-                <button
-                  onClick={handleManualSubmit}
-                  disabled={!manualData.store || !manualData.total}
-                  className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={20} />
-                  Add Receipt
-                </button>
               </div>
 
             </div>
-          </div>
-        )
-      }
 
-      {/* Paywall Modal */}
-      <Paywall
-        isOpen={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        reason={paywallReason}
-        dailyRemaining={dailyRemaining}
-        weeklyRemaining={weeklyRemaining}
-      />
+            <div className="p-6 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl">
+              <button
+                onClick={handleManualSubmit}
+                disabled={!manualData.store || !manualData.total}
+                className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={20} />
+                Add Receipt
+              </button>
+            </div>
+
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Paywall Modal - Portal to break out of transforms */}
+      {showPaywall && createPortal(
+        <Paywall
+          isOpen={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          reason={paywallReason}
+          dailyRemaining={dailyRemaining}
+          weeklyRemaining={weeklyRemaining}
+        />,
+        document.body
+      )}
     </div >
   );
 };

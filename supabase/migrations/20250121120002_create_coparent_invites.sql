@@ -14,10 +14,12 @@ CREATE TABLE IF NOT EXISTS coparent_invites (
 ALTER TABLE coparent_invites ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can view their own invites
+DROP POLICY IF EXISTS "Users can view own invites" ON coparent_invites;
 CREATE POLICY "Users can view own invites" ON coparent_invites
   FOR SELECT USING (auth.uid() = invited_by);
 
 -- Policy: Users can create invites
+DROP POLICY IF EXISTS "Users can create invites" ON coparent_invites;
 CREATE POLICY "Users can create invites" ON coparent_invites
   FOR INSERT WITH CHECK (auth.uid() = invited_by);
 

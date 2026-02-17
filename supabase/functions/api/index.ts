@@ -1,53 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-console.log("Hello from Functions!");
+console.log("Edge Function started (V8 Standard ROOT)");
 
 serve(async (req) => {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
-    }
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
     try {
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
         let action = pathParts[pathParts.length - 1];
 
-        // Read body once
         let body: any = {};
-        try {
-            body = await req.json();
-        } catch (e) {
-            // Body might be empty for simple GETs
-        }
+        try { body = await req.json(); } catch (e) { }
 
-        // Check if action is just the function name (likely 'api'), if so, look in body
         if (action === 'api' || action === 'v1' || !action) {
             if (body.action) action = body.action;
         }
 
-        console.log(`Resource requested: ${action}`);
+        console.log(`Action: ${action}`);
 
         if (action === 'health') {
-            return new Response(JSON.stringify({ status: 'ok', version: '1.0.0' }), {
+            const apiKey = Deno.env.get('GEMINI_API_KEY');
+            return new Response(JSON.stringify({ status: 'ok', hasApiKey: !!apiKey }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
-        if (action === 'product-lookup') {
-            return await handleProductLookup(body);
-        }
+        if (action === 'list-models') return await handleListModels();
+        if (action === 'analyze-receipt') return await handleAnalyzeReceipt(body);
+        if (action === 'product-lookup' || action === 'item-insights') return await handleGenericGemini(body, action);
 
-        if (action === 'analyze-receipt') {
-            return await handleAnalyzeReceipt(body);
-        }
-
-        if (action === 'item-insights') {
-            return await handleItemInsights(body);
-        }
-
-        // Default: Return 404 for unknown actions
         return new Response(JSON.stringify({ error: `Method ${action} not found` }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -62,162 +45,71 @@ serve(async (req) => {
     }
 });
 
-// --- Handlers ---
-
-async function handleProductLookup(body: any) {
-    const { barcode } = body;
-    if (!barcode) throw new Error("Barcode is required");
-
-    console.log(`Looking up barcode: ${barcode}`);
-
-    // 1. Try OpenFoodFacts/OpenBeautyFacts/etc.
-    const endpoints = [
-        'https://world.openfoodfacts.org/api/v0/product/',
-        'https://world.openbeautyfacts.org/api/v0/product/',
-        'https://world.openproductsfacts.org/api/v0/product/'
-    ];
-
-    let cleanCode = barcode.replace(/[^0-9]/g, '');
-    if (cleanCode.startsWith('01') && cleanCode.length >= 16) {
-        cleanCode = cleanCode.substring(2, 16); // Extract GTIN-14 from GS1
-    }
-
-    for (const baseUrl of endpoints) {
-        try {
-            const res = await fetch(`${baseUrl}${cleanCode}.json`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.status === 1 && data.product) {
-                    const p = data.product;
-                    return new Response(JSON.stringify({
-                        source: 'openfacts',
-                        data: {
-                            name: p.product_name || p.generic_name || 'Unknown Product',
-                            brand: p.brands || p.brands_tags?.[0],
-                            imageUrl: p.image_front_url || p.image_url,
-                            category: mapCategory(p.categories_tags),
-                            nutritionGrade: p.nutrition_grades,
-                            ingredientsText: p.ingredients_text
-                        }
-                    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-                }
-            }
-        } catch (e) {
-            console.warn(`Failed to fetch from ${baseUrl}`, e);
-        }
-    }
-
-    // 2. Fallback to Gemini
-    console.log("Native lookup failed, trying Gemini...");
-    const geminiResult = await callGeminiProductLookup(cleanCode);
-
-    return new Response(JSON.stringify({
-        source: 'gemini',
-        data: geminiResult || null
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+async function handleListModels() {
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 async function handleAnalyzeReceipt(body: any) {
-    const { base64Image, categories } = body;
-    if (!base64Image) throw new Error("Image data required");
+    const payloadSize = body.base64Image ? Math.round(body.base64Image.length * 0.75 / 1024) : 0;
+    console.log(`Analyzing receipt. Payload size: ${payloadSize}KB`);
 
-    console.log("Analyzing receipt...");
-    const result = await callGeminiReceiptAnalysis(base64Image, categories);
-
-    return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // Added gemini-1.5-flash as it's very stable and less likely to 429
+    const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-lite", "gemini-flash-latest", "gemini-pro-latest"];
+    let lastError = null;
+    for (const model of modelsToTry) {
+        try {
+            console.log(`Trying model: ${model}`);
+            const result = await runGeminiInternal(model, body, "analyze-receipt");
+            return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+            console.warn(`Model ${model} failed: ${e.message}`);
+            lastError = e;
+            // Continue to next model on ANY error (429, 500, etc.)
+        }
+    }
+    throw lastError || new Error("All models failed");
 }
 
-async function handleItemInsights(body: any) {
-    const { items, barcodes } = body;
-    if (!items) throw new Error("Items array required");
-
-    console.log(`Generating insights for ${items.length} items`);
-    const insights = await callGeminiItemInsights(items, barcodes);
-
-    return new Response(JSON.stringify(insights), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+async function handleGenericGemini(body: any, action: string) {
+    const result = await runGeminiInternal("gemini-flash-latest", body, action);
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-// --- Helpers ---
+async function runGeminiInternal(model: string, body: any, action: string) {
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) throw new Error("GEMINI_API_KEY not set");
 
-function mapCategory(tags: string[] = []): string {
-    const lowerTags = tags.map(t => t.toLowerCase());
-    if (lowerTags.some(t => t.includes('medicine') || t.includes('drug') || t.includes('health'))) return 'Health';
-    if (lowerTags.some(t => t.includes('alcohol') || t.includes('beer') || t.includes('wine'))) return 'Alcohol';
-    if (lowerTags.some(t => t.includes('cleaning') || t.includes('detergent'))) return 'Household';
-    if (lowerTags.some(t => t.includes('baby') || t.includes('child'))) return 'Child';
-    if (lowerTags.some(t => t.includes('education'))) return 'Education';
-    if (lowerTags.some(t => t.includes('clothing'))) return 'Clothing';
-    // Defaults
-    if (lowerTags.some(t => t.includes('food') || t.includes('snack') || t.includes('drink'))) return 'Food';
-    return 'Other';
-}
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-// --- Gemini Calls ---
-
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const MODEL = "gemini-2.0-flash-exp";
-
-async function callGeminiProductLookup(barcode: string) {
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
-
-    const prompt = `Identify the product associated with this Barcode/GTIN: "${barcode}". Return pure JSON: { "found": Boolean, "name": "Name", "brand": "Brand", "category": "Category", "confidence": Number }. NO Markdown.`;
-
-    const result = await runGemini(prompt);
-    if (result && result.found) return result;
-    return null;
-}
-
-async function callGeminiReceiptAnalysis(base64: string, customCategories: any[]) {
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
-
-    // Recycled prompt from client logic
-    const cats = customCategories?.map((c: any) => c.name).join(', ') || "Food, Household, Other";
-    const prompt = `Analyze receipt. Return pure JSON: { "storeName": "Store", "date": "YYYY-MM-DD", "total": Number, "items": [{ "name": "Item", "price": Number, "category": "Category", "isRestricted": Boolean, "isChildRelated": Boolean }] }. Categories: ${cats}. NO Markdown.`;
-
-    const result = await runGemini(prompt, base64);
-    return result;
-}
-
-async function callGeminiItemInsights(items: any[], barcodes: any[]) {
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
-
-    const prompt = `Analyze items and provie insights. Items: ${JSON.stringify(items)}. Return pure JSON array matching item order: [{ "nutritionScore": number, "valueRating": number, "childFriendly": number, "insight": "string", "warnings": ["string"] }]. NO Markdown.`;
-
-    const result = await runGemini(prompt);
-    return result || items.map(() => null);
-}
-
-async function runGemini(text: string, imageBase64?: string) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-    const parts: any[] = [{ text }];
-    if (imageBase64) {
-        parts.unshift({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
+    let prompt = "";
+    if (action === 'analyze-receipt') {
+        const cats = body.categories?.map((c: any) => c.name).join(', ') || "Food, Household, Other";
+        prompt = `Analyze receipt. Return pure JSON: { "storeName": "Store", "date": "YYYY-MM-DD", "total": Number, "items": [{ "name": "Item", "price": Number, "category": "Category", "isRestricted": Boolean, "isChildRelated": Boolean }] }. Categories: ${cats}. NO Markdown.`;
+    } else if (action === 'product-lookup') {
+        prompt = `Identify the product associated with this Barcode/GTIN: "${body.barcode}". Return pure JSON: { "found": Boolean, "name": "Name", "brand": "Brand", "category": "Category", "confidence": Number }. NO Markdown.`;
     }
 
-    const res = await fetch(url, {
+    const parts: any[] = [{ text: prompt }];
+    if (body.base64Image) parts.unshift({ inlineData: { mimeType: "image/jpeg", data: body.base64Image } });
+
+    const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } })
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1 } })
     });
 
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Gemini API Error: ${res.status} ${txt}`);
-    }
-
+    if (!res.ok) throw new Error(`Gemini ${model} Error ${res.status}: ${await res.text()}`);
     const json = await res.json();
-    const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) return null;
+    let content = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) throw new Error("Empty response");
 
     try {
-        return JSON.parse(content);
-    } catch (e) {
-        console.error("Failed to parse Gemini JSON", content);
-        return null; // or throw
-    }
+        if (content.includes('```json')) content = content.split('```json')[1].split('```')[0];
+        else if (content.includes('```')) content = content.split('```')[1].split('```')[0];
+        return JSON.parse(content.trim());
+    } catch (e) { return { raw: content }; }
 }
