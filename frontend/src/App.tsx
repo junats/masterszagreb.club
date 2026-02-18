@@ -34,7 +34,7 @@ const AppContent: React.FC = () => {
     spendRatio,
     ageRestricted,
     helpEnabled,
-    childSupportMode
+    childSupportMode,
   } = useData();
 
   // Check Tour & Request Permissions
@@ -139,14 +139,15 @@ const AppContent: React.FC = () => {
           Standardizes the scrolling area and accounts for fixed Header and Navigation.
           Centralized padding logic allows removing all individual component padding.
       */}
-      <main
-        className="flex-1 w-full max-w-lg mx-auto relative z-10 h-full overflow-y-auto overflow-x-hidden custom-scrollbar"
-        style={{
-          paddingTop: 'calc(var(--header-height) + var(--safe-area-top))',
-          paddingBottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom, 20px) + 20px)',
-        }}
-      >
-        <ViewStateHandler currentView={currentView} setCurrentView={setCurrentView} direction={direction} />
+      <main className="flex-1 w-full max-w-lg mx-auto relative z-10 h-full overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div
+          style={{
+            paddingTop: 'calc(var(--header-height) + var(--safe-area-top))',
+            paddingBottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom, 20px) + 20px)',
+          }}
+        >
+          <ViewStateHandler currentView={currentView} setCurrentView={setCurrentView} direction={direction} />
+        </div>
       </main>
 
       <Navigation currentView={currentView} setView={handleSetView} isVisible={true} childSupportMode={childSupportMode} helpEnabled={helpEnabled} />

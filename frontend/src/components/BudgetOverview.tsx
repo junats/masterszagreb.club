@@ -3,19 +3,22 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { ChevronRight, AlertTriangle, Wallet } from 'lucide-react';
 import { DashboardMetrics } from '../hooks/useDashboardMetrics';
 import { useLanguage } from '../contexts/LanguageContext';
+import { motion } from 'framer-motion';
 
 interface BudgetOverviewProps {
     metrics: DashboardMetrics;
     budgetView: 'daily' | 'weekly' | 'monthly';
     setBudgetView: (view: 'daily' | 'weekly' | 'monthly') => void;
     monthlyBudget: number;
+    isVisible?: boolean;
 }
 
 export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
     metrics,
     budgetView,
     setBudgetView,
-    monthlyBudget
+    monthlyBudget,
+    isVisible = true
 }) => {
     const { t } = useLanguage();
 
@@ -32,7 +35,8 @@ export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
     const isOverBudget = progressRatio > 100;
     const overSpend = Math.max(0, progressValue - progressTarget);
 
-    // Chart Data Selection (Placeholder if we want to add chart later, logic from Dashboard suggests specialized charts per view)
+    // Dynamic width calculation for animation
+    const barWidth = isVisible ? `${Math.min(progressRatio, 100)}%` : '0%';
 
     return (
         <div className="flex flex-col h-full relative overflow-hidden">
@@ -72,13 +76,15 @@ export const BudgetOverview: React.FC<BudgetOverviewProps> = ({
                     </div>
                 </div>
 
-                {/* Progress Bar - Slim & Minimal */}
+                {/* Progress Bar - Slim & Minimal with Animation */}
                 <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-3 border border-white/5">
-                    <div
-                        className={"h-full rounded-full transition-all duration-1000 " + (
+                    <motion.div
+                        initial={{ width: '0%' }}
+                        animate={{ width: barWidth }}
+                        transition={{ duration: 1.2, ease: "easeOut" }}
+                        className={"h-full rounded-full " + (
                             isOverBudget ? 'bg-red-500' : progressRatio > 85 ? 'bg-amber-500' : 'bg-emerald-500'
                         )}
-                        style={{ width: `${Math.min(progressRatio, 100)}%` }}
                     />
                 </div>
 

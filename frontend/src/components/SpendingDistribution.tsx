@@ -112,7 +112,7 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
             </div>
 
             {/* Charts Grid */}
-            <div className={"grid gap-3 " + (childSupportMode ? "grid-cols-2" : "grid-cols-1")}>
+            <div className="flex flex-col gap-3">
                 {activeCharts.map(chartConfig => {
                     const activeIdx = activeIndex[chartConfig.id];
                     const hasActive = activeIdx !== undefined && activeIdx !== null;
@@ -124,21 +124,15 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                         : '#94a3b8';
 
                     return (
-                        <div key={chartConfig.id} className="flex flex-col h-full bg-slate-900/40 border border-white/5 rounded-[1.5rem] p-3 backdrop-blur-sm relative overflow-hidden group hover:border-white/10 transition-colors">
-                            {activeCharts.length > 1 && (
-                                <h5 className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 text-center">{chartConfig.title}</h5>
-                            )}
+                        <div key={chartConfig.id} className="flex flex-col bg-slate-900/40 border border-white/5 rounded-[2rem] p-4 backdrop-blur-sm relative overflow-hidden group hover:border-white/10 transition-colors">
+                            <h5 className="text-[11px] uppercase font-bold text-slate-500 tracking-widest mb-6 text-left flex items-center gap-2">
+                                <div className="w-1 h-3 rounded-full bg-indigo-500/50"></div>
+                                {chartConfig.title}
+                            </h5>
 
-                            <div className={"flex-1 flex flex-col items-center justify-start " + (childSupportMode ? "gap-2" : "gap-6 md:flex-row")}>
+                            <div className="flex flex-col gap-8">
                                 {/* Chart */}
-                                <div
-                                    className={(childSupportMode ? "w-28 h-28" : "w-36 h-36 md:w-32 md:h-32") + " relative flex-shrink-0"}
-                                    style={{
-                                        width: childSupportMode ? '112px' : '144px', // w-28 : w-36
-                                        height: childSupportMode ? '112px' : '144px',
-                                        minWidth: childSupportMode ? '112px' : '128px', // MD breakpoint fallback logic is tricky in inline styles, so we prioritize the base size or ensure it doesn't collapse.
-                                    }}
-                                >
+                                <div className="w-full h-48 relative flex-shrink-0">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart key={`${chartConfig.id}-${pieView}-${isVisible}`}>
                                             <Pie
@@ -148,10 +142,10 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                                                 data={chartConfig.data}
                                                 cx="50%"
                                                 cy="50%"
-                                                innerRadius={childSupportMode ? "70%" : "70%"}
-                                                outerRadius={childSupportMode ? "95%" : "100%"}
+                                                innerRadius="75%"
+                                                outerRadius="100%"
                                                 paddingAngle={4}
-                                                cornerRadius={4}
+                                                cornerRadius={6}
                                                 dataKey="value"
                                                 startAngle={90}
                                                 endAngle={-270}
@@ -186,42 +180,64 @@ export const SpendingDistribution: React.FC<SpendingDistributionProps> = ({
                                                 transition={{ duration: 0.2 }}
                                                 className="flex flex-col items-center"
                                             >
-                                                <p className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: hasActive ? displayColor : '#64748b' }}>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: hasActive ? displayColor : '#64748b' }}>
                                                     {displayLabel}
                                                 </p>
-                                                <p className={"font-bold text-white leading-none " + (childSupportMode ? "text-sm" : "text-base")}>
-                                                    €{displayTotal.toFixed(0)}
+                                                <p className="text-2xl font-bold text-white leading-none tracking-tight">
+                                                    €{displayTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 </p>
                                             </motion.div>
                                         </AnimatePresence>
                                     </div>
                                 </div>
 
-                                {/* Legend */}
-                                <div className="flex flex-col gap-1.5 w-full min-w-0 px-1">
-                                    {chartConfig.data.slice(0, childSupportMode ? 3 : 4).map((entry: any, i: number) => {
+                                {/* Legend with Animated Bars */}
+                                <div className="grid grid-cols-1 gap-3 w-full px-2">
+                                    {chartConfig.data.map((entry: any, i: number) => {
                                         const entryColor = chartConfig.id === 'child' ? chartConfig.colors[i % chartConfig.colors.length] : getCategoryColor(entry.name);
                                         const isActive = activeIdx === i;
                                         const percent = chartConfig.total > 0 ? (entry.value / chartConfig.total) * 100 : 0;
 
                                         return (
-                                            <div
+                                            <motion.div
                                                 key={i}
-                                                className={"flex justify-between items-center text-xs group/item cursor-pointer rounded-lg p-1 transition-all " + (isActive ? "bg-white/5" : "hover:bg-white/5")}
+                                                initial="initial"
+                                                whileInView="visible"
+                                                viewport={{ once: true }}
+                                                className={"flex flex-col gap-1.5 cursor-pointer p-2 rounded-xl transition-all " + (isActive ? "bg-white/5" : "hover:bg-white/5")}
                                                 onMouseEnter={() => onPieEnter(chartConfig.id, null, i)}
                                                 onMouseLeave={() => onPieLeave(chartConfig.id)}
                                             >
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <div className={"w-2 h-2 rounded-full shrink-0 transition-transform " + (isActive ? "scale-125" : "")} style={{ backgroundColor: entryColor }}></div>
-                                                    <div className="flex flex-col">
-                                                        <span className={"font-medium truncate max-w-[70px] leading-none " + (isActive ? "text-white" : "text-slate-400")}>{t(`categories.${entry.name.toLowerCase()}`, { defaultValue: entry.name })}</span>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className={"w-2.5 h-2.5 rounded-full shrink-0 transition-transform " + (isActive ? "scale-125 shadow-[0_0_8px_rgba(255,255,255,0.3)]" : "")} style={{ backgroundColor: entryColor }}></div>
+                                                        <span className={"font-bold truncate max-w-[150px] leading-none " + (isActive ? "text-white" : "text-slate-300")}>
+                                                            {t(`categories.${entry.name.toLowerCase()}`, { defaultValue: entry.name })}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={"font-bold tabular-nums text-sm " + (isActive ? "text-white" : "text-slate-200")}>
+                                                            €{entry.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-500 tabular-nums w-8 text-right underline decoration-slate-500/30 underline-offset-2">{percent.toFixed(0)}%</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col items-end">
-                                                    <span className={"font-bold tabular-nums leading-none " + (isActive ? "text-white" : "text-slate-300")}>€{entry.value.toFixed(0)}</span>
-                                                    <span className="text-[9px] text-slate-500 tabular-nums">{percent.toFixed(0)}%</span>
+
+                                                {/* Animated Progress Bar */}
+                                                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden relative">
+                                                    <motion.div
+                                                        variants={{
+                                                            initial: { width: 0 },
+                                                            visible: { width: `${percent}%`, transition: { duration: 1, ease: "easeOut", delay: 0.1 + (i * 0.1) } }
+                                                        }}
+                                                        className="absolute inset-y-0 left-0 rounded-full"
+                                                        style={{
+                                                            backgroundColor: entryColor,
+                                                            boxShadow: isActive ? `0 0 10px ${entryColor}40` : 'none'
+                                                        }}
+                                                    />
                                                 </div>
-                                            </div>
+                                            </motion.div>
                                         );
                                     })}
                                 </div>

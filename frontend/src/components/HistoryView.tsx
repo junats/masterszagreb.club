@@ -770,7 +770,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar pt-2 pb-32 relative z-10">
+            <div className="flex-1 overflow-y-auto no-scrollbar pt-2 relative z-10">
                 {showStats && filteredReceipts.length > 0 && (
                     <HistoryAnalytics receipts={filteredReceipts} ageRestricted={ageRestricted} categoryBudgets={categoryBudgets} childSupportMode={childSupportMode} />
                 )}

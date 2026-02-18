@@ -54,6 +54,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Translation function with nested key support and parameter interpolation
     const t = (key: string, params?: Record<string, string | number>): string => {
+        if (!key) return '';
+
         const keys = key.split('.');
         let value: any = translations;
 
@@ -61,12 +63,19 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (value && typeof value === 'object' && k in value) {
                 value = value[k];
             } else {
+                // If key not found, check if a defaultValue was provided
+                if (params && params.defaultValue) {
+                    return params.defaultValue.toString();
+                }
                 console.warn(`Translation key not found: ${key}`);
                 return key;
             }
         }
 
         if (typeof value !== 'string') {
+            if (params && params.defaultValue) {
+                return params.defaultValue.toString();
+            }
             return key;
         }
 

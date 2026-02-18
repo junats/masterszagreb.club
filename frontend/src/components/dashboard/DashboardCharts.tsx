@@ -32,7 +32,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
     return (
         <div className="col-span-2">
             <ProBlurGuard isPro={isProMode} onClick={() => setShowSubscriptionModal(true)} label="Advanced Analytics" className={!isProMode ? "rounded-3xl h-full" : "h-full"}>
-                <div className="flex flex-col gap-6 h-full">
+                <div className="flex flex-col gap-4 h-full">
                     <div className="col-span-2 h-full">
                         <SpotlightCard className="h-full relative rounded-3xl border border-slate-800 bg-card p-4 flex flex-col min-h-[280px] shadow-lg">
                             <div className="relative z-10 flex flex-col h-full">

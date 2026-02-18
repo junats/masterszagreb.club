@@ -1,7 +1,7 @@
 import React from 'react';
 import { SubscriptionTier } from "@common/types";
 import { User, ViewState } from '@common/types';
-import { Shield, Heart, Bell } from 'lucide-react';
+import { Heart, Bell, Star } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import NotificationCenter from './NotificationCenter';
@@ -10,7 +10,7 @@ interface HeaderProps {
     user: User | null;
     currentView: ViewState;
     onAvatarClick: () => void;
-    ageRestricted: boolean; // Add to props if needed for Shield icon
+    ageRestricted: boolean; // Keep in props for now to avoid breaking App.tsx, but ignore
     onNavigate: (view: ViewState) => void;
 }
 
@@ -64,17 +64,17 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
                     {/* Notification Bell */}
                     <button
                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-secondarySystemBackground hover:bg-tertiarySystemBackground transition-colors"
+                        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 transition-all shadow-sm group"
                     >
-                        <Bell className="w-5 h-5 text-systemBlue" />
+                        <Bell className="w-5 h-5 text-systemBlue group-active:scale-90 transition-transform" />
                         {unreadNotificationCount > 0 && (
-                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-systemRed rounded-full border-2 border-white dark:border-black" />
+                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-systemRed rounded-full border-2 border-white dark:border-black shadow-sm" />
                         )}
                     </button>
 
                     {/* Avatar / Profile Link */}
                     <div className="relative group cursor-pointer" onClick={onAvatarClick}>
-                        <div className={`w-9 h-9 rounded-full border border-black/5 dark:border-white/10 flex items-center justify-center overflow-hidden transition-transform active:scale-95 ${user?.tier === SubscriptionTier.PRO ? 'ring-2 ring-systemYellow/50' : ''} ${childSupportMode ? 'ring-2 ring-systemGreen shadow-sm' : ''}`}>
+                        <div className={`w-9 h-9 rounded-full border border-black/5 dark:border-white/10 flex items-center justify-center overflow-hidden transition-transform active:scale-95 shadow-sm`}>
                             {user?.avatarUrl ? (
                                 <img src={user.avatarUrl} alt={user.name || 'User'} className="w-full h-full object-cover" />
                             ) : (
@@ -83,17 +83,17 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
                                 </div>
                             )}
                         </div>
+                        {user?.tier === SubscriptionTier.PRO && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-systemYellow rounded-full border-1.5 border-white dark:border-black flex items-center justify-center shadow-md z-10 animate-in zoom-in duration-300">
+                                <Star size={8} className="text-black" fill="currentColor" />
+                            </div>
+                        )}
                         {childSupportMode && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-systemGreen rounded-full border-2 border-white dark:border-black flex items-center justify-center">
-                                <Heart size={8} className="text-white" />
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-systemGreen rounded-full border-1.5 border-white dark:border-black flex items-center justify-center shadow-md animate-in fade-in duration-500">
+                                <Heart size={8} className="text-white" fill="currentColor" />
                             </div>
                         )}
                     </div>
-                    {ageRestricted && (
-                        <div className="bg-systemOrange/10 px-2 py-1 rounded-md flex items-center justify-center">
-                            <Shield className="text-systemOrange w-4 h-4" />
-                        </div>
-                    )}
                 </div>
             </div>
 

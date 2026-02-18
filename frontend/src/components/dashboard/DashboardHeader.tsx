@@ -21,6 +21,7 @@ interface DashboardHeaderProps {
     ambientMode: boolean;
     ambientStyle: React.CSSProperties;
     budgetCardRef: React.RefObject<HTMLDivElement>;
+    isVisible?: boolean;
 }
 
 const VisibilitySensor = ({ children, threshold = 0.5 }: { children: (props: { isVisible: boolean }) => React.ReactNode, threshold?: number }) => {
@@ -44,7 +45,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     childSupportMode,
     ambientMode,
     ambientStyle,
-    budgetCardRef
+    budgetCardRef,
+    isVisible = true
 }) => {
     const itemVariants = {
         hidden: { opacity: 0, y: 10 },
@@ -52,12 +54,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     };
 
     return (
-        <motion.div
+        <div
             ref={budgetCardRef}
-            key={metrics.thisMonthTotal}
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
             style={ambientMode ? ambientStyle : {}}
             className={"relative transition-all duration-1000 mb-4"} // Removed hardcoded borders/radius to let Card handle it
         >
@@ -71,6 +69,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     budgetView={budgetView}
                     setBudgetView={setBudgetView}
                     monthlyBudget={monthlyBudget || 0}
+                    isVisible={isVisible}
                 />
 
                 {suggestions.length > 0 && (
@@ -119,6 +118,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     </VisibilitySensor>
                 </div>
             </SpotlightCard>
-        </motion.div>
+        </div>
     );
 };

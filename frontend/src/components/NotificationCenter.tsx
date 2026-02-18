@@ -29,7 +29,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Recent alerts with persistence
-    const [recentAlerts, setRecentAlerts] = useState<Array<{ id: number, message: string, type: string, time: string }>>([]);
+    const [recentAlerts, setRecentAlerts] = useState<Array<{ id: number, message: string, type: string, time: string, isRead?: boolean }>>([]);
+    const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
 
     // Get Smart Insights
     const smartInsights = useMemo(() => {
@@ -65,9 +66,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
 
     useEffect(() => {
         if (isOpen) {
-            markAllNotificationsAsRead();
+            // markAllNotificationsAsRead();
+            // We'll handle individual read status instead of just clearing the dot on open
         }
-    }, [isOpen, markAllNotificationsAsRead]);
+    }, [isOpen]);
+
+    const handleDismissInsight = (id: string) => {
+        setDismissedInsights(prev => new Set([...prev, id]));
+    };
 
     // Load persisted data
     useEffect(() => {
@@ -114,14 +120,40 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
     }, []);
 
     // Dismiss handlers
-    const handleDismissAlert = (id: number) => {
-        setRecentAlerts(prev => prev.filter(alert => alert.id !== id));
-        // Update storage logic here if needed
+    const handleDismissAlert = async (id: number) => {
+        const updated = recentAlerts.filter(alert => alert.id !== id);
+        setRecentAlerts(updated);
+        try {
+            const { Preferences } = await import('@capacitor/preferences');
+            await Preferences.set({ key: 'truetrack_recent_alerts', value: JSON.stringify(updated) });
+        } catch (e) {
+            console.error('Failed to save alerts:', e);
+        }
     };
 
-    const handleDismissSystemNotification = (id: number) => {
-        setSystemNotifications(prev => prev.filter(n => n.id !== id));
-        // Update storage logic here if needed
+    const handleDismissSystemNotification = async (id: number) => {
+        const updated = systemNotifications.filter(n => n.id !== id);
+        setSystemNotifications(updated);
+        try {
+            const { Preferences } = await import('@capacitor/preferences');
+            await Preferences.set({ key: 'truetrack_notifications', value: JSON.stringify(updated) });
+        } catch (e) {
+            console.error('Failed to save notifications:', e);
+        }
+    };
+
+    const toggleNotificationRead = async (id: number, type: 'alert' | 'system') => {
+        if (type === 'alert') {
+            const updated = recentAlerts.map(a => a.id === id ? { ...a, isRead: !a.isRead } : a);
+            setRecentAlerts(updated);
+            const { Preferences } = await import('@capacitor/preferences');
+            await Preferences.set({ key: 'truetrack_recent_alerts', value: JSON.stringify(updated) });
+        } else {
+            const updated = systemNotifications.map(n => n.id === id ? { ...n, isRead: !n.isRead } : n);
+            setSystemNotifications(updated);
+            const { Preferences } = await import('@capacitor/preferences');
+            await Preferences.set({ key: 'truetrack_notifications', value: JSON.stringify(updated) });
+        }
     };
 
     // Close on click outside
@@ -159,9 +191,22 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                         <Bell size={16} className="text-white" />
                         <h2 className="text-sm font-bold text-white uppercase tracking-wider">{t('notificationsView.title')}</h2>
                     </div>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                        <X size={16} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => {
+                                markAllNotificationsAsRead();
+                                // Also mark all local items as read
+                                setRecentAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
+                                setSystemNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                            }}
+                            className="text-[10px] uppercase font-bold text-blue-400 hover:text-blue-300 transition-colors mr-2 px-2 py-1 bg-blue-500/10 rounded-lg border border-blue-500/20"
+                        >
+                            {t('notificationsView.markAsRead')}
+                        </button>
+                        <button onClick={onClose} className="p-1 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+                            <X size={16} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="overflow-y-auto p-4 space-y-6 scroll-smooth">
@@ -173,9 +218,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                             {t('dashboard.insights')}
                         </h3>
                         <div className="space-y-3">
-                            {smartInsights.length > 0 ? (
-                                smartInsights.map((insight) => (
-                                    <div key={insight.id} className={`p-3 rounded-xl border flex flex-col gap-2 ${insight.severity === 'danger' ? 'bg-red-500/10 border-red-500/20' :
+                            {smartInsights.filter(i => !dismissedInsights.has(i.id)).length > 0 ? (
+                                smartInsights.filter(i => !dismissedInsights.has(i.id)).map((insight) => (
+                                    <div key={insight.id} className={`p-3 rounded-xl border flex flex-col gap-2 relative group ${insight.severity === 'danger' ? 'bg-red-500/10 border-red-500/20' :
                                         insight.severity === 'warning' ? 'bg-amber-500/10 border-amber-500/20' :
                                             insight.severity === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' :
                                                 'bg-blue-500/10 border-blue-500/20'
@@ -197,6 +242,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                                 <p className="text-xs text-slate-400 leading-tight mt-1">{insight.subtext}</p>
                                             </div>
                                         </div>
+
+                                        {/* Dismiss Insight */}
+                                        <button
+                                            onClick={() => handleDismissInsight(insight.id)}
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-white transition-opacity"
+                                            title={t('notificationsView.dismiss')}
+                                        >
+                                            <X size={14} />
+                                        </button>
 
                                         {/* Action Button */}
                                         {insight.action && (
@@ -241,20 +295,31 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                             <div className="space-y-2">
                                 {recentAlerts.map((alert) => (
                                     <div key={alert.id} className="relative group">
-                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-white/5">
+                                        <div className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${alert.isRead ? 'bg-slate-800/30 border-white/5 saturate-[0.5]' : 'bg-slate-800/80 border-blue-500/20 shadow-lg shadow-blue-500/5'}`}>
+                                            {!alert.isRead && <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />}
                                             {alert.type === 'success' && <CheckCircle size={14} className="text-emerald-400" />}
                                             {alert.type === 'error' && <AlertCircle size={14} className="text-red-400" />}
                                             {alert.type === 'info' && <Info size={14} className="text-blue-400" />}
                                             <div className="flex-1">
-                                                <p className="text-xs font-medium text-slate-200">{alert.message}</p>
+                                                <p className={`text-xs font-medium ${alert.isRead ? 'text-slate-400' : 'text-slate-200'}`}>{alert.message}</p>
                                                 <p className="text-[10px] text-slate-500">{alert.time}</p>
                                             </div>
-                                            <button
-                                                onClick={() => handleDismissAlert(alert.id)}
-                                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-600 hover:text-red-400 transition-all"
-                                            >
-                                                <X size={14} />
-                                            </button>
+                                            <div className="flex items-center gap-1 opacity-100 group-hover:opacity-100">
+                                                <button
+                                                    onClick={() => toggleNotificationRead(alert.id, 'alert')}
+                                                    className={`p-1 transition-colors ${alert.isRead ? 'text-slate-600 hover:text-blue-400' : 'text-blue-400 hover:text-blue-300'}`}
+                                                    title={alert.isRead ? t('notificationsView.markAsUnread') : t('notificationsView.markAsRead')}
+                                                >
+                                                    {alert.isRead ? <Clock size={14} /> : <CheckCircle size={14} />}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDismissAlert(alert.id)}
+                                                    className="p-1 text-slate-600 hover:text-red-400 transition-colors"
+                                                    title={t('notificationsView.delete')}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -275,29 +340,40 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                     return (
                                         <div
                                             key={notification.id}
-                                            className="bg-slate-800/30 border border-white/5 rounded-xl p-3 hover:bg-slate-800/50 transition-colors group relative"
+                                            className={`border rounded-xl p-3 transition-colors group relative ${notification.isRead ? 'bg-slate-800/20 border-white/5 saturate-[0.5]' : 'bg-slate-800/60 border-indigo-500/20 shadow-lg shadow-indigo-500/5'}`}
                                         >
+                                            {!notification.isRead && <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" />}
                                             <div className="flex items-start gap-3">
-                                                <div className={`${notification.bgColor || 'bg-slate-700'} ${notification.color || 'text-white'} p-2 rounded-lg flex-shrink-0`}>
+                                                <div className={`${notification.bgColor || 'bg-slate-700'} ${notification.color || 'text-white'} p-2 rounded-lg flex-shrink-0 transition-opacity ${notification.isRead ? 'opacity-50' : ''}`}>
                                                     <Icon size={16} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="text-slate-200 font-bold text-xs mb-0.5">
+                                                    <h3 className={`font-bold text-xs mb-0.5 ${notification.isRead ? 'text-slate-400' : 'text-slate-200'}`}>
                                                         {notification.title}
                                                     </h3>
-                                                    <p className="text-slate-400 text-xs leading-relaxed">
+                                                    <p className={`text-xs leading-relaxed ${notification.isRead ? 'text-slate-500' : 'text-slate-400'}`}>
                                                         {notification.message}
                                                     </p>
                                                     <span className="text-slate-600 text-[10px] mt-1 block">
                                                         {notification.time}
                                                     </span>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleDismissSystemNotification(notification.id)}
-                                                    className="absolute top-2 right-2 text-slate-600 hover:text-white transition-colors p-1 opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <X size={14} />
-                                                </button>
+                                                <div className="flex items-center gap-1 opacity-100 group-hover:opacity-100">
+                                                    <button
+                                                        onClick={() => toggleNotificationRead(notification.id, 'system')}
+                                                        className={`p-1 transition-colors ${notification.isRead ? 'text-slate-600 hover:text-blue-400' : 'text-blue-400 hover:text-blue-300'}`}
+                                                        title={notification.isRead ? t('notificationsView.markAsUnread') : t('notificationsView.markAsRead')}
+                                                    >
+                                                        {notification.isRead ? <Clock size={14} /> : <CheckCircle size={14} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDismissSystemNotification(notification.id)}
+                                                        className="p-1 text-slate-600 hover:text-red-400 transition-colors"
+                                                        title={t('notificationsView.delete')}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     );

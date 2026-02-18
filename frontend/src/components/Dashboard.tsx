@@ -147,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         // Top Category
         const topCatName = metrics.categoryData.length > 0 ? metrics.categoryData[0].name : null;
-        const topCategory = topCatName ? t(`categories.${topCatName.toLowerCase()} `, { defaultValue: topCatName }) : '-';
+        const topCategory = topCatName ? t(`categories.${topCatName.toLowerCase()}`, { defaultValue: topCatName }) : '-';
 
         // Weekend Spend %
         const weekendSpend = (metrics.thisMonthReceipts || []).reduce((acc, r) => {
@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             statusValue = t('status.receiptAdded');
             statusTrend = 'up';
             statusIcon = CheckCircle2;
-            statusDetail = `+€${latestReceipt.total.toFixed(2)} at ${latestReceipt.storeName} `;
+            statusDetail = `+€${latestReceipt.total.toFixed(2)} at ${latestReceipt.storeName}`;
             statusPopup = {
                 title: t('popups.receiptProcessed.title'),
                 description: t('popups.receiptProcessed.description', { storeName: latestReceipt.storeName, amount: latestReceipt.total.toFixed(2) }),
@@ -205,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             statusValue = t('status.overBudget');
             statusTrend = 'down';
             statusIcon = AlertCircle;
-            statusDetail = `Exceeded by €${(metrics.thisMonthTotal - monthlyBudget).toFixed(0)} `;
+            statusDetail = `Exceeded by €${(metrics.thisMonthTotal - monthlyBudget).toFixed(0)}`;
             statusPopup = {
                 title: t('popups.budgetAlert.title'),
                 description: t('popups.budgetAlert.description', { budget: monthlyBudget.toString() }),
@@ -254,9 +254,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         }
 
         const top3Cats = metrics.categoryData.slice(0, 3).map(c => ({
-            label: t(`categories.${c.name.toLowerCase()} `, { defaultValue: c.name }),
-            value: c.percentage.toFixed(0) + "% ",
-            subtext: "€" + c.value.toFixed(0) + " "
+            label: t(`categories.${c.name.toLowerCase()}`, { defaultValue: c.name }),
+            value: c.percentage.toFixed(0) + "%",
+            subtext: "€" + c.value.toFixed(0)
         }));
 
         const dailyTarget = monthlyBudget / 30; // Approx
@@ -265,7 +265,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         return [
             {
                 label: t('labels.dailyAvg'),
-                value: "€" + dailyAvg.toFixed(0) + " ",
+                value: "€" + dailyAvg.toFixed(0),
                 trend: dailyTrendDiff > 0 ? 'up' : 'down',
                 trendLabel: dailyTrendDiff > 0 ? t('labels.aboveTarget') : t('status.onTrack'),
                 icon: Calendar,
@@ -296,7 +296,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 trend: 'neutral',
                 trendLabel: t('labels.dominant'),
                 icon: ShoppingCart,
-                detail: (top3Cats[0]?.value || '0%') + " " + t('labels.ofTotal'),
+                detail: (top3Cats[0]?.value || '0%') + t('labels.ofTotal'),
                 popup: {
                     title: t('popups.topCategories.title'),
                     description: t('popups.topCategories.description', { category: topCategory }),
@@ -421,15 +421,12 @@ const Dashboard: React.FC<DashboardProps> = ({
             {isRefreshing ? (
                 <DashboardSkeleton />
             ) : (
-                <motion.div
-                    className="w-full h-full pt-2 px-4 pb-4 scroll-smooth no-scrollbar"
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
+                <div
+                    className="w-full h-full pt-2 px-4 scroll-smooth no-scrollbar"
                 >
 
                     {/* Main Content Wrapper */}
-                    <div className="pt-0 pb-32 space-y-4">
+                    <div className="pt-0 space-y-4">
 
                         <DashboardHeader
                             metrics={metrics}
@@ -447,10 +444,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                             ambientMode={ambientMode}
                             ambientStyle={ambientStyle}
                             budgetCardRef={budgetCardRef}
+                            isVisible={isBudgetInView}
                         />
 
                         {/* BENTO GRID LAYOUT */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
 
                             {/* Co-Parenting Section (if enabled) */}
                             <CoParentingWidget
@@ -571,7 +569,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             setShowSubscriptionModal(false);
                         }}
                     />
-                </motion.div>
+                </div>
             )}
         </PullToRefresh>
     );

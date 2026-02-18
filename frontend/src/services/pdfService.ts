@@ -61,22 +61,42 @@ export const PDFService = {
         });
 
         // --- Custody Summary ---
+        // Helper to format Date as YYYY-MM-DD in local time
+        const formatLocalDate = (date: Date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const startStr = formatLocalDate(dateRange.start);
+        const endStr = formatLocalDate(dateRange.end);
+
         const filteredCustody = custodyDays.filter(d => {
-            const dDate = new Date(d.date);
-            return dDate >= dateRange.start && dDate <= dateRange.end;
+            // d.date is "YYYY-MM-DD", compare strings for exact day match inclusive
+            return d.date >= startStr && d.date <= endStr;
         });
 
-        const totalDays = filteredCustody.length;
-        const daysWithUser = filteredCustody.filter(d => d.withYou).length;
-        const custodyPercentage = totalDays > 0 ? (daysWithUser / totalDays) * 100 : 0;
+        // Exact days in period (corrected for inclusive range)
+        const diffTime = Math.abs(dateRange.end.getTime() - dateRange.start.getTime());
+        const totalDaysInPeriod = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        const meDays = filteredCustody.filter(d => String(d.status) === 'me').length;
+        const partnerDays = filteredCustody.filter(d => String(d.status) === 'partner').length;
+        const splitDays = filteredCustody.filter(d => String(d.status) === 'split').length;
+
+        const mePct = totalDaysInPeriod > 0 ? ((meDays / totalDaysInPeriod) * 100).toFixed(1) : "0.0";
+        const partnerPct = totalDaysInPeriod > 0 ? ((partnerDays / totalDaysInPeriod) * 100).toFixed(1) : "0.0";
+        const splitPct = totalDaysInPeriod > 0 ? ((splitDays / totalDaysInPeriod) * 100).toFixed(1) : "0.0";
 
         autoTable(doc, {
             startY: (doc as any).lastAutoTable.finalY + 10,
-            head: [['Custody Metric', 'Value']],
+            head: [['Custody Metric', 'Days', 'Percentage']],
             body: [
-                ['Total Days in Period', totalDays.toString()],
-                ['Days with Primary Parent (You)', daysWithUser.toString()],
-                ['Custody Percentage', `${custodyPercentage.toFixed(1)}%`],
+                ['Total Days in Period', totalDaysInPeriod.toString(), '100%'],
+                ['Days with You (Me)', meDays.toString(), `${mePct}%`],
+                ['Days with Partner', partnerDays.toString(), `${partnerPct}%`],
+                ['Split / Handover Days', splitDays.toString(), `${splitPct}%`],
             ],
             theme: 'grid',
             headStyles: { fillColor: [147, 51, 234] }, // Purple 600

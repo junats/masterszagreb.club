@@ -18,6 +18,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
 }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasCrossedThreshold, setHasCrossedThreshold] = useState(false);
+    const [isAtTop, setIsAtTop] = useState(true);
+    const lastScrollTime = useRef(Date.now());
     const touchStartY = useRef(0);
     const scrollRef = useRef<HTMLDivElement>(null);
     const pullDistance = useMotionValue(0);
@@ -26,10 +28,21 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     const indicatorScale = useTransform(pullDistance, [0, threshold], [0.6, 1]);
     const arrowRotation = useTransform(pullDistance, [0, threshold], [0, 180]);
 
+    const handleScroll = useCallback(() => {
+        const scrollTop = scrollRef.current?.scrollTop ?? 0;
+        setIsAtTop(scrollTop <= 0);
+        lastScrollTime.current = Date.now();
+    }, []);
+
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (disabled || isRefreshing) return;
+
         const scrollTop = scrollRef.current?.scrollTop ?? 0;
-        if (scrollTop <= 0) {
+        const timeSinceLastScroll = Date.now() - lastScrollTime.current;
+
+        // Only allow pull-to-refresh if we are at the top AND 
+        // there hasn't been active scrolling for a short moment (stops momentum triggers)
+        if (scrollTop <= 0 && timeSinceLastScroll > 100) {
             touchStartY.current = e.touches[0].clientY;
         } else {
             touchStartY.current = 0;
@@ -39,14 +52,20 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         if (disabled || isRefreshing || touchStartY.current === 0) return;
         const scrollTop = scrollRef.current?.scrollTop ?? 0;
-        if (scrollTop > 0) return;
+
+        // If we've started scrolling down the list, cancel the pull-to-refresh
+        if (scrollTop > 5) {
+            touchStartY.current = 0;
+            pullDistance.set(0);
+            return;
+        }
 
         const currentY = e.touches[0].clientY;
         const diff = currentY - touchStartY.current;
 
-        if (diff > 0) {
-            // Dampen the pull (feels more native)
-            const dampened = Math.min(diff * 0.4, threshold * 1.5);
+        if (diff > 10) { // Add a small dead zone (10px) before showing indicator
+            // Dampen the pull more aggressively at first
+            const dampened = Math.min((diff - 10) * 0.35, threshold * 1.8);
             pullDistance.set(dampened);
 
             if (dampened >= threshold && !hasCrossedThreshold) {
@@ -55,6 +74,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
             } else if (dampened < threshold && hasCrossedThreshold) {
                 setHasCrossedThreshold(false);
             }
+        } else if (diff < 0 && pullDistance.get() > 0) {
+            // Allow sliding back up to cancel
+            pullDistance.set(0);
         }
     }, [disabled, isRefreshing, threshold, hasCrossedThreshold, pullDistance]);
 
@@ -105,8 +127,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
                     ) : (
                         <motion.div
                             className={`w-8 h-8 rounded-full flex items-center justify-center border backdrop-blur-sm transition-colors duration-200 ${hasCrossedThreshold
-                                    ? 'bg-blue-500/20 border-blue-500/30'
-                                    : 'bg-slate-800/80 border-white/10'
+                                ? 'bg-blue-500/20 border-blue-500/30'
+                                : 'bg-slate-800/80 border-white/10'
                                 }`}
                             style={{ rotate: arrowRotation }}
                         >
@@ -122,6 +144,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
                 ref={scrollRef}
                 className="h-full w-full overflow-y-auto overflow-x-hidden custom-scrollbar"
                 style={{ y: contentY }}
+                onScroll={handleScroll}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}

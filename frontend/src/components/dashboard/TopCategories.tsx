@@ -38,7 +38,7 @@ export const TopCategories: React.FC<TopCategoriesProps> = ({ metrics, getCatego
                                         <div className="flex justify-between items-end mb-1">
                                             <span className="text-xxs font-medium text-slate-300 group-hover/bar:text-white transition-colors flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(cat.name) }}></div>
-                                                {t(`categories.${cat.name.toLowerCase()} `, { defaultValue: cat.name })}
+                                                {t(`categories.${cat.name.toLowerCase()}`, { defaultValue: cat.name })}
                                             </span>
                                             <div className="flex items-end gap-1.5">
                                                 <span className="text-sm font-bold text-white tabular-nums">€{cat.value.toFixed(0)}</span>
@@ -48,7 +48,7 @@ export const TopCategories: React.FC<TopCategoriesProps> = ({ metrics, getCatego
                                         <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-white/5">
                                             <motion.div
                                                 initial={{ width: 0 }}
-                                                animate={{ width: isInView ? `${cat.percentage}% ` : 0 }}
+                                                animate={{ width: isInView ? `${cat.percentage}%` : 0 }}
                                                 transition={{ duration: 1, ease: "easeOut", delay: idx * 0.1 }}
                                                 className="h-full rounded-full"
                                                 style={{ backgroundColor: getCategoryColor(cat.name) }}

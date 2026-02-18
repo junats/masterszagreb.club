@@ -12,6 +12,8 @@ import { WidgetService } from '../services/widgetService';
 import { Preferences } from '@capacitor/preferences';
 import { authService } from '../services/authService';
 import SubscriptionModal from './SubscriptionModal';
+import LegalModal from './LegalModal';
+import { ShieldCheck } from 'lucide-react';
 
 import { useData } from '../contexts/DataContext';
 import { useUser } from '../contexts/UserContext';
@@ -82,6 +84,8 @@ const Settings: React.FC<SettingsProps> = () => {
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryColor, setNewCategoryColor] = useState('#3b82f6'); // Default Blue
+
+    const [showLegal, setShowLegal] = useState<{ file: string, title: string } | null>(null);
 
     const [biometricAvailable, setBiometricAvailable] = useState(false);
     const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -277,7 +281,7 @@ const Settings: React.FC<SettingsProps> = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="flex-1 w-full max-w-md mx-auto relative pt-0 pb-8 px-4 custom-scrollbar"
+                className="flex-1 w-full max-w-md mx-auto relative pt-0 px-4 custom-scrollbar"
             >
                 <div className="pb-4 px-6 text-center">
                     {/* App Version moved to bottom */}
@@ -745,8 +749,8 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
                                 <span className="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">{t('settings.general.soon')}</span>
                             </button>
-                            <button className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5">
-                                <div className="flex items-center gap-3">
+                            <div className="border-b border-white/5">
+                                <div className="flex items-center gap-3 p-4">
                                     <div className="bg-slate-500/20 p-2 rounded-xl text-slate-400">
                                         <Database size={18} />
                                     </div>
@@ -754,10 +758,31 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <span className="text-slate-200 text-sm font-bold block">{t('settings.general.privacy')}</span>
                                     </div>
                                 </div>
-                                <ChevronRight className="text-slate-600" size={16} />
-                            </button>
+                                <div className="px-4 pb-4 flex flex-col gap-2">
+                                    <button
+                                        onClick={() => setShowLegal({ file: 'privacy_policy.md', title: t('settings.legal.privacyPolicy') || 'Privacy Policy' })}
+                                        className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck size={14} className="text-emerald-400" />
+                                            <span className="text-xs text-slate-300 font-medium">{t('settings.legal.privacyPolicy') || 'Privacy Policy'}</span>
+                                        </div>
+                                        <ChevronRight className="text-slate-600" size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => setShowLegal({ file: 'terms_of_use.md', title: t('settings.legal.terms') || 'Terms of Use' })}
+                                        className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <FileText size={14} className="text-blue-400" />
+                                            <span className="text-xs text-slate-300 font-medium">{t('settings.legal.terms') || 'Terms of Use'}</span>
+                                        </div>
+                                        <ChevronRight className="text-slate-600" size={14} />
+                                    </button>
+                                </div>
+                            </div>
 
-                            {/* Ambient Mode and 18+ toggles moved to Pro Controls section above */}
+                            {/* 18+ Ambient Mode and 18+ toggles moved to Pro Controls section above */}
 
                             {/* Comprehensive Seed Data (Dev) */}
                             {/* Comprehensive Seed Data (Dev) */}
@@ -803,49 +828,6 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
                             )}
 
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const savedReceipts = localStorage.getItem('truetrack_receipts');
-                                        if (!savedReceipts) {
-                                            alert(t('settings.data.noData'));
-                                            return;
-                                        }
-                                        let receipts = JSON.parse(savedReceipts) as Receipt[];
-
-                                        // 18+ Filter for Export
-                                        if (ageRestricted) {
-                                            receipts = receipts.map(r => ({
-                                                ...r,
-                                                items: r.items.filter(i => !i.isRestricted),
-                                                // Recalculate total if items were removed? 
-                                                // Ideally yes, but original total stands for reference. 
-                                                // But for "Hiding" purposes, maybe we just hide the line items?
-                                                // Let's filter items. The CSV usually iterates items.
-                                            })).filter(r => r.items.length > 0 || r.total > 0);
-                                        }
-
-                                        const csv = exportService.generateCSV(receipts);
-                                        const filename = `truetrack_export_${new Date().toISOString().split('T')[0]}.csv`;
-                                        await exportService.downloadCSV(csv, filename);
-                                    } catch (e) {
-                                        console.error('Export failed:', e);
-                                        alert(t('settings.data.exportFail'));
-                                    }
-                                }}
-                                className="w-full flex items-center justify-between p-4 hover:bg-surfaceHighlight transition-colors duration-300 border-b border-white/5"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-purple-500/20 p-2 rounded-xl text-purple-400">
-                                        <FileDown size={18} />
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="text-slate-200 text-sm font-bold block">{t('settings.proFeatures.export')}</span>
-                                        <span className="text-xs text-slate-500 font-medium">{t('settings.proFeatures.exportDesc')}</span>
-                                    </div>
-                                </div>
-                                <ChevronRight className="text-slate-600" size={16} />
-                            </button>
 
                             <button
                                 onClick={() => setShowLegalExportModal(true)}
@@ -1220,7 +1202,35 @@ const Settings: React.FC<SettingsProps> = () => {
                             </div>
 
                             <div className="space-y-4">
-                                <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <button
+                                        onClick={() => {
+                                            const now = new Date();
+                                            const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                                            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of month
+                                            setExportStartDate(start.toISOString().split('T')[0]);
+                                            setExportEndDate(end.toISOString().split('T')[0]);
+                                            HapticsService.impactLight();
+                                        }}
+                                        className="bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold py-2 rounded-lg border border-white/5 transition-all"
+                                    >
+                                        {t('settings.modals.thisMonth') || 'THIS MONTH'}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const end = new Date();
+                                            const start = new Date(end);
+                                            start.setFullYear(end.getFullYear() - 1); // 1 year ago
+                                            setExportStartDate(start.toISOString().split('T')[0]);
+                                            setExportEndDate(end.toISOString().split('T')[0]);
+                                            HapticsService.impactLight();
+                                        }}
+                                        className="bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold py-2 rounded-lg border border-white/5 transition-all"
+                                    >
+                                        {t('settings.modals.allTime') || 'ALL TIME'}
+                                    </button>
+                                </div>
+                                <div className="flex flex-col gap-3">
                                     <div>
                                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">{t('settings.modals.startDate')}</label>
                                         <input
@@ -1507,6 +1517,13 @@ const Settings: React.FC<SettingsProps> = () => {
                     document.body
                 )
             }
+
+            <LegalModal
+                isOpen={!!showLegal}
+                onClose={() => setShowLegal(null)}
+                fileName={showLegal?.file || ''}
+                title={showLegal?.title || ''}
+            />
         </>
     );
 };

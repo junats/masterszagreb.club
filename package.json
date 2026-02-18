@@ -31,6 +31,8 @@
     "@capacitor/preferences": "^7.0.0",
     "@capacitor/share": "^7.0.0",
     "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "7.0.5",
+    "@capawesome/capacitor-screenshot": "7.0.1",
     "@capgo/capacitor-native-biometric": "^7.6.0",
     "@google/genai": "^1.30.0",
     "@modelcontextprotocol/sdk": "^1.25.3",

@@ -27,6 +27,10 @@ PODS:
     - Capacitor
   - CapacitorSplashScreen (7.0.4):
     - Capacitor
+  - CapacitorStatusBar (7.0.5):
+    - Capacitor
+  - CapawesomeCapacitorScreenshot (7.0.1):
+    - Capacitor
   - CapgoCapacitorNativeBiometric (7.1.13):
     - Capacitor
   - GoogleDataTransport (10.1.0):
@@ -98,6 +102,8 @@ DEPENDENCIES:
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
+  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - "CapawesomeCapacitorScreenshot (from `../../node_modules/@capawesome/capacitor-screenshot`)"
   - "CapgoCapacitorNativeBiometric (from `../../node_modules/@capgo/capacitor-native-biometric`)"
   - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
 
@@ -146,6 +152,10 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/share"
   CapacitorSplashScreen:
     :path: "../../node_modules/@capacitor/splash-screen"
+  CapacitorStatusBar:
+    :path: "../../node_modules/@capacitor/status-bar"
+  CapawesomeCapacitorScreenshot:
+    :path: "../../node_modules/@capawesome/capacitor-screenshot"
   CapgoCapacitorNativeBiometric:
     :path: "../../node_modules/@capgo/capacitor-native-biometric"
   RevenuecatPurchasesCapacitor:
@@ -165,6 +175,8 @@ SPEC CHECKSUMS:
   CapacitorPreferences: 913eef88272c13eb6445b21e51fe8ef6635412cc
   CapacitorShare: a4f4f86eabd4b3ff52ba6a11b754713c6926a8d1
   CapacitorSplashScreen: 000f7591d546907dda5cbb514bd6b6d9e6048cf8
+  CapacitorStatusBar: 6de542f202c0dd3f9d0a73b240d4c9d3dddc49b4
+  CapawesomeCapacitorScreenshot: 7cb6adcfda60f72153d18811654638b19f019738
   CapgoCapacitorNativeBiometric: ede2c497c810fcad523b4e3d1895f989d33fe72b
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleMLKit: eff9e23ec1d90ea4157a1ee2e32a4f610c5b3318
@@ -183,6 +195,6 @@ SPEC CHECKSUMS:
   RevenueCat: d185cbff8be9425b5835042afd6889389bb756c8
   RevenuecatPurchasesCapacitor: d6cca993813f124f48c777d9f2b199c98b69f8f9
 
-PODFILE CHECKSUM: 4465dd1f2374bde7c943369fec454726d1467d3c
+PODFILE CHECKSUM: 030c8da244270e08641ebf7a1057ebaaf1c957ab
 
 COCOAPODS: 1.16.2
