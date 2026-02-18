@@ -49,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     onCustodyClick,
     onHabitsClick
 }) => {
-    const { receipts, monthlyBudget, goals, custodyDays, userSettings, addGoal, updateGoal, achievements, isProMode, setIsProMode, categories, childSupportMode, ageRestricted, goalsEnabled, financialSnapshotEnabled, isRefreshing, refreshData } = useData();
+    const { receipts, monthlyBudget, goals, custodyDays, userSettings, addGoal, updateGoal, achievements, isProMode, setIsProMode, categories, childSupportMode, ageRestricted, goalsEnabled, financialSnapshotEnabled, isRefreshing, refreshData, ambientMode } = useData();
     const { user } = useUser();
     const { t } = useLanguage();
 
@@ -382,16 +382,26 @@ const Dashboard: React.FC<DashboardProps> = ({
         return {
             '--glow-color': active.color,
             '--glow-color-bright': active.bright,
-            '--glow-size': '2px', // Accents only
-            borderColor: active.color,
-            boxShadow: "0 0 10px -5px " + active.color, // Subtle shadow
+            '--glow-size': active.glow,
+            borderColor: active.bright,
+            borderWidth: '1.5px',
+            borderStyle: 'solid',
+            boxShadow: [
+                `0 0 ${active.glow} ${active.color}`,          // tight glow
+                `0 0 ${parseInt(active.glow) * 2}px ${active.color}40`,  // medium spread
+                `0 0 ${parseInt(active.glow) * 4}px ${active.color}20`,  // large ambient wash
+                `inset 0 0 ${active.glow} ${active.color}15`   // inner glow
+            ].join(', '),
             borderRadius: '1.5rem',
+            background: `radial-gradient(ellipse at top, ${active.color}12 0%, transparent 70%)`,
             transition: 'all 1s ease',
-            animation: healthState === 'critical' ? 'pulse-border-v2 3s infinite ease-in-out' : undefined
+            animation: healthState === 'critical'
+                ? 'pulse-border-v2 2s infinite ease-in-out'
+                : 'pulse-border-v2 4s infinite ease-in-out'
         } as React.CSSProperties;
     }, [healthState, isBudgetInView, active]);
 
-    const ambientMode = true; // Always enable ambient mode logic if user setting?
+    // ambientMode is read from useData() context, toggled in Settings
 
     const containerVariants = {
         hidden: { opacity: 0 },

@@ -197,7 +197,8 @@ export const GoalBreakdown: React.FC<GoalBreakdownProps> = ({
                                             filteredGoalReceipts.forEach(r => {
                                                 (r.items || []).forEach(i => {
                                                     const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                    if (i.goalType === goal.type || matchesKeyword) total += i.price * (i.quantity || 1);
+                                                    const matchesCategory = i.category.toLowerCase() === goal.type.split('_').join(' '); // Simple mapping like 'junk food' or 'alcohol'
+                                                    if (i.goalType === goal.type || matchesKeyword || matchesCategory) total += i.price * (i.quantity || 1);
                                                 });
                                             });
 
@@ -205,7 +206,8 @@ export const GoalBreakdown: React.FC<GoalBreakdownProps> = ({
                                             previousGoalReceipts.forEach(r => {
                                                 (r.items || []).forEach(i => {
                                                     const matchesKeyword = goal.keywords.some(k => i.name.toLowerCase().includes(k) || r.storeName.toLowerCase().includes(k));
-                                                    if (i.goalType === goal.type || matchesKeyword) prevTotal += i.price * (i.quantity || 1);
+                                                    const matchesCategory = i.category.toLowerCase() === goal.type.split('_').join(' ');
+                                                    if (i.goalType === goal.type || matchesKeyword || matchesCategory) prevTotal += i.price * (i.quantity || 1);
                                                 });
                                             });
 

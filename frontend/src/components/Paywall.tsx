@@ -6,6 +6,7 @@ import { useUser } from '../contexts/UserContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { PurchasesPackage } from '@revenuecat/purchases-capacitor';
+import LegalModal from './LegalModal';
 
 interface PaywallProps {
     isOpen: boolean;
@@ -31,6 +32,7 @@ const Paywall: React.FC<PaywallProps> = ({
     const [offerings, setOfferings] = useState<PurchasesPackage[]>([]);
     const [debugTaps, setDebugTaps] = useState(0);
     const [showDebug, setShowDebug] = useState(false);
+    const [showLegal, setShowLegal] = useState<{ file: string, title: string } | null>(null);
 
     // Fetch real offerings when paywall opens
     useEffect(() => {
@@ -74,17 +76,21 @@ const Paywall: React.FC<PaywallProps> = ({
         try {
             const result = await RevenueCatService.restorePurchases();
             if (result && RevenueCatService.hasActiveEntitlement(result)) {
+                alert('Purchases restored successfully!');
                 onClose();
             } else {
+                alert('No active subscription found. If you believe this is an error, please contact support.');
                 setError('No active subscription found.');
             }
         } catch (e: any) {
             console.error('Restore failed:', e);
+            alert('Could not restore purchases. Please try again later.');
             setError('Could not restore purchases.');
         } finally {
             setIsRestoring(false);
         }
     };
+
 
     const features = [
         'Unlimited receipt scans',
@@ -268,9 +274,37 @@ const Paywall: React.FC<PaywallProps> = ({
                             >
                                 {isRestoring ? 'Restoring...' : 'Restore Purchases'}
                             </button>
+
+                            <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                                <button
+                                    onClick={() => setShowLegal({ file: 'terms_of_use.md', title: 'Terms of Use' })}
+                                    className="hover:text-slate-300 transition-colors underline underline-offset-2"
+                                >
+                                    Terms of Use
+                                </button>
+                                <span>•</span>
+                                <button
+                                    onClick={() => setShowLegal({ file: 'privacy_policy.md', title: 'Privacy Policy' })}
+                                    className="hover:text-slate-300 transition-colors underline underline-offset-2"
+                                >
+                                    Privacy Policy
+                                </button>
+                            </div>
+
+                            <LegalModal
+                                isOpen={!!showLegal}
+                                onClose={() => setShowLegal(null)}
+                                fileName={showLegal?.file || ''}
+                                title={showLegal?.title || ''}
+                            />
+
+                            <p className="text-[9px] text-slate-600 text-center leading-relaxed max-w-xs">
+                                Subscription automatically renews unless canceled at least 24 hours before the end of the current period. Manage subscriptions in your Apple ID settings.
+                            </p>
+
                             <button
                                 onClick={onClose}
-                                className="text-slate-500 text-sm hover:text-slate-400 transition-colors"
+                                className="text-slate-500 text-sm hover:text-slate-400 transition-colors mt-1"
                             >
                                 Maybe Later
                             </button>

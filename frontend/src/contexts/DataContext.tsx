@@ -26,7 +26,7 @@ const DEFAULT_CATEGORIES: CategoryDefinition[] = [
 const DEFAULT_GOALS: Goal[] = [
     // Existing
     { id: 'junk_food', type: GoalType.JUNK_FOOD, name: 'Stop Junk Food', isEnabled: false, keywords: ['mcdonalds', 'kfc', 'burger king', 'pizza', 'chips', 'candy', 'chocolate', 'takeaway', 'fast food', 'five guys', 'subway', 'dominos', 'papa johns'], streak: 0, emoji: '🍔' },
-    { id: 'alcohol', type: GoalType.ALCOHOL, name: 'Reduce Alcohol', isEnabled: false, keywords: ['beer', 'wine', 'vodka', 'whiskey', 'liquor', 'alcohol', 'pub', 'bar', 'off license', 'brewery', 'gin', 'rum', 'cider'], streak: 0, emoji: '🍺' },
+    { id: 'alcohol', type: GoalType.ALCOHOL, name: 'Reduce Alcohol', isEnabled: false, keywords: ['beer', 'wine', 'vodka', 'whiskey', 'liquor', 'alcohol', 'pub', 'bar', 'off license', 'brewery', 'gin', 'rum', 'cider', 'heineken', 'stella', 'budweiser', 'guinness', 'corona', 'jack daniels', 'smirnoff', 'baileys', 'aperol', 'prosecco'], streak: 0, emoji: '🍺' },
     { id: 'smoking', type: GoalType.SMOKING, name: 'Quit Smoking', isEnabled: false, keywords: ['tobacco', 'cigarettes', 'cigar', 'vape', 'smoke', 'nicotine'], streak: 0, emoji: '🚬' },
     { id: 'gaming', type: GoalType.GAMING, name: 'Less Gaming', isEnabled: false, keywords: ['steam', 'playstation', 'xbox', 'nintendo', 'game', 'epic games', 'riot games', 'blizzard'], streak: 0, emoji: '🎮' },
     // Shopping / Impulse

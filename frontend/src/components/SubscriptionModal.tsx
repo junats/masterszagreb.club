@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
 import { RevenueCatService } from '../services/revenueCatService';
+import LegalModal from './LegalModal';
 
 interface SubscriptionModalProps {
     isOpen: boolean;
@@ -19,6 +20,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
     const [debugTaps, setDebugTaps] = useState(0);
     const [showDebug, setShowDebug] = useState(false);
     const [offerings, setOfferings] = useState<any[]>([]);
+    const [showLegal, setShowLegal] = useState<{ file: string, title: string } | null>(null);
     const [detailedDebug, setDetailedDebug] = useState<any>(null);
     const { setIsProModeWithTimestamp } = useData();
     const { showToast } = useToast();
@@ -182,10 +184,17 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                         <span>•</span>
                         <button onClick={() => setShowDebug(true)} className="hover:text-slate-300">System Info</button>
                         <span>•</span>
-                        <button onClick={() => window.open('/terms_of_use.md', '_blank')} className="hover:text-slate-300">{t('settings.subscription.terms')}</button>
+                        <button onClick={() => setShowLegal({ file: 'terms_of_use.md', title: t('settings.subscription.terms') })} className="hover:text-slate-300">{t('settings.subscription.terms')}</button>
                         <span>•</span>
-                        <button onClick={() => window.open('/privacy_policy.md', '_blank')} className="hover:text-slate-300">{t('settings.subscription.privacy')}</button>
+                        <button onClick={() => setShowLegal({ file: 'privacy_policy.md', title: t('settings.subscription.privacy') })} className="hover:text-slate-300">{t('settings.subscription.privacy')}</button>
                     </div>
+
+                    <LegalModal
+                        isOpen={!!showLegal}
+                        onClose={() => setShowLegal(null)}
+                        fileName={showLegal?.file || ''}
+                        title={showLegal?.title || ''}
+                    />
                 </div>
             </div>
         </div>,

@@ -279,8 +279,8 @@ const AuthScreen: React.FC = () => {
                 <div className="text-center mb-10">
                     {/* Logo Composition */}
                     <div className="flex justify-center mb-6">
-                        <div className="w-24 h-24 bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(56,189,248,0.3)] ring-1 ring-white/20">
-                            <img src="/logo.png" alt="TrueTrack Logo" className="w-16 h-16 drop-shadow-md" />
+                        <div className="w-24 h-24 bg-[#3e6dbb] rounded-3xl flex items-center justify-center border border-white/10 relative overflow-hidden">
+                            <img src="/logo.png" alt="TrueTrack Logo" className="w-20 h-20 relative z-10" />
                         </div>
                     </div>
 

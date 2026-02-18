@@ -101,6 +101,25 @@ const HistoryView: React.FC<HistoryViewProps> = ({
         }
     };
 
+    // Close on Escape key
+    React.useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && showFullImage) {
+                setShowFullImage(false);
+                setZoomLevel(1);
+                setPanPosition({ x: 0, y: 0 });
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [showFullImage]);
+
+    const handleCloseFullImage = () => {
+        setShowFullImage(false);
+        setZoomLevel(1);
+        setPanPosition({ x: 0, y: 0 });
+    };
+
     // Navigation State
     const [viewMode, setViewMode] = useState<'day' | 'month' | 'year' | 'all'>('all');
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -281,17 +300,25 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
         return (
 
-            <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out">
-                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-0 pb-24">
-                    <button
-                        onClick={() => onSelectReceipt(null)}
-                        className="text-white bg-white/5 hover:bg-white/10 text-sm mb-4 px-4 py-2 rounded-xl flex items-center gap-2 font-semibold transition-all duration-300 border border-white/10 hover:border-white/20 active:scale-95"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M19 12H5M12 19l-7-7 7-7" />
-                        </svg>
-                        Back to History
-                    </button>
+            <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out relative">
+                {/* Floating back button — outside scroll container so it's always visible on iOS */}
+                <button
+                    onClick={() => {
+                        if (showFullImage) {
+                            handleCloseFullImage();
+                        } else {
+                            onSelectReceipt(null);
+                        }
+                    }}
+                    className="absolute top-2 left-4 z-[200] text-white bg-black/60 hover:bg-black/80 text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all duration-200 border border-white/20 active:scale-95 backdrop-blur-md shadow-2xl"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                    {showFullImage ? t('common.close') : t('common.back')}
+                </button>
+
+                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-12 pb-24 relative">
 
                     {/* Sticky Header Wrapper */}
                     <div className="sticky top-0 z-10 -mx-4 px-4 pb-3 bg-gradient-to-b from-background via-background to-transparent">
@@ -612,19 +639,19 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                     </div>
 
                     {showFullImage && displayImageUrl && (
-                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-sm">
+                        <div className="fixed inset-0 z-[150] bg-black/95 flex items-center justify-center overflow-hidden animate-in fade-in duration-300 backdrop-blur-md p-4">
+                            {/* Backdrop click to close */}
+                            <div className="absolute inset-0 z-0" onClick={handleCloseFullImage} />
+
                             <button
-                                onClick={() => {
-                                    setShowFullImage(false);
-                                    setZoomLevel(1);
-                                    setPanPosition({ x: 0, y: 0 });
-                                }}
-                                className="absolute right-6 z-[200] text-white bg-black/60 backdrop-blur-md rounded-full p-3 transition-all hover:bg-black/80 shadow-2xl hover:scale-110 active:scale-95"
+                                onClick={handleCloseFullImage}
+                                className="absolute right-6 z-[250] text-white bg-white/10 backdrop-blur-md rounded-full px-4 py-2 transition-all hover:bg-white/20 border border-white/20 flex items-center gap-2 shadow-2xl hover:scale-105 active:scale-95"
                                 style={{
-                                    top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)'
+                                    top: 'calc(env(safe-area-inset-top, 0px) + 1rem)'
                                 }}
                             >
-                                <X size={24} />
+                                <X size={20} />
+                                <span className="text-sm font-bold uppercase tracking-wider">{t('common.close')}</span>
                             </button>
 
                             <div

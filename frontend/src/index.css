@@ -78,3 +78,15 @@
 .bg-surfaceHighlight {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* Ambient glow pulse animation for budget card */
+@keyframes pulse-border-v2 {
+  0%, 100% {
+    opacity: 0.75;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.15);
+  }
+}

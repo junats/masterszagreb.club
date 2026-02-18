@@ -1220,52 +1220,82 @@ const Settings: React.FC<SettingsProps> = () => {
                             </div>
 
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('settings.modals.startDate')}</label>
-                                    <input
-                                        type="date"
-                                        value={exportStartDate}
-                                        onChange={(e) => setExportStartDate(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('settings.modals.endDate')}</label>
-                                    <input
-                                        type="date"
-                                        value={exportEndDate}
-                                        onChange={(e) => setExportEndDate(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"
-                                    />
+                                <div className="flex flex-col gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">{t('settings.modals.startDate')}</label>
+                                        <input
+                                            type="date"
+                                            value={exportStartDate}
+                                            onChange={(e) => setExportStartDate(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">{t('settings.modals.endDate')}</label>
+                                        <input
+                                            type="date"
+                                            value={exportEndDate}
+                                            onChange={(e) => setExportEndDate(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                        />
+                                    </div>
                                 </div>
 
                                 <button
                                     onClick={async () => {
                                         try {
-                                            const savedReceipts = localStorage.getItem('truetrack_receipts');
-                                            if (!savedReceipts) {
-                                                alert('No data to export.');
-                                                return;
+                                            console.log('📄 Starting PDF Export Flow...');
+
+                                            // Fallback to localStorage if context is empty (migration safety)
+                                            let currentReceipts = receipts || [];
+                                            if (!currentReceipts || currentReceipts.length === 0) {
+                                                const raw = localStorage.getItem('truetrack_receipts');
+                                                if (raw) {
+                                                    try {
+                                                        currentReceipts = JSON.parse(raw);
+                                                    } catch (e) {
+                                                        console.error('Failed to parse localStorage receipts:', e);
+                                                    }
+                                                }
                                             }
-                                            let receipts = JSON.parse(savedReceipts) as Receipt[];
+
+                                            // Filter for date range
+                                            const start = new Date(exportStartDate);
+                                            const end = new Date(exportEndDate);
+                                            start.setHours(0, 0, 0, 0);
+                                            end.setHours(23, 59, 59, 999);
+
+                                            let filteredReceipts = currentReceipts.filter(r => {
+                                                const rDate = new Date(r.date);
+                                                return rDate >= start && rDate <= end;
+                                            });
+
+                                            // Allow export even with 0 receipts if they want custody/activities report
+                                            if (filteredReceipts.length === 0) {
+                                                const confirmed = window.confirm("No receipts found in this range. Do you want to generate the report anyway to see co-parenting data?");
+                                                if (!confirmed) return;
+                                            }
 
                                             // 18+ Filter for Legal Export
                                             if (ageRestricted) {
-                                                receipts = receipts.map(r => ({
+                                                filteredReceipts = filteredReceipts.map(r => ({
                                                     ...r,
                                                     items: r.items.filter(i => !i.isRestricted)
                                                 }));
                                             }
 
-                                            PDFService.generateLegalReport(
-                                                receipts,
+                                            console.log('🚀 Generating PDF...');
+                                            await PDFService.generateLegalReport(
+                                                filteredReceipts,
                                                 user,
-                                                { start: new Date(exportStartDate), end: new Date(exportEndDate) }
+                                                custodyDays,
+                                                { start, end }
                                             );
+
                                             setShowLegalExportModal(false);
                                         } catch (e) {
-                                            console.error('PDF Export failed:', e);
-                                            alert('Failed to generate PDF.');
+                                            console.error('❌ PDF Export failed:', e);
+                                            alert(`${t('settings.data.exportFail') || 'Failed to generate PDF'}: ${e instanceof Error ? e.message : 'Unknown error'}`);
                                         }
                                     }}
                                     className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all mt-4 flex items-center justify-center gap-2"

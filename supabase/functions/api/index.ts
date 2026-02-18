@@ -88,7 +88,8 @@ async function runGeminiInternal(model: string, body: any, action: string) {
     let prompt = "";
     if (action === 'analyze-receipt') {
         const cats = body.categories?.map((c: any) => c.name).join(', ') || "Food, Household, Other";
-        prompt = `Analyze receipt. Return pure JSON: { "storeName": "Store", "date": "YYYY-MM-DD", "total": Number, "items": [{ "name": "Item", "price": Number, "category": "Category", "isRestricted": Boolean, "isChildRelated": Boolean }] }. Categories: ${cats}. NO Markdown.`;
+        const goalTypes = "junk_food, alcohol, smoking, gaming, online_shopping, fast_fashion, streaming, gambling, caffeine, sugar, ride_sharing, other";
+        prompt = `Analyze receipt. Return pure JSON: { "storeName": "Store", "date": "YYYY-MM-DD", "total": Number, "items": [{ "name": "Item", "price": Number, "category": "Category", "goalType": "GoalType", "isRestricted": Boolean, "isChildRelated": Boolean }] }. Categories: ${cats}. GoalTypes: ${goalTypes}. NO Markdown.`;
     } else if (action === 'product-lookup') {
         prompt = `Identify the product associated with this Barcode/GTIN: "${body.barcode}". Return pure JSON: { "found": Boolean, "name": "Name", "brand": "Brand", "category": "Category", "confidence": Number }. NO Markdown.`;
     }
