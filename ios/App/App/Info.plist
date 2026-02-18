@@ -4,6 +4,8 @@
 <dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>TrueTrack uses Face ID to securely log you into your account.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>TrueTrack needs photo library access to select receipt images</string>
 	<key>NSCameraUsageDescription</key>
