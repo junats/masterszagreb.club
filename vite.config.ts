@@ -16,9 +16,15 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
-        '@common': path.resolve(__dirname, 'common'),
+        '@': path.resolve(__dirname, './frontend/src'),
+        '@common': path.resolve(__dirname, './common'),
       }
-    }
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './frontend/src/setupTests.ts',
+      include: ['frontend/src/**/*.{test,spec}.{ts,tsx}'],
+    },
   };
 });
