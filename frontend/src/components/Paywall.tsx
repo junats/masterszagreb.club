@@ -239,11 +239,39 @@ const Paywall: React.FC<PaywallProps> = ({
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-white font-bold text-lg">{pkg.product.priceString}</div>
+                                                    <div className="text-white font-bold text-lg">{pkg.product.priceString.replace('.', ',')}</div>
                                                 </div>
                                             </button>
                                         );
                                     })}
+
+                                    {/* Fallback for Yearly if missing from RevenueCat payload but other offerings exist */}
+                                    {!offerings.some(pkg => pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('annual')) && (
+                                        <button
+                                            onClick={() => setSelectedPackage({ identifier: 'mock_annual' } as any)}
+                                            className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all relative overflow-hidden ${selectedPackage?.identifier === 'mock_annual' ? 'bg-orange-500/10 border-orange-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                        >
+                                            {selectedPackage?.identifier === 'mock_annual' && (
+                                                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-amber-500/10 pointer-events-none" />
+                                            )}
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${selectedPackage?.identifier === 'mock_annual' ? 'border-orange-500 bg-orange-500' : 'border-slate-500'}`}>
+                                                        {selectedPackage?.identifier === 'mock_annual' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                    </div>
+                                                    <span className="text-white font-bold">Yearly</span>
+                                                    <span className="bg-orange-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ml-2">SAVE 28%</span>
+                                                </div>
+                                                <div className="mt-1 pl-6">
+                                                    <div className="text-emerald-400 font-medium text-xs mb-1">7-Day Free Trial</div>
+                                                    <div className="text-slate-400 text-xs">Billed annually</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-white font-bold text-lg">€29,99</div>
+                                            </div>
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-3 mb-6">
@@ -269,7 +297,7 @@ const Paywall: React.FC<PaywallProps> = ({
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-white font-bold text-lg">€29.99</div>
+                                            <div className="text-white font-bold text-lg">€29,99</div>
                                         </div>
                                     </button>
 
@@ -293,7 +321,7 @@ const Paywall: React.FC<PaywallProps> = ({
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-white font-bold text-lg">€6.99</div>
+                                            <div className="text-white font-bold text-lg">€6,99</div>
                                         </div>
                                     </button>
                                 </div>

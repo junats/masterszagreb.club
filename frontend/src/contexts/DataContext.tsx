@@ -182,6 +182,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (isPremium !== undefined && isDataLoaded) {
             console.log('💎 Premium status updated from RevenueCat:', isPremium);
             setIsProMode(isPremium);
+            if (!isPremium) {
+                setGoalsEnabled(false);
+                setFinancialSnapshotEnabled(false);
+                setHelpEnabled(false);
+                setAgeRestricted(false);
+            }
         }
     }, [isPremium, isDataLoaded]);
 
