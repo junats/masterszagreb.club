@@ -196,12 +196,12 @@ const Settings: React.FC<SettingsProps> = () => {
     };
 
     const handleToggleRestricted = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!isProMode && !e.target.checked === false) { // Trying to turn ON
+        if (!isProMode) {
             e.preventDefault();
             setShowPaywall(true);
-        } else {
-            setAgeRestricted(e.target.checked);
+            return;
         }
+        setAgeRestricted(e.target.checked);
     };
 
     const handleExportData = async () => {
@@ -449,7 +449,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <AlertTriangle size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.parental')}</span>
+                                        <span className="text-white text-[17px] font-normal flex items-center gap-2">
+                                            {t('settings.proFeatures.parental')}
+                                            <Crown size={14} className="text-purple-400" />
+                                        </span>
                                         <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.parentalDesc')}</span>
                                     </div>
                                 </div>
