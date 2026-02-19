@@ -247,7 +247,7 @@ const Paywall: React.FC<PaywallProps> = ({
                                 </div>
                             ) : (
                                 <div className="text-center mb-6">
-                                    <span className="text-4xl font-bold text-white">€4.99</span>
+                                    <span className="text-4xl font-bold text-white">€6.99</span>
                                     <span className="text-slate-400">/mo</span>
                                     <div className="mt-2 text-emerald-400 text-sm font-medium">Or €29.99/yr</div>
                                     <div className="mt-2">
