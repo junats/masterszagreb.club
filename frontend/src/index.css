@@ -36,6 +36,11 @@
     overflow: hidden;
   }
 
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+
   .glass-card {
     background: rgba(15, 23, 42, 0.4);
     backdrop-filter: blur(16px);

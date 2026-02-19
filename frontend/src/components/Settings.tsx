@@ -62,7 +62,7 @@ const Settings: React.FC<SettingsProps> = () => {
         setFinancialSnapshotEnabled
     } = useData();
 
-    const { user, updateUser, signOut: contextSignOut, upgradeToPro } = useUser();
+    const { user, updateUser, signOut: contextSignOut, upgradeToPro, isMockMode } = useUser();
     const { language, setLanguage, t } = useLanguage();
 
     // Map context values to names used in the component
@@ -577,7 +577,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-white text-[17px] font-normal block">Financial Snapshot</span>
+                                            <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.financialSnapshot')}</span>
                                             {!isProMode && <Lock size={12} className="text-systemOrange" />}
                                         </div>
                                     </div>
@@ -967,52 +967,57 @@ const Settings: React.FC<SettingsProps> = () => {
                         {t('settings.account.delete') || "Delete Account"}
                     </button>
 
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2 mt-8">{t('settings.uicalc.devTools')}</p>
+                    {/* Dev Tools - Restricted */}
+                    {(user?.email === 'mark@example.com' || user?.email === 'admin@example.com' || isMockMode) && (
+                        <>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-2 mt-8">{t('settings.uicalc.devTools')} (Dev Only)</p>
 
-                    {/* Test Widget Button */}
-                    <button
-                        onClick={async () => {
-                            HapticsService.impactMedium();
-                            try {
-                                console.log('🧪 Test Widget button clicked');
+                            {/* Test Widget Button */}
+                            <button
+                                onClick={async () => {
+                                    HapticsService.impactMedium();
+                                    try {
+                                        console.log('🧪 Test Widget button clicked');
 
-                                await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays);
+                                        await WidgetService.updateWidgetData(receipts, monthlyBudget, custodyDays);
 
-                                console.log('✅ Widget test completed successfully!');
-                                showToast(t('settings.uicalc.widgetUpdateSuccess'), 'success');
-                            } catch (error: any) {
-                                console.error('❌ Widget test failed:', error);
-                                showToast(`${t('settings.uicalc.widgetUpdateFail')} ${error?.message || 'Unknown error'}`, 'error');
-                            }
-                        }}
-                        className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-sm font-medium mb-3"
-                    >
-                        <Trophy size={16} />
-                        {t('settings.uicalc.testWidget')}
-                    </button>
+                                        console.log('✅ Widget test completed successfully!');
+                                        showToast(t('settings.uicalc.widgetUpdateSuccess'), 'success');
+                                    } catch (error: any) {
+                                        console.error('❌ Widget test failed:', error);
+                                        showToast(`${t('settings.uicalc.widgetUpdateFail')} ${error?.message || 'Unknown error'}`, 'error');
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-sm font-medium mb-3"
+                            >
+                                <Trophy size={16} />
+                                {t('settings.uicalc.testWidget')}
+                            </button>
 
 
-                    <button
-                        onClick={async () => {
-                            const { keys } = await Preferences.keys();
-                            if (keys.length === 0) {
-                                alert(t('settings.uicalc.storageDumpEmpty'));
-                                return;
-                            }
+                            <button
+                                onClick={async () => {
+                                    const { keys } = await Preferences.keys();
+                                    if (keys.length === 0) {
+                                        alert(t('settings.uicalc.storageDumpEmpty'));
+                                        return;
+                                    }
 
-                            // Dump all values
-                            let dump = t('settings.uicalc.storageKeysTitle') + "\n";
-                            for (const key of keys) {
-                                // truncate key for readability
-                                dump += `- ${key}\n`;
-                            }
-                            alert(dump);
-                        }}
-                        className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mb-4"
-                    >
-                        <Database size={18} />
-                        {t('settings.uicalc.debugStorage')}
-                    </button>
+                                    // Dump all values
+                                    let dump = t('settings.uicalc.storageKeysTitle') + "\n";
+                                    for (const key of keys) {
+                                        // truncate key for readability
+                                        dump += `- ${key}\n`;
+                                    }
+                                    alert(dump);
+                                }}
+                                className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mb-4"
+                            >
+                                <Database size={18} />
+                                {t('settings.uicalc.debugStorage')}
+                            </button>
+                        </>
+                    )}
 
                     <button
                         onClick={onDeleteAll}
@@ -1185,7 +1190,7 @@ const Settings: React.FC<SettingsProps> = () => {
             {
                 showLegalExportModal && createPortal(
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
+                        <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-4 sm:p-6 relative animate-in zoom-in-95 duration-200">
                             <button
                                 onClick={() => setShowLegalExportModal(false)}
                                 className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
@@ -1212,9 +1217,9 @@ const Settings: React.FC<SettingsProps> = () => {
                                             setExportEndDate(end.toISOString().split('T')[0]);
                                             HapticsService.impactLight();
                                         }}
-                                        className="bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold py-2 rounded-lg border border-white/5 transition-all"
+                                        className="bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold py-2 rounded-lg border border-white/5 transition-all uppercase"
                                     >
-                                        {t('settings.modals.thisMonth') || 'THIS MONTH'}
+                                        {t('settings.modals.thisMonth')}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -1225,9 +1230,9 @@ const Settings: React.FC<SettingsProps> = () => {
                                             setExportEndDate(end.toISOString().split('T')[0]);
                                             HapticsService.impactLight();
                                         }}
-                                        className="bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold py-2 rounded-lg border border-white/5 transition-all"
+                                        className="bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold py-2 rounded-lg border border-white/5 transition-all uppercase"
                                     >
-                                        {t('settings.modals.allTime') || 'ALL TIME'}
+                                        {t('settings.modals.allTime')}
                                     </button>
                                 </div>
                                 <div className="flex flex-col gap-3">
@@ -1237,7 +1242,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             type="date"
                                             value={exportStartDate}
                                             onChange={(e) => setExportStartDate(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            className="w-full min-w-0 box-border appearance-none bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
                                         />
                                     </div>
                                     <div>
@@ -1246,7 +1251,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             type="date"
                                             value={exportEndDate}
                                             onChange={(e) => setExportEndDate(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                                            className="w-full min-w-0 box-border appearance-none bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
                                         />
                                     </div>
                                 </div>

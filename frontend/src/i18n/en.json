@@ -239,7 +239,12 @@
             "exportTitle": "TrueTrack Export",
             "exportMessage": "Here is my spending data from TrueTrack.",
             "helpSupport": "Help & Support",
-            "helpSupportDesc": "Find nearby legal aid & support services"
+            "helpSupportDesc": "Find nearby legal aid & support services",
+            "financialSnapshot": "Financial Snapshot"
+        },
+        "legal": {
+            "privacyPolicy": "Privacy Policy",
+            "terms": "Terms of Use"
         },
         "security": {
             "title": "Security",
@@ -297,7 +302,10 @@
         "account": {
             "signOut": "Sign Out",
             "signOutDesc": "End your session",
-            "signOutConfirm": "Are you sure you want to sign out?"
+            "signOutConfirm": "Are you sure you want to sign out?",
+            "delete": "Delete Account",
+            "deleteConfirm": "Are you sure you want to delete your account? This action cannot be undone and will delete all your data.",
+            "deleteDoubleConfirm": "LAST WARNING: All your receipts, expenses, and data will be permanently deleted."
         },
         "language": {
             "title": "Language",
@@ -366,6 +374,8 @@
             "overwriteDesc": "This will delete all existing receipts and generate new {{scenario}} scenario data. This cannot be undone.",
             "overwriteData": "Overwrite Data",
             "cancel": "Cancel",
+            "thisMonth": "This Month",
+            "allTime": "All Time",
             "generateFormalReport": "Generate formal report"
         },
         "biometricPrompt": "Please enter your current password to enable Face ID login:",

@@ -30,6 +30,7 @@ const Paywall: React.FC<PaywallProps> = ({
     const [isRestoring, setIsRestoring] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [offerings, setOfferings] = useState<PurchasesPackage[]>([]);
+    const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
     const [debugTaps, setDebugTaps] = useState(0);
     const [showDebug, setShowDebug] = useState(false);
     const [showLegal, setShowLegal] = useState<{ file: string, title: string } | null>(null);
@@ -40,17 +41,20 @@ const Paywall: React.FC<PaywallProps> = ({
             const fetchOfferings = async () => {
                 const availablePackages = await RevenueCatService.getOfferings();
                 setOfferings(availablePackages);
+                if (availablePackages.length > 0) {
+                    const annual = availablePackages.find(p => p.packageType === 'ANNUAL' || p.identifier.toLowerCase().includes('annual'));
+                    setSelectedPackage(annual || availablePackages[0]);
+                }
             };
             fetchOfferings();
         }
     }, [isOpen]);
 
-    const handlePurchase = async (pkg?: PurchasesPackage) => {
+    const handlePurchase = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Use the selected package, or fall back to the first available if none selected
-            const targetPkg = pkg || offerings[0];
+            const targetPkg = selectedPackage || offerings[0];
             if (!targetPkg) {
                 throw new Error('No packages available for purchase.');
             }
@@ -206,26 +210,46 @@ const Paywall: React.FC<PaywallProps> = ({
                         {/* Offerings Selector (Dynamic) */}
                         <div className="px-6 pb-4">
                             {offerings.length > 0 ? (
-                                <div className="space-y-3 mb-4">
-                                    {offerings.map((pkg) => (
-                                        <button
-                                            key={pkg.identifier}
-                                            onClick={() => handlePurchase(pkg)}
-                                            disabled={isLoading || isRestoring}
-                                            className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between hover:bg-white/10 transition-colors"
-                                        >
-                                            <div className="text-left">
-                                                <div className="text-white font-medium">{pkg.packageType}</div>
-                                                <div className="text-slate-400 text-xs">{pkg.product.description}</div>
-                                            </div>
-                                            <div className="text-white font-bold">{pkg.product.priceString}</div>
-                                        </button>
-                                    ))}
+                                <div className="space-y-3 mb-6">
+                                    {offerings.map((pkg) => {
+                                        const isAnnual = pkg.packageType === 'ANNUAL' || pkg.identifier.toLowerCase().includes('annual');
+                                        const isSelected = selectedPackage?.identifier === pkg.identifier;
+                                        return (
+                                            <button
+                                                key={pkg.identifier}
+                                                onClick={() => setSelectedPackage(pkg)}
+                                                className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all relative overflow-hidden ${isSelected ? 'bg-orange-500/10 border-orange-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                            >
+                                                {isSelected && (
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-amber-500/10 pointer-events-none" />
+                                                )}
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-slate-500'}`}>
+                                                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                        </div>
+                                                        <span className="text-white font-bold">{pkg.packageType === 'ANNUAL' ? 'Yearly' : 'Monthly'}</span>
+                                                        {isAnnual && (
+                                                            <span className="bg-orange-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ml-2">SAVE 28%</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-1 pl-6">
+                                                        {isAnnual && <div className="text-emerald-400 font-medium text-xs mb-1">7-Day Free Trial</div>}
+                                                        <div className="text-slate-400 text-xs">{pkg.product.description || (isAnnual ? 'Billed annually' : 'Billed monthly')}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-white font-bold text-lg">{pkg.product.priceString}</div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             ) : (
-                                <div className="text-center mb-4">
-                                    <span className="text-4xl font-bold text-white">€7</span>
-                                    <span className="text-slate-400">/month</span>
+                                <div className="text-center mb-6">
+                                    <span className="text-4xl font-bold text-white">€4.99</span>
+                                    <span className="text-slate-400">/mo</span>
+                                    <div className="mt-2 text-emerald-400 text-sm font-medium">Or €29.99/yr</div>
                                     <div className="mt-2">
                                         <button
                                             onClick={() => setShowDebug(true)}
@@ -244,25 +268,25 @@ const Paywall: React.FC<PaywallProps> = ({
                                 </div>
                             )}
 
-                            {!offerings.length && (
-                                <button
-                                    onClick={() => handlePurchase()}
-                                    disabled={isLoading || isRestoring}
-                                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <RefreshCw size={20} className="animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles size={20} />
-                                            Unlock Unlimited
-                                        </>
-                                    )}
-                                </button>
-                            )}
+                            <button
+                                onClick={handlePurchase}
+                                disabled={isLoading || isRestoring || (offerings.length > 0 && !selectedPackage)}
+                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <RefreshCw size={20} className="animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={20} />
+                                        {selectedPackage && (selectedPackage.packageType === 'ANNUAL' || selectedPackage.identifier.toLowerCase().includes('annual'))
+                                            ? 'Start 7-Day Free Trial'
+                                            : 'Subscribe Now'}
+                                    </>
+                                )}
+                            </button>
                         </div>
 
                         {/* Footer */}

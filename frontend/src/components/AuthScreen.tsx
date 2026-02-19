@@ -270,25 +270,25 @@ const AuthScreen: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 relative bg-background font-sans overflow-x-hidden overflow-y-auto custom-scrollbar">
+        <div className="h-[100dvh] w-full flex flex-col items-center justify-between px-6 pb-6 pt-[calc(env(safe-area-inset-top)+1rem)] relative bg-background font-sans overflow-hidden">
             {/* Background Gradients */}
             <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-secondary/10 rounded-full blur-[80px] pointer-events-none"></div>
 
-            <div className="w-full max-w-sm z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="text-center mb-10">
+            <div className="w-full max-w-sm z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 flex flex-col flex-1 justify-center">
+                <div className="text-center mb-4">
                     {/* Logo Composition */}
-                    <div className="flex justify-center mb-6">
-                        <div className="w-24 h-24 bg-[#3e6dbb] rounded-3xl flex items-center justify-center border border-white/10 relative overflow-hidden">
-                            <img src="/logo.png" alt="TrueTrack Logo" className="w-20 h-20 relative z-10" />
+                    <div className="flex justify-center mb-4">
+                        <div className="w-16 h-16 bg-[#3e6dbb] rounded-2xl flex items-center justify-center border border-white/10 relative overflow-hidden">
+                            <img src="/logo.png" alt="TrueTrack Logo" className="w-12 h-12 relative z-10" />
                         </div>
                     </div>
 
-                    <h1 className="text-4xl font-heading font-bold text-white mb-2 tracking-tighter">
+                    <h1 className="text-3xl font-heading font-bold text-white mb-1 tracking-tighter">
                         {isLogin ? t('auth.welcomeBack') : t('auth.letsGetStarted')}
                     </h1>
-                    <p className="text-emerald-400 font-medium tracking-wide uppercase text-xs mb-4">{t('auth.tagline')}</p>
-                    <p className="text-slate-400 font-medium tracking-tight">
+                    <p className="text-emerald-400 font-medium tracking-wide uppercase text-[10px] mb-2">{t('auth.tagline')}</p>
+                    <p className="text-slate-400 font-medium tracking-tight text-sm">
                         {isLogin ? t('auth.loginDesc') : t('auth.signupDesc')}
                     </p>
                     <p className="text-xs text-slate-500 mt-3 max-w-[280px] mx-auto leading-relaxed">
@@ -296,7 +296,7 @@ const AuthScreen: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="bg-card border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+                <div className="bg-card border border-slate-800 rounded-3xl p-5 shadow-2xl relative">
                     {/* Manual Check Button for Stuck Users */}
 
 
@@ -310,7 +310,7 @@ const AuthScreen: React.FC = () => {
                                         placeholder={t('auth.labels.fullName')}
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium text-sm"
                                         required={!isLogin}
                                         autoComplete="name"
 
@@ -326,7 +326,7 @@ const AuthScreen: React.FC = () => {
                                     placeholder={t('auth.labels.email')}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium text-sm"
                                     required
                                     autoComplete="email"
                                 />
@@ -339,7 +339,7 @@ const AuthScreen: React.FC = () => {
                                 placeholder={t('auth.labels.password')}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-12 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-12 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium text-sm"
                                 required
                                 onFocus={async () => {
                                     const { value: logoutAtStr } = await Preferences.get({ key: 'manual_logout_at' });
@@ -388,7 +388,7 @@ const AuthScreen: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group relative overflow-hidden"
+                            className="w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3.5 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group relative overflow-hidden"
                         >
                             <span className="relative z-10 flex items-center gap-2">
                                 {loading ? t('auth.labels.connecting') : (isLogin ? t('auth.labels.signIn') : t('auth.labels.createAccount'))}
@@ -512,7 +512,7 @@ const AuthScreen: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-4 mt-8">
+                <div className="flex flex-col items-center gap-3 mt-4 shrink-0">
                     <p className="text-slate-600 text-[10px] font-medium text-center">
                         {t('auth.footer.encrypted')}
                     </p>

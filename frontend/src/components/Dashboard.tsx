@@ -359,9 +359,9 @@ const Dashboard: React.FC<DashboardProps> = ({
     // Ambient Style Logic
     const active = useMemo(() => {
         const colorMap = {
-            healthy: { color: '#84cc16', bright: '#bef264', glow: '15px' }, // Lime
-            warning: { color: '#eab308', bright: '#facc15', glow: '20px' }, // Yellow
-            critical: { color: '#ef4444', bright: '#ff2222', glow: '30px' } // Red
+            healthy: { color: '#84cc16', bright: '#bef264', glow: '8px' }, // Lime (Reduced from 15px)
+            warning: { color: '#eab308', bright: '#facc15', glow: '12px' }, // Yellow (Reduced from 20px)
+            critical: { color: '#ef4444', bright: '#ff2222', glow: '16px' } // Red (Reduced from 30px)
         };
         return colorMap[healthState];
     }, [healthState]);
@@ -372,7 +372,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 '--glow-color': active.color,
                 '--glow-color-bright': active.bright,
                 '--glow-size': '0px',
-                borderColor: 'rgba(255,255,255,0.1)',
+                borderColor: 'rgba(255,255,255,0.05)', // Subtler border when inactive
                 boxShadow: 'none',
                 transition: 'all 0.5s ease',
                 background: 'transparent'
@@ -384,16 +384,15 @@ const Dashboard: React.FC<DashboardProps> = ({
             '--glow-color-bright': active.bright,
             '--glow-size': active.glow,
             borderColor: active.bright,
-            borderWidth: '1.5px',
+            borderWidth: '1px', // Thinner border for crispness
             borderStyle: 'solid',
             boxShadow: [
-                `0 0 ${active.glow} ${active.color}`,          // tight glow
-                `0 0 ${parseInt(active.glow) * 2}px ${active.color}40`,  // medium spread
-                `0 0 ${parseInt(active.glow) * 4}px ${active.color}20`,  // large ambient wash
-                `inset 0 0 ${active.glow} ${active.color}15`   // inner glow
+                `0 0 ${active.glow} ${active.color}40`,          // tight glow (reduced opacity)
+                `0 0 ${parseInt(active.glow) * 2}px ${active.color}15`,  // medium spread (very subtle)
+                `inset 0 0 ${parseInt(active.glow)}px ${active.color}10`   // inner glow (barely there)
             ].join(', '),
             borderRadius: '1.5rem',
-            background: `radial-gradient(ellipse at top, ${active.color}12 0%, transparent 70%)`,
+            background: `radial-gradient(circle at top, ${active.color}08 0%, transparent 60%)`, // Very faint top wash
             transition: 'all 1s ease',
             animation: healthState === 'critical'
                 ? 'pulse-border-v2 2s infinite ease-in-out'
@@ -422,7 +421,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <DashboardSkeleton />
             ) : (
                 <div
-                    className="w-full h-full pt-2 px-4 scroll-smooth no-scrollbar"
+                    className="w-full h-full pt-2 px-4 scroll-smooth no-scrollbar overflow-x-hidden max-w-[100vw] box-border"
                 >
 
                     {/* Main Content Wrapper */}
@@ -451,10 +450,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
 
                             {/* Co-Parenting Section (if enabled) */}
-                            <CoParentingWidget
-                                custodyDays={custodyDays}
-                                onCustodyClick={onCustodyClick}
-                            />
+                            {/* Co-Parenting Section (if enabled) */}
+                            {childSupportMode && (
+                                <CoParentingWidget
+                                    custodyDays={custodyDays}
+                                    onCustodyClick={onCustodyClick}
+                                />
+                            )}
 
                             {/* Dashboard Charts */}
                             <DashboardCharts

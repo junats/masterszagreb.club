@@ -39,7 +39,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         <ToastContext.Provider value={{ showToast }}>
             {children}
             {/* Toast Container */}
-            <div className="fixed top-2 z-[200] left-0 right-0 px-3 pointer-events-none flex flex-col items-center gap-2">
+            <div className="fixed top-0 z-[200] left-0 right-0 px-3 pointer-events-none flex flex-col items-center gap-2" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
                 <AnimatePresence>
                     {toasts.map(toast => (
                         <ToastItem key={toast.id} toast={toast} onDismiss={() => removeToast(toast.id)} />
