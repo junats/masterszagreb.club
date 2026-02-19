@@ -1258,6 +1258,12 @@ const Settings: React.FC<SettingsProps> = () => {
 
                                 <button
                                     onClick={async () => {
+                                        if (!isProMode) {
+                                            setShowPaywall(true);
+                                            setShowLegalExportModal(false);
+                                            return;
+                                        }
+
                                         try {
                                             console.log('📄 Starting PDF Export Flow...');
 
