@@ -87,8 +87,8 @@ export const GoalBreakdown: React.FC<GoalBreakdownProps> = ({
                                             {isProMode ? t('goals.enableDesc') : t('goals.upgradeDesc')}
                                         </p>
                                     </div>
-                                    <div className={"w-8 h-8 rounded-full flex items-center justify-center " + (isProMode ? "bg-purple-500/10" : "bg-slate-800/50")}>
-                                        {isProMode ? <ArrowRight size={16} className="text-purple-400" /> : <Shield size={14} className="text-slate-500" />}
+                                    <div className={"w-8 h-8 rounded-full flex items-center justify-center " + (isProMode ? "bg-purple-500/10" : "bg-purple-500/10")}>
+                                        {isProMode ? <ArrowRight size={16} className="text-purple-400" /> : <Crown size={14} className="text-purple-400" />}
                                     </div>
                                 </motion.div>
                             </div>

@@ -165,8 +165,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [showGlobalAmbient, setShowGlobalAmbient] = useState(true);
     const [helpEnabled, setHelpEnabled] = useState(false);
     const [isProMode, setIsProMode] = useState(false);
-    const [goalsEnabled, setGoalsEnabled] = useState(true); // Default to true, or match isProMode initially
-    const [financialSnapshotEnabled, setFinancialSnapshotEnabled] = useState(true);
+    const [goalsEnabled, setGoalsEnabled] = useState(false); // Default to false
+    const [financialSnapshotEnabled, setFinancialSnapshotEnabled] = useState(false);
     const [proActivatedAt, setProActivatedAt] = useState<string | null>(null);
     const [dataVersion, setDataVersion] = useState(0);
     const [lastPartnerChanges, setLastPartnerChanges] = useState<string | null>(null);

@@ -499,7 +499,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <LifeBuoy size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.helpSupport')}</span>
+                                        <span className="text-white text-[17px] font-normal flex items-center gap-2">
+                                            {t('settings.proFeatures.helpSupport')}
+                                            <Crown size={14} className="text-purple-400" />
+                                        </span>
                                         <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.helpSupportDesc')}</span>
                                     </div>
                                 </div>
@@ -509,6 +512,11 @@ const Settings: React.FC<SettingsProps> = () => {
                                         className="sr-only peer"
                                         checked={helpEnabled}
                                         onChange={(e) => {
+                                            if (!isProMode) {
+                                                e.preventDefault();
+                                                setShowPaywall(true);
+                                                return;
+                                            }
                                             HapticsService.impactMedium();
                                             setHelpEnabled(e.target.checked);
                                         }}
@@ -523,7 +531,10 @@ const Settings: React.FC<SettingsProps> = () => {
                                         <Target size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.goals')}</span>
+                                        <span className="text-white text-[17px] font-normal flex items-center gap-2">
+                                            {t('settings.proFeatures.goals')}
+                                            <Crown size={14} className="text-purple-400" />
+                                        </span>
                                         <span className="text-[13px] text-systemGray block leading-tight mt-0.5">{t('settings.proFeatures.goalsDesc')}</span>
                                     </div>
                                 </div>
@@ -534,6 +545,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         checked={goalsEnabled}
                                         onChange={(e) => {
                                             if (!isProMode) {
+                                                e.preventDefault();
                                                 setShowPaywall(true);
                                                 return;
                                             }
@@ -581,12 +593,12 @@ const Settings: React.FC<SettingsProps> = () => {
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-white text-[17px] font-normal block">{t('settings.proFeatures.financialSnapshot')}</span>
-                                            {!isProMode && <Lock size={12} className="text-systemOrange" />}
+                                            <Crown size={14} className="text-purple-400" />
                                         </div>
                                     </div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" className="sr-only peer" checked={financialSnapshotEnabled} onChange={(e) => { if (!isProMode) return setShowPaywall(true); setFinancialSnapshotEnabled(e.target.checked); }} />
+                                    <input type="checkbox" className="sr-only peer" checked={financialSnapshotEnabled} onChange={(e) => { if (!isProMode) { e.preventDefault(); setShowPaywall(true); return; } setFinancialSnapshotEnabled(e.target.checked); }} />
                                     <div className="w-11 h-6 bg-systemGray4 rounded-full peer peer-checked:bg-systemGreen after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
                                 </label>
                             </div>
