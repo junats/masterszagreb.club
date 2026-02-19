@@ -57,8 +57,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   // Paywall and usage tracking state
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<'daily_limit' | 'weekly_limit' | undefined>();
-  const [dailyRemaining, setDailyRemaining] = useState<number>(4);
-  const [weeklyRemaining, setWeeklyRemaining] = useState<number>(10);
+  const [dailyRemaining, setDailyRemaining] = useState<number>(3);
+  const [weeklyRemaining, setWeeklyRemaining] = useState<number>(7);
 
   // Load usage stats on mount
   useEffect(() => {
@@ -217,7 +217,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         const base64ForAI = await blobToBase64(processedBlob);
 
         // 3. Analyze with Gemini AI (main bottleneck - network + AI)
-        const result: AnalysisResult = await analyzeReceiptImage(base64ForAI, categories);
+        const result: AnalysisResult = await analyzeReceiptImage(base64ForAI, categories, isProSubscription);
 
         // 4. PARALLEL: Run AI insights + storage upload concurrently
         const isDisplayable = processedBlob.type === 'image/jpeg' || processedBlob.type === 'image/png';

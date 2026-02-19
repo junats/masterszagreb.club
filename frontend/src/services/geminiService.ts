@@ -43,7 +43,7 @@ async function compressImage(file: File): Promise<string> {
   });
 }
 
-export const analyzeReceiptImage = async (base64Image: string, categories: { name: string }[] = []): Promise<AnalysisResult> => {
+export const analyzeReceiptImage = async (base64Image: string, categories: { name: string }[] = [], isPremium: boolean = false): Promise<AnalysisResult> => {
   console.log('🔍 analyzeReceiptImage called (Edge Function)');
 
   try {
@@ -56,7 +56,8 @@ export const analyzeReceiptImage = async (base64Image: string, categories: { nam
       body: {
         action: 'analyze-receipt',
         base64Image,
-        categories
+        categories,
+        isPremium
       },
       headers: {
         // Optional: Hint to backend if needed
@@ -99,7 +100,7 @@ export const analyzeReceiptImage = async (base64Image: string, categories: { nam
 };
 
 
-export const analyzeItemInsights = async (items: any[], barcodes?: string[]): Promise<any[]> => {
+export const analyzeItemInsights = async (items: any[], barcodes?: string[], isPremium: boolean = false): Promise<any[]> => {
   console.log('🔍 analyzeItemInsights called (Edge Function)');
 
   try {
@@ -107,7 +108,8 @@ export const analyzeItemInsights = async (items: any[], barcodes?: string[]): Pr
       body: {
         action: 'item-insights',
         items,
-        barcodes
+        barcodes,
+        isPremium
       }
     });
 

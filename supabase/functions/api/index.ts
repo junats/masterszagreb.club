@@ -57,8 +57,13 @@ async function handleAnalyzeReceipt(body: any) {
     const payloadSize = body.base64Image ? Math.round(body.base64Image.length * 0.75 / 1024) : 0;
     console.log(`Analyzing receipt. Payload size: ${payloadSize}KB`);
 
-    // Added gemini-1.5-flash as it's very stable and less likely to 429
-    const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-lite", "gemini-flash-latest", "gemini-pro-latest"];
+    // Free users: Use flash models to reduce cost
+    // Premium users: Use pro models for better extraction
+    const isPremium = body.isPremium === true;
+    const modelsToTry = isPremium
+        ? ["gemini-1.5-pro", "gemini-pro-latest", "gemini-1.5-flash"]
+        : ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-lite"];
+
     let lastError = null;
     for (const model of modelsToTry) {
         try {
@@ -75,7 +80,9 @@ async function handleAnalyzeReceipt(body: any) {
 }
 
 async function handleGenericGemini(body: any, action: string) {
-    const result = await runGeminiInternal("gemini-flash-latest", body, action);
+    const isPremium = body.isPremium === true;
+    const model = isPremium ? "gemini-1.5-pro" : "gemini-1.5-flash";
+    const result = await runGeminiInternal(model, body, action);
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 

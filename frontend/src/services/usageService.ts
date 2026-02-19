@@ -3,8 +3,8 @@ import { Preferences } from '@capacitor/preferences';
 const USAGE_KEY = 'truetrack_usage_stats';
 
 // Free tier limits
-const FREE_DAILY_LIMIT = 4;
-const FREE_WEEKLY_LIMIT = 10;
+const FREE_DAILY_LIMIT = 3;
+const FREE_WEEKLY_LIMIT = 7;
 
 export interface UsageStats {
     dailyUploads: number;
