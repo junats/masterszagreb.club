@@ -246,19 +246,56 @@ const Paywall: React.FC<PaywallProps> = ({
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-center mb-6">
-                                    <span className="text-4xl font-bold text-white">€6.99</span>
-                                    <span className="text-slate-400">/mo</span>
-                                    <div className="mt-2 text-emerald-400 text-sm font-medium">Or €29.99/yr</div>
-                                    <div className="mt-2">
-                                        <button
-                                            onClick={() => setShowDebug(true)}
-                                            className="text-[10px] text-slate-600 space-x-1"
-                                        >
-                                            <span>•</span>
-                                            <span>System Debug Info</span>
-                                        </button>
-                                    </div>
+                                <div className="space-y-3 mb-6">
+                                    {/* Mock Annual Package */}
+                                    <button
+                                        onClick={() => setSelectedPackage({ identifier: 'mock_annual' } as any)}
+                                        className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all relative overflow-hidden ${selectedPackage?.identifier === 'mock_annual' || !selectedPackage ? 'bg-orange-500/10 border-orange-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                    >
+                                        {(selectedPackage?.identifier === 'mock_annual' || !selectedPackage) && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-amber-500/10 pointer-events-none" />
+                                        )}
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${selectedPackage?.identifier === 'mock_annual' || !selectedPackage ? 'border-orange-500 bg-orange-500' : 'border-slate-500'}`}>
+                                                    {(selectedPackage?.identifier === 'mock_annual' || !selectedPackage) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                </div>
+                                                <span className="text-white font-bold">Yearly</span>
+                                                <span className="bg-orange-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ml-2">SAVE 28%</span>
+                                            </div>
+                                            <div className="mt-1 pl-6">
+                                                <div className="text-emerald-400 font-medium text-xs mb-1">7-Day Free Trial</div>
+                                                <div className="text-slate-400 text-xs">Billed annually</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-white font-bold text-lg">€29.99</div>
+                                        </div>
+                                    </button>
+
+                                    {/* Mock Monthly Package */}
+                                    <button
+                                        onClick={() => setSelectedPackage({ identifier: 'mock_monthly' } as any)}
+                                        className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all relative overflow-hidden ${selectedPackage?.identifier === 'mock_monthly' ? 'bg-orange-500/10 border-orange-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                    >
+                                        {selectedPackage?.identifier === 'mock_monthly' && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-amber-500/10 pointer-events-none" />
+                                        )}
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${selectedPackage?.identifier === 'mock_monthly' ? 'border-orange-500 bg-orange-500' : 'border-slate-500'}`}>
+                                                    {selectedPackage?.identifier === 'mock_monthly' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                </div>
+                                                <span className="text-white font-bold">Monthly</span>
+                                            </div>
+                                            <div className="mt-1 pl-6">
+                                                <div className="text-slate-400 text-xs">Billed monthly</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-white font-bold text-lg">€6.99</div>
+                                        </div>
+                                    </button>
                                 </div>
                             )}
 
