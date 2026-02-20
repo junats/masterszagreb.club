@@ -344,7 +344,8 @@
             },
             "cancelConfirm": "Are you sure you want to cancel your Pro subscription? You will lose access to all Pro features.",
             "cancelSuccess": "Subscription cancelled. You are now on the Free plan.",
-            "pricePerMonth": "€{{price}}/mo"
+            "pricePerMonth": "€{{price}}/mo",
+            "noPlansFound": "No plans found. Tap \"System Info\" for details."
         },
         "uicalc": {
             "devTools": "Dev Tools",
@@ -395,6 +396,7 @@
         "loading": "Loading...",
         "error": "Error",
         "success": "Success",
+        "unknownError": "Unknown error",
         "total": "Total",
         "items": "items",
         "clear": "Clear",

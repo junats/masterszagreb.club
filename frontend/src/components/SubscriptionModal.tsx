@@ -48,7 +48,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
             const pkg = availablePackages[0];
 
             if (!pkg) {
-                showToast('No plans found. Tap "System Info" for details.', 'error');
+                showToast(t('settings.subscription.noPlansFound'), 'error');
                 return;
             }
 

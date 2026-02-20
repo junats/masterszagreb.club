@@ -737,7 +737,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                             'no': 'Norsk',
                                             'da': 'Dansk'
                                         };
-                                        showToast(`Language changed to ${languageNames[e.target.value]}`, 'success');
+                                        showToast(`${t('notifications.languageChanged')} ${languageNames[e.target.value as keyof typeof languageNames]}`, 'success');
                                     }}
                                 >
                                     <option value="en">🇬🇧 English</option>
@@ -1000,7 +1000,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                         showToast(t('settings.uicalc.widgetUpdateSuccess'), 'success');
                                     } catch (error: any) {
                                         console.error('❌ Widget test failed:', error);
-                                        showToast(`${t('settings.uicalc.widgetUpdateFail')} ${error?.message || 'Unknown error'}`, 'error');
+                                        showToast(`${t('settings.uicalc.widgetUpdateFail')} ${error?.message || t('common.unknownError')}`, 'error');
                                     }
                                 }}
                                 className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-sm font-medium mb-3"
