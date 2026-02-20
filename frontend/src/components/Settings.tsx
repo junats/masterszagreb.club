@@ -905,7 +905,7 @@ const Settings: React.FC<SettingsProps> = () => {
                                 </div>
                                 {isProMode && (
                                     <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-1">
-                                        <p className="text-xs font-bold text-purple-400">{t('settings.subscription.pricePerMonth', { price: '4.99' })}</p>
+                                        <p className="text-xs font-bold text-purple-400">{t('settings.subscription.pricePerMonth', { price: '6,99' })}</p>
                                     </div>
                                 )}
                             </div>

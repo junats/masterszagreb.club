@@ -166,7 +166,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
                             <span className="text-[10px] text-slate-500">{t('settings.subscription.cancelAnytime')}</span>
                         </div>
                         <div className="text-right">
-                            <span className="text-xl font-bold text-white">€4.99</span>
+                            <span className="text-xl font-bold text-white">€6,99</span>
                             <span className="text-xs text-slate-500 font-medium">{t('settings.subscription.perMonth')}</span>
                         </div>
                     </div>
