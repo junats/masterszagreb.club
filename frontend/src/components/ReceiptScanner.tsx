@@ -12,6 +12,7 @@ import Paywall from './Paywall';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import heic2any from 'heic2any';
+import imageCompression from 'browser-image-compression';
 
 const computeHash = (str: string): string => {
   let hash = 0;
@@ -210,10 +211,29 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       );
 
       const processingTask = async () => {
-        // 1. Optimize Image (Resize & Compress) -> Blob
-        const processedBlob = await optimizeImage(blob);
+        // 1. First Pass (Handle HEIC and rough browser canvas limits)
+        let processedBlob = await optimizeImage(blob);
 
-        // 2. Convert to Base64 for Gemini Analysis
+        // 2. Advanced Compression Pass (Shrink heavily before sending to Gemini)
+        try {
+          console.log(`Size before compression: ${Math.round(processedBlob.size / 1024)}KB`);
+          const compressionPromise = imageCompression(processedBlob as File, {
+            maxSizeMB: 0.7,
+            maxWidthOrHeight: 1024,
+            useWebWorker: false, // MUST be false — Web Workers hang in iOS WKWebView/Capacitor
+            initialQuality: 0.7
+          });
+          // Safety timeout: if compression hangs for >10s, skip it and use the original blob
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Compression timeout')), 10000)
+          );
+          processedBlob = await Promise.race([compressionPromise, timeoutPromise]);
+          console.log(`Size after compression: ${Math.round(processedBlob.size / 1024)}KB`);
+        } catch (e) {
+          console.warn("Advanced image compression skipped or failed: ", e);
+        }
+
+        // 3. Convert to Base64 for Gemini Analysis
         const base64ForAI = await blobToBase64(processedBlob);
 
         // 3. Analyze with Gemini AI (main bottleneck - network + AI)
@@ -585,8 +605,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
   return (
     <div className="flex flex-col h-full px-4 pt-0 pb-32 overflow-y-auto no-scrollbar">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
         className="flex flex-col h-full"
       >
@@ -653,7 +673,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
+        <div className="grid grid-cols-3 gap-3 w-full max-w-sm mx-auto">
           {/* Camera */}
           <button
             onClick={handleCameraCapture}
@@ -695,8 +715,8 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
         </p>
 
 
-        <div className="mt-auto">
-          <button onClick={onCancel} className="w-full py-4 rounded-2xl text-slate-500 font-bold hover:bg-white/5 hover:text-slate-300 transition-all duration-300">
+        <div className="mt-auto pt-6">
+          <button onClick={onCancel} className="w-full py-3.5 rounded-2xl bg-white/5 text-slate-300 font-bold hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10 shadow-sm">
             {t('scanner.cancel')}
           </button>
         </div>
@@ -706,15 +726,15 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
       {showReviewModal && scannedReceipts.length > 0 && createPortal(
         <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 flex items-end sm:items-center justify-center">
           {/* iOS Sheet Container */}
-          <div className="w-full max-w-lg h-[90vh] sm:h-fit sm:max-h-[85vh] bg-secondarySystemBackground dark:bg-[#1C1C1E] rounded-t-[20px] sm:rounded-[20px] shadow-2xl flex flex-col animate-in slide-in-from-bottom duration-300 overflow-hidden">
+          <div className="w-full max-w-lg h-[90vh] sm:h-fit sm:max-h-[85vh] bg-slate-900/80 backdrop-blur-2xl rounded-t-[20px] sm:rounded-[20px] shadow-2xl flex flex-col animate-in fade-in duration-300 overflow-hidden border border-white/10">
 
             {/* Drag Handle (Visual only for now) */}
-            <div className="w-full flex justify-center pt-2 pb-1 bg-secondarySystemBackground dark:bg-[#1C1C1E] shrink-0" onClick={() => setShowReviewModal(false)}>
+            <div className="w-full flex justify-center pt-2 pb-1 bg-transparent shrink-0" onClick={() => setShowReviewModal(false)}>
               <div className="w-10 h-1 bg-systemGray3 rounded-full opacity-50"></div>
             </div>
 
             {/* Header */}
-            <div className="px-6 pb-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center shrink-0 bg-secondarySystemBackground dark:bg-[#1C1C1E]">
+            <div className="px-6 pb-4 border-b border-white/10 flex justify-between items-center shrink-0 bg-white/5 backdrop-blur-md">
               <div className="text-center w-full">
                 <h2 className="text-[17px] font-semibold text-black dark:text-white">{t('scanner.review.title')}</h2>
                 {scannedReceipts.length > 1 && (
@@ -739,7 +759,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     type="text"
                     value={scannedReceipts[0]?.storeName || ''}
                     onChange={(e) => updateFirstReceipt({ storeName: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 backdrop-blur-sm"
                   />
                 </div>
                 <div>
@@ -748,7 +768,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     type="date"
                     value={scannedReceipts[0]?.date || ''}
                     onChange={(e) => updateFirstReceipt({ date: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 backdrop-blur-sm"
                   />
                 </div>
               </div>
@@ -762,7 +782,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                     type="number"
                     value={scannedReceipts[0]?.total || 0}
                     onChange={(e) => updateFirstReceipt({ total: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-white font-mono focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 backdrop-blur-sm"
                   />
                 </div>
               </div>
@@ -777,7 +797,7 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
                   {(scannedReceipts[0]?.items || []).map((item, idx) => {
                     if (!item) return null;
                     return (
-                      <div key={idx} className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div key={idx} className="bg-white/[0.03] backdrop-blur-sm p-3 rounded-xl border border-white/10 space-y-2 hover:bg-white/[0.06] transition-all duration-200">
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0 pr-3">
                             <p className="text-sm text-white font-medium truncate">{item.name}</p>
@@ -869,10 +889,10 @@ const ReceiptScanner: React.FC<ReceiptScannerProps> = ({ onScanComplete, onCance
             )}
 
             {/* Footer - Fixed at bottom with extra padding */}
-            <div className="p-6 pb-8 border-t border-white/10 bg-surfaceHighlight/50 rounded-b-3xl shrink-0">
+            <div className="p-6 pb-8 border-t border-white/10 bg-white/5 backdrop-blur-md rounded-b-3xl shrink-0">
               <button
                 onClick={handleSave}
-                className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2"
               >
                 <Save size={20} />
                 {scannedReceipts.length > 1 ? t('scanner.review.save', { count: scannedReceipts.length }) : t('scanner.review.saveSingle')}

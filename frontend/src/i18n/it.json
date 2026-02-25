@@ -883,7 +883,10 @@
             "accountExists": "L'account esiste già.",
             "invalidCredentials": "Dettagli non validi.",
             "default": "Autenticazione fallita.",
-            "passwordReset": "Presto disponibile."
+            "passwordReset": "Presto disponibile.",
+            "nameRequired": "Inserisci il tuo nome completo.",
+            "emailRequired": "Inserisci un indirizzo email valido.",
+            "passwordRequired": "Inserisci la tua password."
         }
     },
     "support": {

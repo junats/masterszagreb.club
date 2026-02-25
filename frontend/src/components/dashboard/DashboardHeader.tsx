@@ -60,46 +60,49 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             className={"relative transition-all duration-1000 mb-4"} // Removed hardcoded borders/radius to let Card handle it
         >
             <SpotlightCard
-                className="p-4 group h-full" // Removed bg-card, rounded-3xl
-                spotlightColor="rgba(0, 122, 255, 0.15)" // System Blue tint
+                className="p-4 group w-full flex flex-col gap-6"
+                spotlightColor="rgba(0, 122, 255, 0.15)"
             >
-
-                <BudgetOverview
-                    metrics={metrics}
-                    budgetView={budgetView}
-                    setBudgetView={setBudgetView}
-                    monthlyBudget={monthlyBudget || 0}
-                    isVisible={isVisible}
-                />
-
-                {suggestions.length > 0 && (
-                    <div className="relative z-10 mt-3 border-t border-white/10 pt-3 h-14 overflow-hidden">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={currentTipIndex}
-                                initial={{ opacity: 0, y: 5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -5 }}
-                                transition={{ duration: 0.5 }}
-                                className="flex items-start gap-3"
-                            >
-                                <div className={"p-1.5 rounded-lg shrink-0 " + (
-                                    suggestions[currentTipIndex].severity === 'danger' ? 'bg-red-500/10 text-red-400' :
-                                        suggestions[currentTipIndex].severity === 'warning' ? 'bg-amber-500/10 text-amber-400' :
-                                            'bg-emerald-500/10 text-emerald-400'
-                                )}>
-                                    {React.createElement(suggestions[currentTipIndex].icon, { size: 14 })}
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xxs text-slate-300 font-medium leading-tight truncate">{suggestions[currentTipIndex].text}</p>
-                                    {suggestions[currentTipIndex].subtext && <p className="text-xxs text-slate-400 mt-0.5 leading-tight truncate">{suggestions[currentTipIndex].subtext}</p>}
-                                </div>
-                            </motion.div>
-                        </AnimatePresence>
+                <div className="flex flex-col md:justify-between gap-4">
+                    <div className="w-full">
+                        <BudgetOverview
+                            metrics={metrics}
+                            budgetView={budgetView}
+                            setBudgetView={setBudgetView}
+                            monthlyBudget={monthlyBudget || 0}
+                            isVisible={isVisible}
+                        />
                     </div>
-                )}
 
-                <div className="relative z-10 border-t border-white/5 pt-4">
+                    {suggestions.length > 0 && (
+                        <div className="relative z-10 pt-3 border-t border-white/10 h-14 overflow-hidden mt-auto">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={currentTipIndex}
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }}
+                                    transition={{ duration: 0.5 }}
+                                    className="flex items-start gap-3"
+                                >
+                                    <div className={"p-1.5 rounded-lg shrink-0 " + (
+                                        suggestions[currentTipIndex].severity === 'danger' ? 'bg-red-500/10 text-red-400' :
+                                            suggestions[currentTipIndex].severity === 'warning' ? 'bg-amber-500/10 text-amber-400' :
+                                                'bg-emerald-500/10 text-emerald-400'
+                                    )}>
+                                        {React.createElement(suggestions[currentTipIndex].icon, { size: 14 })}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xxs text-slate-300 font-medium leading-tight truncate">{suggestions[currentTipIndex].text}</p>
+                                        {suggestions[currentTipIndex].subtext && <p className="text-xxs text-slate-400 mt-0.5 leading-tight truncate">{suggestions[currentTipIndex].subtext}</p>}
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    )}
+                </div>
+
+                <div className="relative z-10 border-t border-white/5 pt-4 flex flex-col justify-center mt-2">
                     <VisibilitySensor threshold={0.2}>
                         {({ isVisible }: { isVisible: boolean }) => (
                             <>

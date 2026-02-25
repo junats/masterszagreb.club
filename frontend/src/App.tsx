@@ -127,6 +127,15 @@ const AppContent: React.FC = () => {
             <button onClick={() => generateDummyData()} className="ml-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-2 py-0.5 rounded text-[9px] font-bold border border-indigo-500/30 transition-colors">
               {t('misc.seedData')}
             </button>
+            <button onClick={async () => {
+              const { generateScreenshotData } = await import('./utils/seedScreenshotData');
+              const data = generateScreenshotData();
+              const { useData } = await import('./contexts/DataContext');
+              // This is a bit hacky but it's just for the subagent to click
+              window.dispatchEvent(new CustomEvent('truetrack:seed_screenshots', { detail: data }));
+            }} className="ml-2 bg-pink-500/20 hover:bg-pink-500/40 px-2 py-0.5 rounded text-[9px] font-bold border border-pink-500/30 transition-colors" id="seed-screenshot-data">
+              Seed Screenshots
+            </button>
           </div>
           <button onClick={() => setShowDevBanner(false)} className="absolute right-2 p-1 hover:text-white">
             <X size={12} />
@@ -139,7 +148,7 @@ const AppContent: React.FC = () => {
           Standardizes the scrolling area and accounts for fixed Header and Navigation.
           Centralized padding logic allows removing all individual component padding.
       */}
-      <main className="flex-1 w-full max-w-lg mx-auto relative z-10 h-full overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <main className="flex-1 w-full max-w-lg md:max-w-4xl lg:max-w-5xl mx-auto relative z-10 h-full overflow-y-auto overflow-x-hidden no-scrollbar">
         <div
           style={{
             paddingTop: 'calc(var(--header-height) + var(--safe-area-top))',

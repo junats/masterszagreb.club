@@ -864,7 +864,10 @@
             "accountExists": "Cuenta ya existe.",
             "invalidCredentials": "Detalles inválidos.",
             "default": "Autenticación fallida.",
-            "passwordReset": "Próximamente."
+            "passwordReset": "Próximamente.",
+            "nameRequired": "Por favor, introduzca su nombre completo.",
+            "emailRequired": "Por favor, introduzca una dirección de correo electrónico válida.",
+            "passwordRequired": "Por favor, introduzca su contraseña."
         }
     },
     "support": {

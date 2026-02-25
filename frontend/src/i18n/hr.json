@@ -988,7 +988,10 @@
             "accountExists": "Račun postoji.",
             "invalidCredentials": "Neispravno.",
             "default": "Greška.",
-            "passwordReset": "Uskoro."
+            "passwordReset": "Uskoro.",
+            "nameRequired": "Molimo unesite vaše puno ime.",
+            "emailRequired": "Molimo unesite valjanu adresu e-pošte.",
+            "passwordRequired": "Molimo unesite vašu lozinku."
         }
     },
     "support": {

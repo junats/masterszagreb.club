@@ -1,6 +1,6 @@
 import { Receipt, Category, Goal, GoalType, CustodyDay, CalendarActivity } from '@common/types';
 
-export type SeedScenario = 'good' | 'average' | 'bad';
+export type SeedScenario = 'good' | 'average' | 'bad' | 'appstore';
 
 
 // --- HEALTH/GOOD ---
@@ -42,7 +42,16 @@ const dummyProducts: { name: string, price: number, store: string, category: Cat
     { name: 'Toy Store', price: 45.00, store: 'Smyths', category: Category.LUXURY, goalType: undefined, scenario: ['average', 'bad'], isChild: true },
     { name: 'Kids Shoes', price: 35.00, store: 'Clarks', category: Category.NECESSITY, goalType: undefined, scenario: ['average', 'good'], isChild: true },
     { name: 'Swimming Lessons', price: 80.00, store: 'Local Pool', category: Category.EDUCATION, goalType: undefined, scenario: ['good', 'average'], isChild: true },
-    { name: 'Zoo Family Ticket', price: 65.00, store: 'Dublin Zoo', category: Category.LUXURY, goalType: undefined, scenario: ['good', 'average'], isChild: true },
+    // APPSTORE SCENARIO ITEMS (Premium, clean aesthetic, high value)
+    { name: 'Organic Groceries', price: 145.20, store: 'Whole Foods', category: Category.FOOD, goalType: undefined, scenario: ['appstore'] },
+    { name: 'Pilates Studio', price: 80.00, store: 'Zen Den', category: Category.HEALTH, goalType: undefined, scenario: ['appstore'] },
+    { name: 'Weekend Getaway', price: 350.00, store: 'Airbnb', category: Category.LUXURY, goalType: undefined, scenario: ['appstore'] },
+    { name: 'High-Speed Fiber', price: 60.00, store: 'Virgin Media', category: Category.NECESSITY, goalType: undefined, scenario: ['appstore'] },
+    { name: 'Date Night Dinner', price: 120.00, store: 'Marco Pizza', category: Category.DINING, goalType: undefined, scenario: ['appstore'] },
+    { name: 'Investment Deposit', price: 500.00, store: 'Vanguard', category: Category.OTHER, goalType: GoalType.SAVINGS, scenario: ['appstore'] },
+    { name: 'Ballet Lessons', price: 95.00, store: 'Academy', category: Category.EDUCATION, goalType: undefined, scenario: ['appstore'], isChild: true },
+    { name: 'Pediatrician Checkup', price: 60.00, store: 'Clinic', category: Category.HEALTH, goalType: undefined, scenario: ['appstore'], isChild: true },
+    { name: 'Gourmet Coffee', price: 5.50, store: 'Artisan Cafe', category: Category.FOOD, goalType: undefined, scenario: ['appstore'] },
 ];
 
 const SAMPLE_ACTIVITIES: { title: string, type: CalendarActivity['type'] }[] = [
@@ -53,6 +62,9 @@ const SAMPLE_ACTIVITIES: { title: string, type: CalendarActivity['type'] }[] = [
     { title: 'Birthday Party', type: 'birthday' },
     { title: 'School Play', type: 'school' },
     { title: 'Family Visit', type: 'other' },
+    // Appstore clean events
+    { title: 'Ballet Recital', type: 'school' },
+    { title: 'Weekend Hike', type: 'sport' }
 ];
 
 export const generateScenarioData = (scenario: SeedScenario, months: number = 3): { receipts: Receipt[], custodyDays: CustodyDay[], goals: Goal[], monthlyBudget: number } => {
@@ -60,8 +72,7 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
     const custodyDays: CustodyDay[] = [];
     const now = new Date();
 
-    // Budget Logic
-    const monthlyBudget = scenario === 'good' ? 3000 : scenario === 'average' ? 2000 : 1000;
+    const monthlyBudget = (scenario === 'good' || scenario === 'appstore') ? 3000 : scenario === 'average' ? 2000 : 1000;
 
     // Helper to add receipt
     const mkReceipt = (date: Date, product: typeof dummyProducts[0], overridePrice?: number): void => {
@@ -91,9 +102,12 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
 
     // Inject High Spend on Today for "Spending Insight" test
     // If scenario is Bad or Average, ensure we have a high spend today
-    if (scenario !== 'good') {
+    if (scenario === 'bad' || scenario === 'average') {
         const zooTrip = dummyProducts.find(p => p.name === 'Zoo Family Ticket') || dummyProducts[0];
         mkReceipt(today, zooTrip, 65.00);
+    } else if (scenario === 'appstore') {
+        const lunch = new Date(today); lunch.setHours(13, 15);
+        mkReceipt(lunch, dummyProducts.find(p => p.name === 'Gourmet Coffee') || dummyProducts[0]);
     } else {
         const lunch = new Date(today); lunch.setHours(13, 0);
         mkReceipt(lunch, dummyProducts.find(p => p.name === 'Lunch Deal')!);
@@ -130,6 +144,13 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
         d.setDate(d.getDate() - (d.getDay() + 1)); // Go back to Sat
         d.setHours(20, 0);
         mkReceipt(d, dummyProducts.find(p => p.name === 'Craft Beer Crate')!, 150.00);
+    }
+
+    if (scenario === 'appstore') {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 3);
+        d.setHours(19, 0);
+        mkReceipt(d, dummyProducts.find(p => p.name === 'Date Night Dinner') || dummyProducts[0]);
     }
 
     if (scenario === 'bad') {
@@ -184,7 +205,7 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
             status = 'split';
         } else {
             // Standard Pattern
-            if (scenario === 'good') {
+            if (scenario === 'good' || scenario === 'appstore') {
                 status = (dayOffset % 4 < 2) ? 'me' : 'partner';
             } else if (scenario === 'average') {
                 const day = d.getDay();
@@ -240,7 +261,7 @@ export const generateScenarioData = (scenario: SeedScenario, months: number = 3)
     const goals: Goal[] = [
         { id: 'junk_food', type: GoalType.JUNK_FOOD, name: 'Stop Junk Food', isEnabled: true, keywords: ['mcdonalds'], streak: scenario === 'good' ? 45 : 0, emoji: '🍔' },
         { id: 'alcohol', type: GoalType.ALCOHOL, name: 'Reduce Alcohol', isEnabled: true, keywords: ['beer', 'vodka'], streak: scenario === 'good' ? 30 : 0, emoji: '🍺' },
-        { id: 'savings', type: GoalType.SAVINGS, name: 'Boost Savings', isEnabled: true, keywords: [], streak: scenario === 'good' ? 60 : 5, emoji: '💰' }
+        { id: 'savings', type: GoalType.SAVINGS, name: 'Boost Savings', isEnabled: true, keywords: [], streak: (scenario === 'good' || scenario === 'appstore') ? 60 : 5, emoji: '💰' }
     ];
 
     return { receipts, custodyDays, goals, monthlyBudget };

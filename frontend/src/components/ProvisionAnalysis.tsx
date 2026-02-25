@@ -251,7 +251,7 @@ const ProvisionAnalysis: React.FC<ProvisionAnalysisProps> = ({ onBack }) => {
     };
 
     return (
-        <div id="expense-report-container" className="flex flex-col h-full bg-[#0B1221] text-slate-200 animate-in fade-in duration-300 font-sans selection:bg-blue-500/30">
+        <div id="expense-report-container" className="flex flex-col h-full bg-[#0B1221] text-slate-200 font-sans selection:bg-blue-500/30">
             {/* Header Bar */}
             <div className="px-6 pt-0 pb-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">

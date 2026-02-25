@@ -30,10 +30,7 @@ interface SettingsProps {
     // Data context clearing might need a separate call.
 }
 
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.3 } },
-};
+// containerVariants removed to prevent animation conflict with ViewStateHandler
 
 const Settings: React.FC<SettingsProps> = () => {
     const {
@@ -277,10 +274,7 @@ const Settings: React.FC<SettingsProps> = () => {
 
     return (
         <>
-            <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
+            <div
                 className="flex-1 w-full max-w-md mx-auto relative pt-0 px-4 custom-scrollbar"
             >
                 <div className="pb-4 px-6 text-center">
@@ -1046,7 +1040,7 @@ const Settings: React.FC<SettingsProps> = () => {
                         <p className="text-[10px] text-slate-600 font-mono">TrueTrack v1.8 (Build {new Date().toLocaleTimeString()})</p>
                     </div>
                 </div >
-            </motion.div >
+            </div>
             {/* End of Main Content Scroll View */}
 
             {/* Modals */}

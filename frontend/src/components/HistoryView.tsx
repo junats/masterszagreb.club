@@ -300,7 +300,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
         return (
 
-            <div className="h-full w-full animate-in slide-in-from-right duration-300 ease-out relative">
+            <div className="h-full w-full relative">
                 {/* Floating back button — outside scroll container so it's always visible on iOS */}
                 <button
                     onClick={() => {
@@ -322,119 +322,88 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
                     {/* Sticky Header Wrapper */}
                     <div className="sticky top-0 z-10 -mx-4 px-4 pb-3 bg-gradient-to-b from-background via-background to-transparent">
-                        <div className={`rounded-3xl p-3 shadow-2xl border ${isBill ? 'bg-slate-900 border-indigo-500/50' : 'bg-surface border-white/10'} relative overflow-hidden`}>
-                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
+                        <div className={`rounded-3xl p-5 shadow-2xl border backdrop-blur-xl ${isBill ? 'bg-slate-900/90 border-indigo-500/30' : 'bg-white/[0.03] border-white/10'} relative overflow-hidden`}>
+                            <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
 
-                            {/* Single line layout */}
-                            <div className="flex items-center justify-between gap-3 mt-0.5">
-                                {/* Store name */}
-                                <div className="flex-1 min-w-0">
-                                    <h2 className="text-lg font-heading font-bold text-white tracking-tight truncate">{selectedReceipt.storeName}</h2>
-                                </div>
-
-                                {/* Pie chart */}
-                                <div className="relative flex-shrink-0">
-                                    <svg width="36" height="36" viewBox="0 0 36 36" className="transform -rotate-90">
-                                        {(() => {
-                                            const childItems = visibleItems.filter(i => i.isChildRelated);
-                                            const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
-                                            const childPercentage = effectiveTotal > 0 ? (childTotal / effectiveTotal) * 100 : 0;
-                                            const circumference = 2 * Math.PI * 15.9155;
-                                            const childStroke = (childPercentage / 100) * circumference;
-                                            const otherStroke = circumference - childStroke;
-
-                                            return (
-                                                <>
-                                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3.2" />
-                                                    {childPercentage > 0 && (
-                                                        <circle
-                                                            cx="18"
-                                                            cy="18"
-                                                            r="15.9155"
-                                                            fill="none"
-                                                            stroke="#34d399"
-                                                            strokeWidth="3.2"
-                                                            strokeDasharray={`${childStroke} ${circumference}`}
-                                                            strokeLinecap="round"
-                                                        />
-                                                    )}
-                                                    {childPercentage < 100 && (
-                                                        <circle
-                                                            cx="18"
-                                                            cy="18"
-                                                            r="15.9155"
-                                                            fill="none"
-                                                            stroke="#f472b6"
-                                                            strokeWidth="3.2"
-                                                            strokeDasharray={`${otherStroke} ${circumference}`}
-                                                            strokeDashoffset={-childStroke}
-                                                            strokeLinecap="round"
-                                                        />
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
-                                    </svg>
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-[7px] font-bold text-white">
-                                            {(() => {
-                                                const childItems = visibleItems.filter(i => i.isChildRelated);
-                                                const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
-                                                const childPercentage = effectiveTotal > 0 ? Math.round((childTotal / effectiveTotal) * 100) : 0;
-                                                return `${childPercentage}%`;
-                                            })()}
-                                        </span>
-                                    </div>
-                                </div>
-
-
-                                {/* Mini trends sparkline - Item Nutrition Scores */}
-                                {/* <div className="flex-shrink-0">
-                                    <svg width="40" height="24" viewBox="0 0 40 24" className="opacity-60">
-                                        <polyline
-                                            points={(() => {
-                                                // Get items with nutrition scores
-                                                const scoredItems = visibleItems.filter(i => i.insights?.nutritionScore !== undefined);
-                                                if (scoredItems.length === 0) return "0,20 40,20"; // Flat line if no data
-                                                if (scoredItems.length === 1) return `0,${24 - (scoredItems[0].insights!.nutritionScore / 100 * 24)} 40,${24 - (scoredItems[0].insights!.nutritionScore / 100 * 24)}`;
-
-                                                return scoredItems.map((item, idx) => {
-                                                    const score = item.insights!.nutritionScore;
-                                                    const x = (idx / (scoredItems.length - 1)) * 40;
-                                                    const y = 24 - ((score / 100) * 20) - 2; // Keep within padded bounds
-                                                    return `${x},${y}`;
-                                                }).join(' ');
-                                            })()}
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className={isBill ? 'text-indigo-400' : 'text-primary'}
-                                        />
-                                    </svg>
-                                </div> */}
-
-                                {/* Total */}
-                                <div className="text-right flex-shrink-0">
-                                    <p className={`text-xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
-                                </div>
-
-                                {/* Action buttons */}
-                                <div className="flex gap-1.5 flex-shrink-0">
-                                    <button onClick={handleShare} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                                        <Share2 size={14} />
-                                    </button>
-                                    {onDelete && (
-                                        <button onClick={handleDelete} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    )}
+                            {/* Row 1 — Store Name + Date */}
+                            <div className="mt-1 mb-4">
+                                <h2 className="text-2xl font-heading font-bold text-white tracking-tight truncate">{selectedReceipt.storeName}</h2>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                    <span className="text-sm text-slate-400">{new Date(selectedReceipt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                    <span className="text-xs bg-white/10 text-slate-300 px-2 py-0.5 rounded-full">{visibleItems.length} {visibleItems.length === 1 ? 'item' : 'items'}</span>
                                 </div>
                             </div>
 
+                            {/* Row 2 — Stats Row */}
+                            <div className="grid grid-cols-3 gap-3 mb-4">
+                                {/* Total */}
+                                <div className={`rounded-2xl p-3 text-center border ${isBill ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/5 border-white/5'}`}>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Total</p>
+                                    <p className={`text-2xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
+                                </div>
+
+                                {/* Pie Chart — Child % */}
+                                <div className={`rounded-2xl p-3 flex flex-col items-center justify-center border ${isBill ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/5 border-white/5'}`}>
+                                    <div className="relative">
+                                        <svg width="48" height="48" viewBox="0 0 36 36" className="transform -rotate-90">
+                                            {(() => {
+                                                const childItems = visibleItems.filter(i => i.isChildRelated);
+                                                const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
+                                                const childPercentage = effectiveTotal > 0 ? (childTotal / effectiveTotal) * 100 : 0;
+                                                const circumference = 2 * Math.PI * 15.9155;
+                                                const childStroke = (childPercentage / 100) * circumference;
+                                                const otherStroke = circumference - childStroke;
+
+                                                return (
+                                                    <>
+                                                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3.2" />
+                                                        {childPercentage > 0 && (
+                                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#34d399" strokeWidth="3.2" strokeDasharray={`${childStroke} ${circumference}`} strokeLinecap="round" />
+                                                        )}
+                                                        {childPercentage < 100 && (
+                                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f472b6" strokeWidth="3.2" strokeDasharray={`${otherStroke} ${circumference}`} strokeDashoffset={-childStroke} strokeLinecap="round" />
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <span className="text-[9px] font-bold text-white">
+                                                {(() => {
+                                                    const childItems = visibleItems.filter(i => i.isChildRelated);
+                                                    const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
+                                                    const childPercentage = effectiveTotal > 0 ? Math.round((childTotal / effectiveTotal) * 100) : 0;
+                                                    return `${childPercentage}%`;
+                                                })()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-1">Child</p>
+                                </div>
+
+                                {/* Categories */}
+                                <div className={`rounded-2xl p-3 text-center border ${isBill ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/5 border-white/5'}`}>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Categories</p>
+                                    <p className={`text-2xl font-heading font-bold tracking-tight ${isBill ? 'text-indigo-400' : 'text-white'}`}>{new Set(visibleItems.map(i => i.category)).size}</p>
+                                </div>
+                            </div>
+
+                            {/* Row 3 — Action Buttons */}
+                            <div className="flex gap-3">
+                                <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/15 text-primary hover:bg-primary/25 transition-all duration-200 font-medium text-sm">
+                                    <Share2 size={16} />
+                                    Share
+                                </button>
+                                {onDelete && (
+                                    <button onClick={handleDelete} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-all duration-200 font-medium text-sm">
+                                        <Trash2 size={16} />
+                                        Delete
+                                    </button>
+                                )}
+                            </div>
+
                             {ageRestricted && selectedReceipt.items.some(i => i.isRestricted) && (
-                                <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium">
+                                <div className="mt-3 inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium">
                                     <span>{t('history.restrictedHidden')}</span>
                                 </div>
                             )}
@@ -690,11 +659,9 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     }
 
     return (
-        <div className="flex flex-col h-full px-4 pt-0 pb-4 bg-background">
-
-
-            {/* Filters */}
-            <div className="mb-4 space-y-3">
+        <div className="flex flex-col h-full px-4 pt-4 pb-4">
+            {/* Filters Container */}
+            <div className="mb-4 space-y-3 bg-surface border border-white/5 rounded-3xl p-4 shadow-lg">
                 {/* Search & Chart Toggle */}
                 <div className="flex items-center gap-2">
                     <div className="relative flex-1 group">
@@ -791,10 +758,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                         const thumbUrl = receipt.imageUrl || (receipt.storagePath ? storageService.getPublicUrl(receipt.storagePath) : '');
 
                         return (
-                            <div key={receipt.id} className="relative mb-3">
+                            <div key={receipt.id} className="relative mb-3 group">
                                 {/* Delete Background with gradient */}
                                 <motion.div
-                                    className="absolute inset-0 bg-red-600 rounded-2xl flex items-center justify-end px-6 z-0"
+                                    className="absolute inset-0 bg-red-600 rounded-3xl flex items-center justify-end px-6 overflow-hidden"
+                                    style={{ zIndex: -1 }}
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                 >
@@ -853,10 +821,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                         stiffness: 400,
                                         damping: 30
                                     }}
-                                    className={`relative z-10 w-full transition-all duration-300 p-3 rounded-2xl border flex items-center gap-4 group cursor-pointer ${isBill
+                                    className={`relative w-full transition-all duration-300 p-4 rounded-3xl border flex items-center gap-4 group cursor-pointer ${isBill
                                         ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-500/20 hover:border-indigo-500/40'
-                                        : 'bg-slate-900 border-white/5 hover:bg-slate-800 hover:border-white/10'
+                                        : 'bg-surface border-white/5 hover:bg-surfaceHighlight hover:border-white/10'
                                         } shadow-lg hover:shadow-xl`}
+                                    style={{ zIndex: 10, backgroundColor: isBill ? undefined : '#0f172a' }}
                                 >
                                     <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex-shrink-0 relative shadow-inner group-hover:border-white/30 group-hover:shadow-lg transition-all duration-300">
                                         {thumbUrl ? (
@@ -871,12 +840,14 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                                                     }}
                                                 />
                                                 <div className="placeholder-thumb hidden absolute inset-0">
-                                                    <PlaceholderImage className="w-full h-full rounded-none bg-transparent" text="" />
+                                                    <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                                        <ReceiptIcon size={24} className="text-slate-500/50" />
+                                                    </div>
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-slate-700">
-                                                <PlaceholderImage className="w-full h-full rounded-none bg-transparent" text="" />
+                                            <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                                <ReceiptIcon size={24} className="text-slate-500/50" />
                                             </div>
                                         )}
                                         {isBill && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>}

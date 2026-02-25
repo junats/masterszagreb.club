@@ -864,7 +864,10 @@
             "accountExists": "Compte existe déjà.",
             "invalidCredentials": "Détails invalides.",
             "default": "Authentification échouée.",
-            "passwordReset": "Bientôt."
+            "passwordReset": "Bientôt.",
+            "nameRequired": "Veuillez entrer votre nom complet.",
+            "emailRequired": "Veuillez entrer une adresse e-mail valide.",
+            "passwordRequired": "Veuillez entrer votre mot de passe."
         }
     },
     "support": {

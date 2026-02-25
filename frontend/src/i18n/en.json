@@ -1028,7 +1028,10 @@
             "accountExists": "Account already exists. Please sign in with your password.",
             "invalidCredentials": "Invalid credentials. If you usually sign in with Google or Apple, please use the buttons below.",
             "default": "Authentication failed. Please try again.",
-            "passwordReset": "Password reset feature coming soon. Please contact support."
+            "passwordReset": "Password reset feature coming soon. Please contact support.",
+            "nameRequired": "Please enter your full name.",
+            "emailRequired": "Please enter a valid email address.",
+            "passwordRequired": "Please enter your password."
         }
     },
     "support": {

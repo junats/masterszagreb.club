@@ -45,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, onAvatarClick, ageRe
     const { title, subtitle } = getHeaderInfo(currentView);
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-[60] bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-black/5 dark:border-white/10 transition-all duration-300"
+        <header className="fixed top-0 left-0 right-0 z-[60] bg-black/70 backdrop-blur-xl border-b border-white/10 transition-all duration-300"
             style={{ height: 'calc(var(--header-height) + var(--safe-area-top))' }}>
             {/* Safe Area Spacer */}
             <div style={{ height: 'var(--safe-area-top)' }} />

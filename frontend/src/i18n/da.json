@@ -866,7 +866,10 @@
             "accountExists": "Konto findes allerede.",
             "invalidCredentials": "Fejl i detaljer.",
             "default": "Autentificering fejlede.",
-            "passwordReset": "Kommer snart."
+            "passwordReset": "Kommer snart.",
+            "nameRequired": "Indtast venligst dit fulde navn.",
+            "emailRequired": "Indtast venligst en gyldig e-mailadresse.",
+            "passwordRequired": "Indtast venligst din adgangskode."
         }
     },
     "support": {

@@ -195,9 +195,9 @@ const CustodyCalendar: React.FC<CustodyCalendarProps> = ({ onBack }) => {
     }, [custodyDays, currentDate]);
 
     return (
-        <div className="flex flex-col h-full bg-background text-white relative pt-0">
+        <div className="flex flex-col h-full bg-background text-white relative" style={{ paddingTop: 'calc(var(--header-height) + var(--safe-area-top))' }}>
             {/* Toolbar (Visible below Global Header) */}
-            <div className="px-4 py-4 flex flex-col gap-3 border-b border-white/5 bg-background/95 backdrop-blur-xl sticky top-0 z-40 shadow-lg shadow-black/20">
+            <div className="px-4 py-4 flex flex-col gap-3 border-b border-white/5 bg-background/95 backdrop-blur-xl sticky z-40 shadow-lg shadow-black/20" style={{ top: 'calc(var(--header-height) + var(--safe-area-top))' }}>
                 {/* Row 1: Nav & Title */}
                 <div className="flex items-center justify-between">
                     <button

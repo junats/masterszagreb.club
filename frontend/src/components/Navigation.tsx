@@ -26,7 +26,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView, isVisible
   ] as const;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-t border-black/5 dark:border-white/10 pb-safe pt-2 px-2 h-auto min-h-[85px] z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-xl border-t border-white/10 pb-safe pt-2 px-2 h-auto min-h-[85px] z-50">
       <div className="flex justify-between items-center max-w-md mx-auto h-full pb-1">
         {navItems.filter(item => !item.hidden).map((item) => {
           const isActive = currentView === item.id;

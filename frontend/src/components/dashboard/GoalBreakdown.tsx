@@ -58,14 +58,14 @@ export const GoalBreakdown: React.FC<GoalBreakdownProps> = ({
     const { t } = useLanguage();
 
     return (
-        <div className="col-span-2">
+        <div className="col-span-1 md:col-span-1">
             <AnimatedSection delay={0} triggerOnce={false} disableEntrance variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                 {({ isInView }: { isInView?: boolean } = {}) => {
                     const hasEnabledGoals = goals && goals.some(g => g.isEnabled);
 
                     if (!hasEnabledGoals) {
                         return (
-                            <div className="col-span-2">
+                            <div className="col-span-1 md:col-span-1">
                                 <motion.div
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => {

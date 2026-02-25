@@ -48,7 +48,7 @@ export const DashboardInsights: React.FC<DashboardInsightsProps> = ({
     };
 
     return (
-        <motion.div variants={itemVariants} className="col-span-2">
+        <motion.div variants={itemVariants} className="col-span-1 md:col-span-1">
             <ProBlurGuard isPro={isProMode} onClick={() => setShowSubscriptionModal(true)} label="Advanced Insights" className="rounded-3xl h-full" visualStyle="simple">
                 <SpotlightCard
                     onClick={isCoParentingMode ? onProvisionClick : undefined}

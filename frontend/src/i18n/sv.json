@@ -866,7 +866,10 @@
             "accountExists": "Konto finns redan.",
             "invalidCredentials": "Fel uppgifter.",
             "default": "Autentisering misslyckades.",
-            "passwordReset": "Kommer snart."
+            "passwordReset": "Kommer snart.",
+            "nameRequired": "Vänligst ange ditt fullständiga namn.",
+            "emailRequired": "Vänligst ange en giltig e-postadress.",
+            "passwordRequired": "Vänligst ange ditt lösenord."
         }
     },
     "support": {

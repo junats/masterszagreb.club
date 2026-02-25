@@ -12,5 +12,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "browser-image-compression": "^2.0.2"
   }
 }

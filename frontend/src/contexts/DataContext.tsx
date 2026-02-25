@@ -138,7 +138,7 @@ interface DataContextType {
     isRefreshing: boolean;
     refreshData: () => Promise<void>;
     dataVersion: number;
-    generateDummyData: (scenario?: 'good' | 'average' | 'bad') => Promise<number>;
+    generateDummyData: (scenario?: 'good' | 'average' | 'bad' | 'appstore') => Promise<number>;
     spendRatio: number;
 }
 
@@ -194,7 +194,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // --- Load Data ---
     const loadData = async () => {
         try {
-            const { value: savedReceipts } = await Preferences.get({ key: RECEIPT_STORAGE_KEY });
+            // Parallel read — all 5 storage keys at once instead of sequential
+            const [
+                { value: savedReceipts },
+                { value: savedSettings },
+                { value: savedCustody },
+                { value: savedNotificationIds },
+                { value: savedUnreadCount },
+            ] = await Promise.all([
+                Preferences.get({ key: RECEIPT_STORAGE_KEY }),
+                Preferences.get({ key: SETTINGS_STORAGE_KEY }),
+                Preferences.get({ key: 'truetrack_custody' }),
+                Preferences.get({ key: 'truetrack_shown_notifications' }),
+                Preferences.get({ key: 'truetrack_unread_notifications' }),
+            ]);
+
             if (savedReceipts) {
                 const parsed = JSON.parse(savedReceipts);
                 if (Array.isArray(parsed)) {
@@ -209,7 +223,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
 
-            const { value: savedSettings } = await Preferences.get({ key: SETTINGS_STORAGE_KEY });
             if (savedSettings) {
                 const parsed = JSON.parse(savedSettings);
 
@@ -240,12 +253,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
 
-            const { value: savedCustody } = await Preferences.get({ key: 'truetrack_custody' });
             if (savedCustody) {
                 setCustodyDays(JSON.parse(savedCustody));
             }
 
-            const { value: savedNotificationIds } = await Preferences.get({ key: 'truetrack_shown_notifications' });
             if (savedNotificationIds) {
                 try {
                     const parsed = JSON.parse(savedNotificationIds);
@@ -257,7 +268,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
 
-            const { value: savedUnreadCount } = await Preferences.get({ key: 'truetrack_unread_notifications' });
             if (savedUnreadCount) {
                 try {
                     const count = parseInt(savedUnreadCount, 10);
@@ -277,6 +287,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         loadData();
+
+        // Listen for screenshot seeding events
+        const handleSeedScreenshots = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail) {
+                const { receipts: newReceipts, custodyDays: newCustodyDays, goals: newGoals, monthlyBudget: newBudget } = customEvent.detail;
+                setReceipts(newReceipts);
+                setCustodyDays(newCustodyDays);
+                setGoals(newGoals);
+                setMonthlyBudget(newBudget);
+                setDataVersion(v => v + 1);
+                console.log('📸 Seeded screenshot data', customEvent.detail);
+            }
+        };
+
+        window.addEventListener('truetrack:seed_screenshots', handleSeedScreenshots);
+
+        return () => {
+            window.removeEventListener('truetrack:seed_screenshots', handleSeedScreenshots);
+        };
     }, []);
 
     const { showToast } = useToast();
@@ -952,7 +982,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const generateDummyData = (scenario: 'good' | 'average' | 'bad' = 'average'): Promise<number> => {
+    const generateDummyData = (scenario: 'good' | 'average' | 'bad' | 'appstore' = 'average'): Promise<number> => {
         return new Promise((resolve) => {
             import('../utils/seedData').then(({ generateScenarioData }) => {
                 setReceipts([]);

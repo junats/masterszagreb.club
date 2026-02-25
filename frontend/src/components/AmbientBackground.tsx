@@ -1,10 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 
 interface AmbientBackgroundProps {
     spendRatio: number; // 0 to 1 (or > 1)
 }
 
 export const AmbientBackground: React.FC<AmbientBackgroundProps> = ({ spendRatio }) => {
+    // Defer heavy blur rendering to let main UI paint first
+    const [isReady, setIsReady] = useState(false);
+    useEffect(() => {
+        const t = setTimeout(() => setIsReady(true), 500);
+        return () => clearTimeout(t);
+    }, []);
     // Determine state based on spend ratio
     const state = useMemo(() => {
         if (spendRatio >= 0.9) return 'critical';
@@ -41,6 +47,8 @@ export const AmbientBackground: React.FC<AmbientBackgroundProps> = ({ spendRatio
     };
 
     const currentConfig = config[state];
+
+    if (!isReady) return null;
 
     return (
         <div className={`absolute inset-0 overflow-hidden pointer-events-none z-0 transition-colors duration-1000 ${currentConfig.base} mix-blend-screen opacity-50`}>

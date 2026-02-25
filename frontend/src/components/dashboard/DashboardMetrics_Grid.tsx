@@ -26,7 +26,7 @@ export const DashboardMetrics_Grid: React.FC<DashboardMetricsGridProps> = ({
     const { t } = useLanguage();
 
     if (!aiMetrics || aiMetrics.length === 0) return (
-        <div className="col-span-2">
+        <div className="col-span-1 md:col-span-2">
             <SpotlightCard className="relative rounded-3xl overflow-hidden shadow-lg border border-slate-800 bg-card">
                 <div className="relative z-10 p-5">
                     <div className="flex items-center gap-3 mb-2">
@@ -51,7 +51,7 @@ export const DashboardMetrics_Grid: React.FC<DashboardMetricsGridProps> = ({
     const gridMetrics = aiMetrics.filter(m => m !== heroMetric);
 
     return (
-        <div className="col-span-2">
+        <div className="col-span-1 md:col-span-2">
             <ProBlurGuard isPro={isProMode} onClick={() => setShowSubscriptionModal(true)} label="Financial Snapshot" className="rounded-3xl h-full" visualStyle="simple">
                 <SpotlightCard className="relative rounded-3xl overflow-hidden group shadow-lg border border-slate-800 bg-card">
 

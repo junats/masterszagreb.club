@@ -188,8 +188,27 @@ const AuthScreen: React.FC = () => {
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+
         setError(null);
+
+        // Manual validation for custom errors
+        if (!isLogin && !name.trim()) {
+            setError(t('auth.errors.nameRequired') || 'Please enter your full name.');
+            HapticsService.notificationWarning();
+            return;
+        }
+        if (!email.trim() || !email.includes('@')) {
+            setError(t('auth.errors.emailRequired') || 'Please enter a valid email address.');
+            HapticsService.notificationWarning();
+            return;
+        }
+        if (!password) {
+            setError(t('auth.errors.passwordRequired') || 'Please enter your password.');
+            HapticsService.notificationWarning();
+            return;
+        }
+
+        setLoading(true);
 
         try {
             if (isLogin) {
@@ -300,7 +319,7 @@ const AuthScreen: React.FC = () => {
                     {/* Manual Check Button for Stuck Users */}
 
 
-                    <form onSubmit={handleAuth} className="space-y-4">
+                    <form onSubmit={handleAuth} className="space-y-4" noValidate>
                         {!isLogin && (
                             <div>
                                 <div className="relative">
@@ -311,7 +330,6 @@ const AuthScreen: React.FC = () => {
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium text-sm"
-                                        required={!isLogin}
                                         autoComplete="name"
 
                                     />
@@ -327,7 +345,6 @@ const AuthScreen: React.FC = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium text-sm"
-                                    required
                                     autoComplete="email"
                                 />
                             </div>
@@ -340,7 +357,6 @@ const AuthScreen: React.FC = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-12 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-medium text-sm"
-                                required
                                 onFocus={async () => {
                                     const { value: logoutAtStr } = await Preferences.get({ key: 'manual_logout_at' });
                                     const logoutAt = logoutAtStr ? parseInt(logoutAtStr) : 0;

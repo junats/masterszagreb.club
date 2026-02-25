@@ -21,7 +21,7 @@ export const TopCategories: React.FC<TopCategoriesProps> = ({ metrics, getCatego
     const { t } = useLanguage();
 
     return (
-        <div className="col-span-2">
+        <div className="col-span-1 md:col-span-1">
             <ProBlurGuard isPro={isProMode} onClick={() => setShowSubscriptionModal(true)} label="Top Categories" className="h-full rounded-3xl" visualStyle="simple">
                 <AnimatedSection delay={0.1} className="h-full" disableEntrance>
                     {({ isInView }: { isInView?: boolean } = {}) => (

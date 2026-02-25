@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-console.log("Edge Function started (V8 Standard ROOT)");
+console.log("Edge Function started (V9 Gemini 2.5)");
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -19,14 +19,6 @@ serve(async (req) => {
         }
 
         console.log(`Action: ${action}`);
-
-        if (action === 'health') {
-            const apiKey = Deno.env.get('GEMINI_API_KEY');
-            return new Response(JSON.stringify({ status: 'ok', hasApiKey: !!apiKey }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
-
         if (action === 'list-models') return await handleListModels();
         if (action === 'analyze-receipt') return await handleAnalyzeReceipt(body);
         if (action === 'product-lookup' || action === 'item-insights') return await handleGenericGemini(body, action);
@@ -53,36 +45,73 @@ async function handleListModels() {
     return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
+async function executeWithFailover(isPremium: boolean, body: any, action: string) {
+    const proModels = [
+        "gemini-2.5-pro",
+        "gemini-pro-latest"
+    ];
+
+    const flashModels = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-2.0-flash-lite-001" // Ultra-cheap last resort
+    ];
+
+    const modelsToTry = isPremium ? [...proModels, ...flashModels] : flashModels;
+
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        let retries = 2; // max 2 retries per model for 429/5xx
+        let delayMs = 1000;
+
+        while (retries >= 0) {
+            try {
+                console.log(`[${action}] Trying model: ${model} (retries left: ${retries})`);
+                const result = await runGeminiInternal(model, body, action);
+                return result;
+            } catch (e) {
+                lastError = e;
+                console.warn(`Model ${model} failed: ${e.message}`);
+
+                // If 404 (Not Found) or 400 (Bad Request), retrying the same missing/bad model won't help
+                if (e.message.includes("Error 404") || e.message.includes("Error 400") || e.message.includes("NOT_FOUND")) {
+                    break;
+                }
+
+                // If it's a hard Quota Exceeded error (not just a minor rate limit spike), stop all failovers immediately
+                if (e.message.includes("Quota exceeded") || e.message.includes("RESOURCE_EXHAUSTED")) {
+                    console.error(`Hard quota limit reached for ${model}. Moving to next fallback model.`);
+                    break;
+                }
+
+                // For rate limits (429) or server errors (500), back off and retry
+                if (retries > 0) {
+                    console.log(`Waiting ${delayMs}ms before retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                    delayMs *= 2; // Exponential backoff
+                }
+                retries--;
+            }
+        }
+    }
+
+    throw lastError || new Error(`All models and retries failed for Action: ${action}`);
+}
+
 async function handleAnalyzeReceipt(body: any) {
     const payloadSize = body.base64Image ? Math.round(body.base64Image.length * 0.75 / 1024) : 0;
     console.log(`Analyzing receipt. Payload size: ${payloadSize}KB`);
-
-    // Free users: Use flash models to reduce cost
-    // Premium users: Use pro models for better extraction
     const isPremium = body.isPremium === true;
-    const modelsToTry = isPremium
-        ? ["gemini-1.5-pro", "gemini-pro-latest", "gemini-1.5-flash"]
-        : ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-lite"];
 
-    let lastError = null;
-    for (const model of modelsToTry) {
-        try {
-            console.log(`Trying model: ${model}`);
-            const result = await runGeminiInternal(model, body, "analyze-receipt");
-            return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        } catch (e) {
-            console.warn(`Model ${model} failed: ${e.message}`);
-            lastError = e;
-            // Continue to next model on ANY error (429, 500, etc.)
-        }
-    }
-    throw lastError || new Error("All models failed");
+    const result = await executeWithFailover(isPremium, body, "analyze-receipt");
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 async function handleGenericGemini(body: any, action: string) {
     const isPremium = body.isPremium === true;
-    const model = isPremium ? "gemini-1.5-pro" : "gemini-1.5-flash";
-    const result = await runGeminiInternal(model, body, action);
+    const result = await executeWithFailover(isPremium, body, action);
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 

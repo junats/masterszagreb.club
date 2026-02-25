@@ -297,7 +297,7 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
     };
 
     return (
-        <div className="col-span-2">
+        <div className="col-span-1 md:col-span-1">
             <div className="w-full relative rounded-3xl p-4 flex flex-col gap-3 border border-slate-800 bg-card shadow-lg overflow-hidden">
 
                 {/* === Header === */}

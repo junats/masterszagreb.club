@@ -20,7 +20,7 @@ export const TopVendors: React.FC<TopVendorsProps> = ({ metrics, isProMode, setS
     const { t } = useLanguage();
 
     return (
-        <div className="col-span-2">
+        <div className="col-span-1 md:col-span-1">
             <ProBlurGuard isPro={isProMode} onClick={() => setShowSubscriptionModal(true)} label="Top Vendors" className="h-full rounded-3xl" visualStyle="simple">
                 <AnimatedSection delay={0} triggerOnce={false} disableEntrance variants={{ hidden: { opacity: 1 }, visible: { opacity: 1 } }}>
                     {({ isInView }: { isInView?: boolean } = {}) => (
