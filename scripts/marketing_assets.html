@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Store Marketing Assets</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .composition {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ---------------------------
+           IPHONE 6.7" (1284 x 2778)
+           --------------------------- */
+        #iphone-comp {
+            width: 1284px;
+            height: 2778px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        #iphone-comp .title {
+            color: white;
+            font-size: 110px;
+            font-weight: 800;
+            margin-top: 250px;
+            text-align: center;
+            letter-spacing: -2px;
+            line-height: 1.1;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        #iphone-comp .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 60px;
+            font-weight: 500;
+            margin-top: 40px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* The Device Mockup Frame */
+        .iphone-frame {
+            position: absolute;
+            bottom: -150px; /* Slight cutoff at bottom looks dynamic */
+            width: 1000px;
+            height: 2164px; /* Proportional */
+            background-color: #000;
+            border-radius: 120px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.5), inset 0 0 0 16px #333, inset 0 0 0 20px #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            z-index: 5;
+        }
+
+        /* The Dynamic Island / Notch Fake */
+        .iphone-notch {
+            position: absolute;
+            top: 20px;
+            width: 300px;
+            height: 80px;
+            background-color: #000;
+            border-radius: 40px;
+            z-index: 20;
+        }
+
+        /* The App Screenshot itself */
+        .iphone-screen {
+            width: 960px;
+            height: 2124px;
+            background-color: #fff;
+            border-radius: 100px;
+            background-image: url('../appstore_iphone.png');
+            background-size: cover;
+            background-position: top center;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* ---------------------------
+           IPAD PRO 12.9" (2048 x 2732)
+           --------------------------- */
+        #ipad-comp {
+            width: 2048px;
+            height: 2732px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        #ipad-comp .title {
+            color: white;
+            font-size: 140px;
+            font-weight: 800;
+            margin-top: 250px;
+            text-align: center;
+            letter-spacing: -3px;
+            line-height: 1.1;
+            text-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        #ipad-comp .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 70px;
+            font-weight: 500;
+            margin-top: 40px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .ipad-frame {
+            position: absolute;
+            bottom: -200px;
+            width: 1700px;
+            height: 2266px; /* 3:4 roughly */
+            background-color: #e0e0e0; /* Silver iPad edge */
+            border-radius: 120px;
+            box-shadow: 0 50px 120px rgba(0,0,0,0.4), inset 0 0 0 10px #fff, inset 0 0 0 25px #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            z-index: 5;
+        }
+
+        .ipad-screen {
+            width: 1650px;
+            height: 2216px;
+            background-color: #fff;
+            border-radius: 95px;
+            background-image: url('../appstore_ipad.png');
+            background-size: cover;
+            background-position: top center;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- IPHONE COMPOSITION -->
+    <div id="iphone-comp" class="composition">
+        <div class="title">Family Finances,<br>Simplified.</div>
+        <div class="subtitle">Effortlessly track expenses & custody</div>
+        
+        <div class="iphone-frame">
+            <div class="iphone-notch"></div>
+            <div class="iphone-screen"></div>
+        </div>
+    </div>
+
+    <!-- IPAD COMPOSITION -->
+    <div id="ipad-comp" class="composition">
+        <div class="title">Settle Up In Seconds</div>
+        <div class="subtitle">Beautiful dashboard for transparent co-parenting</div>
+        
+        <div class="ipad-frame">
+            <div class="ipad-screen"></div>
+        </div>
+    </div>
+
+</body>
+</html>

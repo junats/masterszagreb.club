@@ -117,4 +117,12 @@
 - [x] **15.2 Supabase RLS Policy Review**
   - Verify Row Level Security is enabled and correctly configured for all tables.
 - [x] **15.3 Secrets & Environment Variable Check**
-  - Ensure no sensitive API keys (e.g., Supabase service role, RevenueCat private keys) are exposed in the frontend bundle.
+### Phase 16: App Store Marketing Assets ✅
+*Goal: Transform raw device captures into professional, high-converting App Store marketing compositions with styling, fonts, and device frames.*
+
+- [x] **16.1 Design Composition Setup**
+  - Initialize an HTML/CSS canvas template to mount and style the App Store compositions.
+- [x] **16.2 Generate Framed Screenshots**
+  - Add device mockups (iPhone/iPad) framing the raw captured screenshots.
+- [x] **16.3 Graphics & Typography**
+  - Add background gradients, premium lighting effects, and descriptive marketing text (e.g., "Effortless Expense Tracking").
