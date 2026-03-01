@@ -58,7 +58,6 @@
   },
   "devDependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@rollup/rollup-darwin-arm64": "^4.53.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.19.7",
