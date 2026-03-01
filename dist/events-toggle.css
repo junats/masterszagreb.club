@@ -1,8 +1,8 @@
 /* === Stickman Movie Scene === */
 .stickman-scene {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 15px;
+    right: 15px;
     z-index: 2000;
     background: transparent;
     border: none;
@@ -16,7 +16,7 @@
 }
 
 .stickman-scene:hover {
-    transform: scale(1.08);
+    transform: scale(1.06);
 }
 
 /* === ACTIVE STATE: Morph to Close X === */
@@ -39,8 +39,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     opacity: 0;
     pointer-events: none;
     transition: all 0.4s ease 0.2s;
@@ -51,11 +51,11 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 36px;
-    height: 4px;
+    width: 44px;
+    height: 5px;
     background: #00ff00;
-    border-radius: 2px;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+    border-radius: 3px;
+    box-shadow: 0 0 12px rgba(0, 255, 0, 0.6);
 }
 
 .close-x span:first-child {
@@ -66,7 +66,6 @@
     transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-/* Show X when active */
 .stickman-scene.active .close-x {
     opacity: 1;
     transition: all 0.3s ease 0.3s;
@@ -80,28 +79,28 @@
 .scene-stage {
     display: flex;
     align-items: flex-end;
-    gap: 0;
-    height: 85px;
+    gap: 2px;
+    height: 120px;
     position: relative;
 }
 
-/* === GUY - larger, chilling === */
+/* === GUY — BIG, chilling === */
 .stick-guy {
     position: relative;
-    filter: drop-shadow(0 0 6px currentColor);
+    filter: drop-shadow(0 0 8px currentColor);
 }
 
 .stick-guy svg {
-    width: 55px;
-    height: 70px;
+    width: 75px;
+    height: 95px;
 }
 
-/* Smoke cloud drifting up */
+/* Smoke cloud */
 .guy-smoke {
     position: absolute;
-    top: -12px;
-    right: -8px;
-    font-size: 18px;
+    top: -15px;
+    right: -10px;
+    font-size: 22px;
     opacity: 0;
     animation: smokeDrift 3s ease-out infinite;
 }
@@ -118,16 +117,16 @@
 
     60% {
         opacity: 0.4;
-        transform: translateY(-18px) translateX(10px) scale(1.3);
+        transform: translateY(-22px) translateX(12px) scale(1.3);
     }
 
     100% {
         opacity: 0;
-        transform: translateY(-35px) translateX(18px) scale(1.6);
+        transform: translateY(-40px) translateX(20px) scale(1.6);
     }
 }
 
-/* Guy vibing - subtle sway */
+/* Guy vibing */
 .stick-guy .guy-head {
     transform-origin: 40px 15px;
     animation: guyHeadBob 1.2s ease-in-out infinite alternate;
@@ -222,22 +221,22 @@
     }
 }
 
-/* === GIRL - larger, walks in === */
+/* === GIRL — BIG, walks in === */
 .stick-girl {
     position: relative;
-    filter: drop-shadow(0 0 6px currentColor);
+    filter: drop-shadow(0 0 8px currentColor);
     animation: girlWalkIn 4s ease-out forwards;
     opacity: 0;
 }
 
 .stick-girl svg {
-    width: 50px;
-    height: 63px;
+    width: 68px;
+    height: 86px;
 }
 
 @keyframes girlWalkIn {
     0% {
-        transform: translateX(70px);
+        transform: translateX(80px);
         opacity: 0;
     }
 
@@ -251,7 +250,6 @@
     }
 }
 
-/* Girl walking legs then vibing */
 .stick-girl .girl-leg-l {
     transform-origin: 35px 50px;
     animation: girlWalk 0.4s ease-in-out 0s 10 alternate, girlVibeL 1s ease-in-out 4s infinite alternate;
@@ -292,7 +290,6 @@
     }
 }
 
-/* Girl vibing after walk-in */
 .stick-girl .girl-head {
     transform-origin: 40px 15px;
     animation: girlHeadTilt 1.5s ease-in-out 4s infinite alternate;
@@ -353,49 +350,108 @@
     }
 }
 
-/* === CHAT BUBBLES === */
+/* === COMIC SPEECH BUBBLES === */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+
 .chat-bubbles {
     position: relative;
     width: 100%;
-    min-height: 30px;
-    margin-top: 6px;
+    min-height: 38px;
+    margin-top: 8px;
 }
 
 .chat-bubble {
     position: absolute;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(5px);
-    border: 1.5px solid currentColor;
-    border-radius: 10px;
-    padding: 5px 10px;
-    font-family: 'Orbitron', 'Share Tech Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+    background: #ffffff;
+    border: 3px solid #000000;
+    border-radius: 20px 20px 20px 5px;
+    padding: 6px 12px;
+    font-family: 'Bangers', 'Comic Sans MS', cursive;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 1px;
     white-space: nowrap;
     opacity: 0;
-    animation: bubblePop 3s ease forwards;
+    animation: bubblePop 3.5s ease forwards;
     pointer-events: none;
+    box-shadow: 3px 3px 0 #000000;
+    color: #000000 !important;
 }
 
+/* Guy bubble: tail points up-left */
 .chat-bubble.from-guy {
     left: 0;
-    color: #ffffff;
+    border-radius: 20px 20px 20px 5px;
 }
 
+.chat-bubble.from-guy::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 12px;
+    width: 0;
+    height: 0;
+    border: 8px solid transparent;
+    border-bottom-color: #000000;
+    border-top: 0;
+}
+
+.chat-bubble.from-guy::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 14px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-bottom-color: #ffffff;
+    border-top: 0;
+    z-index: 1;
+}
+
+/* Girl bubble: tail points up-right */
 .chat-bubble.from-girl {
     right: 0;
-    color: #ff69b4;
+    border-radius: 20px 20px 5px 20px;
+}
+
+.chat-bubble.from-girl::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    right: 12px;
+    width: 0;
+    height: 0;
+    border: 8px solid transparent;
+    border-bottom-color: #000000;
+    border-top: 0;
+}
+
+.chat-bubble.from-girl::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 14px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-bottom-color: #ffffff;
+    border-top: 0;
+    z-index: 1;
 }
 
 @keyframes bubblePop {
     0% {
         opacity: 0;
-        transform: translateY(5px) scale(0.7);
+        transform: translateY(8px) scale(0.5);
     }
 
-    15% {
+    12% {
         opacity: 1;
+        transform: translateY(-2px) scale(1.1);
+    }
+
+    20% {
         transform: translateY(0) scale(1);
     }
 
@@ -406,11 +462,11 @@
 
     100% {
         opacity: 0;
-        transform: translateY(-5px) scale(0.8);
+        transform: translateY(-8px) scale(0.7);
     }
 }
 
-/* Active state glow */
+/* Active glow */
 .stickman-scene.active .stick-guy,
 .stickman-scene.active .stick-girl {
     filter: drop-shadow(0 0 10px #00ff00);
@@ -419,26 +475,26 @@
 /* Mobile */
 @media (max-width: 768px) {
     .stickman-scene {
-        top: 12px;
+        top: 10px;
         right: 8px;
     }
 
     .stick-guy svg {
-        width: 45px;
-        height: 56px;
+        width: 55px;
+        height: 70px;
     }
 
     .stick-girl svg {
-        width: 40px;
-        height: 50px;
+        width: 50px;
+        height: 63px;
     }
 
     .scene-stage {
-        height: 65px;
+        height: 80px;
     }
 
     .chat-bubble {
-        font-size: 8px;
-        padding: 3px 7px;
+        font-size: 11px;
+        padding: 4px 9px;
     }
 }
