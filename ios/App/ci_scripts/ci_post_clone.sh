@@ -12,7 +12,7 @@ brew install node
 echo "==> Installing project dependencies..."
 npm install
 
-echo "==> Syncing Capacitor iOS project (this runs pod install)..."
-npx cap sync ios
+echo "==> Building frontend and syncing Capacitor iOS project..."
+npm run build:mobile
 
 echo "==> ci_post_clone.sh complete!"
