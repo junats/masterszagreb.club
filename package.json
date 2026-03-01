@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "python3 -m http.server 8000",
         "start": "python3 -m http.server 8000",
-        "build": "mkdir -p dist && cp *.html *.css *.js *.svg *.jpg *.png dist/ 2>/dev/null || true",
+        "build": "rm -rf dist && mkdir -p dist && rsync -a --exclude='dist' --exclude='node_modules' --exclude='.git' --exclude='.gsd' --exclude='.agent' --exclude='.claude' --exclude='.gemini' --exclude='.DS_Store' --exclude='server' --exclude='README.md' --exclude='TELEGRAM_SETUP.md' --exclude='THREEJS_GUIDE.md' --exclude='package.json' --exclude='package-lock.json' . dist/",
         "preview": "cd dist && python3 -m http.server 8080"
     },
     "keywords": [
