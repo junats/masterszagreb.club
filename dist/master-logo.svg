@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 40 110 240" width="110" height="240">
+  <!-- MA -->
+  <text x="20" y="80" font-family="Arial, sans-serif" font-size="48" font-weight="bold" font-style="italic" fill="white" text-anchor="start">MA</text>
+  
+  <!-- ST with underline -->
+  <text x="20" y="140" font-family="Arial, sans-serif" font-size="48" font-weight="bold" font-style="italic" fill="white" text-anchor="start">ST</text>
+  <line x1="20" y1="145" x2="100" y2="145" stroke="white" stroke-width="2"/>
+  
+  <!-- ER with underline -->
+  <text x="20" y="200" font-family="Arial, sans-serif" font-size="48" font-weight="bold" font-style="italic" fill="white" text-anchor="start">ER</text>
+  <line x1="20" y1="205" x2="100" y2="205" stroke="white" stroke-width="2"/>
+  
+  <!-- S with underline -->
+  <text x="20" y="260" font-family="Arial, sans-serif" font-size="48" font-weight="bold" font-style="italic" fill="white" text-anchor="start">S</text>
+  <line x1="20" y1="265" x2="100" y2="265" stroke="white" stroke-width="2"/>
+</svg>
+

@@ -1,0 +1,444 @@
+/* === Stickman Movie Scene === */
+.stickman-scene {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    transition: all 0.5s ease;
+}
+
+.stickman-scene:hover {
+    transform: scale(1.08);
+}
+
+/* === ACTIVE STATE: Morph to Close X === */
+.stickman-scene.active .scene-stage,
+.stickman-scene.active .chat-bubbles {
+    opacity: 0;
+    transform: scale(0.3) rotate(90deg);
+    pointer-events: none;
+    transition: all 0.4s ease;
+}
+
+.stickman-scene .scene-stage,
+.stickman-scene .chat-bubbles {
+    transition: all 0.4s ease;
+}
+
+/* Close X icon - hidden by default */
+.close-x {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s ease 0.2s;
+}
+
+.close-x span {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    background: #00ff00;
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+}
+
+.close-x span:first-child {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.close-x span:last-child {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Show X when active */
+.stickman-scene.active .close-x {
+    opacity: 1;
+    transition: all 0.3s ease 0.3s;
+}
+
+.stickman-scene.active {
+    color: #00ff00;
+}
+
+/* Stage: holds both characters */
+.scene-stage {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    height: 85px;
+    position: relative;
+}
+
+/* === GUY - larger, chilling === */
+.stick-guy {
+    position: relative;
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+.stick-guy svg {
+    width: 55px;
+    height: 70px;
+}
+
+/* Smoke cloud drifting up */
+.guy-smoke {
+    position: absolute;
+    top: -12px;
+    right: -8px;
+    font-size: 18px;
+    opacity: 0;
+    animation: smokeDrift 3s ease-out infinite;
+}
+
+@keyframes smokeDrift {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.5);
+    }
+
+    20% {
+        opacity: 0.8;
+    }
+
+    60% {
+        opacity: 0.4;
+        transform: translateY(-18px) translateX(10px) scale(1.3);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-35px) translateX(18px) scale(1.6);
+    }
+}
+
+/* Guy vibing - subtle sway */
+.stick-guy .guy-head {
+    transform-origin: 40px 15px;
+    animation: guyHeadBob 1.2s ease-in-out infinite alternate;
+}
+
+.stick-guy .guy-body {
+    transform-origin: 40px 55px;
+    animation: guySway 1.5s ease-in-out infinite alternate;
+}
+
+.stick-guy .guy-arm-l {
+    transform-origin: 40px 35px;
+    animation: guyArmChill 2s ease-in-out infinite alternate;
+}
+
+.stick-guy .guy-arm-r {
+    transform-origin: 40px 35px;
+    animation: guyArmSmoke 2.5s ease-in-out infinite alternate;
+}
+
+.stick-guy .guy-leg-l {
+    transform-origin: 40px 55px;
+    animation: guyLegTap 0.8s ease-in-out infinite alternate;
+}
+
+.stick-guy .guy-leg-r {
+    transform-origin: 40px 55px;
+    animation: guyLegChill 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes guyHeadBob {
+    0% {
+        transform: rotate(-5deg) translateY(0);
+    }
+
+    100% {
+        transform: rotate(5deg) translateY(-2px);
+    }
+}
+
+@keyframes guySway {
+    0% {
+        transform: rotate(-3deg);
+    }
+
+    100% {
+        transform: rotate(3deg);
+    }
+}
+
+@keyframes guyArmChill {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(15deg);
+    }
+}
+
+@keyframes guyArmSmoke {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(-30deg);
+    }
+
+    100% {
+        transform: rotate(-10deg);
+    }
+}
+
+@keyframes guyLegTap {
+    0% {
+        transform: rotate(-3deg);
+    }
+
+    100% {
+        transform: rotate(5deg);
+    }
+}
+
+@keyframes guyLegChill {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(3deg);
+    }
+}
+
+/* === GIRL - larger, walks in === */
+.stick-girl {
+    position: relative;
+    filter: drop-shadow(0 0 6px currentColor);
+    animation: girlWalkIn 4s ease-out forwards;
+    opacity: 0;
+}
+
+.stick-girl svg {
+    width: 50px;
+    height: 63px;
+}
+
+@keyframes girlWalkIn {
+    0% {
+        transform: translateX(70px);
+        opacity: 0;
+    }
+
+    30% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Girl walking legs then vibing */
+.stick-girl .girl-leg-l {
+    transform-origin: 35px 50px;
+    animation: girlWalk 0.4s ease-in-out 0s 10 alternate, girlVibeL 1s ease-in-out 4s infinite alternate;
+}
+
+.stick-girl .girl-leg-r {
+    transform-origin: 45px 50px;
+    animation: girlWalk 0.4s ease-in-out 0s 10 alternate-reverse, girlVibeR 1s ease-in-out 4s infinite alternate;
+}
+
+@keyframes girlWalk {
+    0% {
+        transform: rotate(-25deg);
+    }
+
+    100% {
+        transform: rotate(25deg);
+    }
+}
+
+@keyframes girlVibeL {
+    0% {
+        transform: rotate(-3deg);
+    }
+
+    100% {
+        transform: rotate(5deg);
+    }
+}
+
+@keyframes girlVibeR {
+    0% {
+        transform: rotate(3deg);
+    }
+
+    100% {
+        transform: rotate(-5deg);
+    }
+}
+
+/* Girl vibing after walk-in */
+.stick-girl .girl-head {
+    transform-origin: 40px 15px;
+    animation: girlHeadTilt 1.5s ease-in-out 4s infinite alternate;
+}
+
+.stick-girl .girl-body {
+    transform-origin: 40px 50px;
+    animation: girlDance 1s ease-in-out 4s infinite alternate;
+}
+
+.stick-girl .girl-arm-l {
+    transform-origin: 40px 32px;
+    animation: girlArmWave 1.2s ease-in-out 4s infinite alternate;
+}
+
+.stick-girl .girl-arm-r {
+    transform-origin: 40px 32px;
+    animation: girlArmVibe 1s ease-in-out 4s infinite alternate-reverse;
+}
+
+@keyframes girlHeadTilt {
+    0% {
+        transform: rotate(-8deg);
+    }
+
+    100% {
+        transform: rotate(8deg);
+    }
+}
+
+@keyframes girlDance {
+    0% {
+        transform: rotate(-4deg) translateY(0);
+    }
+
+    100% {
+        transform: rotate(4deg) translateY(-2px);
+    }
+}
+
+@keyframes girlArmWave {
+    0% {
+        transform: rotate(-10deg);
+    }
+
+    100% {
+        transform: rotate(30deg);
+    }
+}
+
+@keyframes girlArmVibe {
+    0% {
+        transform: rotate(-5deg);
+    }
+
+    100% {
+        transform: rotate(25deg);
+    }
+}
+
+/* === CHAT BUBBLES === */
+.chat-bubbles {
+    position: relative;
+    width: 100%;
+    min-height: 30px;
+    margin-top: 6px;
+}
+
+.chat-bubble {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    border: 1.5px solid currentColor;
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    opacity: 0;
+    animation: bubblePop 3s ease forwards;
+    pointer-events: none;
+}
+
+.chat-bubble.from-guy {
+    left: 0;
+    color: #ffffff;
+}
+
+.chat-bubble.from-girl {
+    right: 0;
+    color: #ff69b4;
+}
+
+@keyframes bubblePop {
+    0% {
+        opacity: 0;
+        transform: translateY(5px) scale(0.7);
+    }
+
+    15% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    75% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-5px) scale(0.8);
+    }
+}
+
+/* Active state glow */
+.stickman-scene.active .stick-guy,
+.stickman-scene.active .stick-girl {
+    filter: drop-shadow(0 0 10px #00ff00);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .stickman-scene {
+        top: 12px;
+        right: 8px;
+    }
+
+    .stick-guy svg {
+        width: 45px;
+        height: 56px;
+    }
+
+    .stick-girl svg {
+        width: 40px;
+        height: 50px;
+    }
+
+    .scene-stage {
+        height: 65px;
+    }
+
+    .chat-bubble {
+        font-size: 8px;
+        padding: 3px 7px;
+    }
+}

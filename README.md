@@ -1,395 +1,202 @@
-# 🛡️ TrueTrack
+# MASTERS Nightclub Website
 
-> **Financial Discipline. Verified Provision. Peace of Mind.**
+A premium nightclub website with Matrix-style event messaging system, managed via Telegram bot.
 
-TrueTrack is a precision financial tracking and discipline tool designed for parents who demand control over their finances. While it serves as a powerful "evidence generator" for co-parenting situations, its core mission is to help you master your budget, track discipline habits, and maintain a verifiable log of your financial life.
+## Features
 
----
+- 🎨 **Matrix-Style UI**: Cyberpunk aesthetic with neon effects and cascading characters
+- 🎵 **Event Display**: Click the MASTERS logo to reveal upcoming events
+- 🤖 **Telegram Bot**: Manage events directly from Telegram
+- 📱 **Responsive Design**: Works on desktop and mobile
+- ✨ **Premium Animations**: Smooth transitions and effects
 
-## AI Tooling
+## Quick Start
 
-This project is tool-agnostic.
-
-Previous iterations used Google Antigravity / Gemini.
-Those tools are now considered legacy and are not required
-to build, refactor, or maintain this codebase.
-
----
-
-## Why This Exists
-
-Elevate your tracking experience with **Coparent Pro**, a suite of quality-of-life features designed to turn financial discipline into a premium experience.
-
-### 🌟 Quality of Life Features
-*   **Ambient Mode:** Dynamic, mood-based lighting effects that react to your spending health.
-*   **Goals & Habits:** Track daily disciplines (e.g., "No Junk Food," "Gym," "Savings") alongside your finances.
-*   **Category Budgets:** Set precise monthly limits for specific spending categories (e.g., Dining, Entertainment).
-
-### 🛡️ Advanced Protection
-*   **Provision Analysis:** Automated reports proving your financial contribution to your child's well-being.
-*   **Parental Controls:** specialized filtering to omit 18+ items (alcohol, tobacco) from shared reports.
-*   **Evidence Export:** One-click CSV/PDF generation for legal counsel or mediation.
-
----
-
-## 📱 What Now? (Mobile Deployment)
-
-Since you have the web app running locally, here are the steps to build the Native iOS and Android apps for the App Store.
-
-### 1. Build the Web Assets
-Run this command to create the production bundle of your React app.
-```bash
-npm run build
-```
-
-### 2. Sync with Native Projects
-This copies your build folder (`dist`) into the iOS and Android native containers.
-```bash
-npx cap sync
-```
-
-### 3. Open in Native IDE
-Use these commands to open the native project. You will then click the "Play" button in Xcode or Android Studio to run it on your phone/simulator.
-```bash
-# For iPhone
-npx cap open ios
-
-# For Android
-npx cap open android
-```
-
-## 🍎 Building for iOS (Detailed)
-
-1.  **Sync Changes:**
-    Always run this after making changes to your React code:
-    ```bash
-    npm run build:mobile
-    ```
-
-2.  **Open Xcode:**
-    ```bash
-    npx cap open ios
-    ```
-
-3.  **Setup Signing (First Time Only):**
-    *   In Xcode, click on the **App** project in the left navigator.
-    *   Select the **App** target.
-    *   Go to the **Signing & Capabilities** tab.
-    *   Select your **Team**.
-    *   Ensure "Automatically manage signing" is checked.
-
-4.  **Run on Device:**
-    *   Connect your iPhone via USB.
-    *   Select your device from the top toolbar (Product > Destination).
-    *   Press **Cmd + R** or click the **Play** button.
-
-5.  **Build for App Store:**
-    *   Select **Any iOS Device (arm64)** as the destination.
-    *   Go to **Product > Archive**.
-    *   Once archived, the "Organizer" window will open, allowing you to **Distribute App** to TestFlight/App Store.
-
-### ⚠️ iOS Troubleshooting
-*   **CocoaPods Error:** If you see pod-related errors, try:
-    ```bash
-    cd ios/App
-    pod install
-    cd ../..
-    ```
-*   **Assets Not Updating:** Ensure you ran `npm run build` *before* `npx cap sync`.
-
----
-
-## 💡 The Vision
-
-TrueTrack combines rigorous financial tracking with the "soft power" of wellness and discipline. Whether you are navigating a complex custody arrangement or simply striving for financial independence, TrueTrack provides the data you need.
-
-### Key Problem Solvers:
-1.  **Precision Budgeting:** Go beyond simple tracking. Set hard limits, visualize categories, and get haptic feedback on your spending health.
-2.  **Habit Stacking:** Monitor lifestyle choices (smoking, fast food, gaming) that impact both your wallet and your well-being.
-3.  **AI-Powered Classification:** Uses Google Gemini AI to read receipts and bills, detecting store names, dates, and line items with near-perfect accuracy.
-4.  **Legal Readiness:** Automatically calculates an "Evidence Score" based on consistency, ensuring you are always prepared if legal need arises.
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend Core
-*   **Framework:** [React 19](https://react.dev/) (via Vite)
-*   **Language:** [TypeScript](https://www.typescriptlang.org/) for strict type safety.
-*   **Styling:** [Tailwind CSS](https://tailwindcss.com/) with a custom Slate-950 Dark Mode palette.
-*   **Icons:** [Lucide React](https://lucide.dev/).
-
-### Artificial Intelligence
-*   **Engine:** **Google Gemini 2.5 Flash** (via `@google/genai`).
-*   **Function:** Multimodal analysis (Image-to-JSON). It handles OCR, entity extraction, context-based categorization, and "Bill vs. Receipt" classification.
-
-### Data & Backend (Hybrid Architecture)
-*   **Service Abstraction:** The app uses a Service Repository pattern.
-*   **Primary Backend:** [Supabase](https://supabase.com/) (PostgreSQL + Auth).
-*   **Fallback Mode:** A robust **Mock Service** runs if no API keys are detected. This allows the app to be fully functional (Auth, Database, Storage) in a local browser environment using `localStorage` for rapid testing and demoing.
-
-### Utilities
-*   **Image Processing:** Custom HTML5 Canvas compression engine to resize 5MB+ camera photos to <100KB for storage efficiency.
-*   **iOS Support:** `heic2any` library to convert Apple HEIC/HEIF photos to JPEG in the browser.
-*   **Subscription Management:** RevenueCat (native In-App Purchases), handling entitlements, offerings, and cross-platform synchronization.
-
----
-
-## 🤖 Developer Workflow (GSD + Local AI)
-
-This project uses the **GSD (Get Shit Done)** methodology combined with **Local AI Tools** to maximize productivity while minimizing cloud API costs.
-
-### Core Philosophy
-
-| Layer | Tool | Purpose |
-|-------|------|---------|
-| **Planning** | Cloud Agent (Gemini/Claude) | Architecture, complex reasoning, multi-file changes |
-| **Execution** | Local Ollama (`fix`, `debate`) | Simple refactors, code fixes, brainstorming |
-| **Testing** | Local Ollama (`gentest`, `autofix`) | Generate tests, auto-fix failures |
-
----
-
-### 🔧 Setup (One-Time)
+### 1. Frontend Setup
 
 ```bash
-# Install Ollama (if not already installed)
-brew install ollama
-
-# Pull the coding model
-ollama pull qwen2.5-coder:7b
-
-# Install the terminal shortcuts
-./scripts/setup_alias.sh
-source ~/.zshrc
+cd nightclub-website
+npm run dev
 ```
 
----
+Open your browser to `http://localhost:8000`
 
-### ⌨️ Terminal Commands
+### 2. Backend Setup (for Telegram integration)
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `fix <file> "<instruction>"` | Refactor a file using local AI | `fix src/App.tsx "Add dark mode toggle"` |
-| `debate "<question>"` | Two AI personas debate, then synthesize | `debate "Should we use Redux or Context?"` |
-| `gentest <file>` | Generate Vitest tests for a file | `gentest src/utils/format.ts` |
-| `autofix <file> "<test_cmd>"` | Run tests → fix failures → repeat (3x max) | `autofix src/App.tsx "npm test"` |
-
----
-
-### 📋 GSD Slash Commands (Chat with Agent)
-
-| Command | Mode | Purpose |
-|---------|------|---------|
-| `/plan "<feature>"` | PLANNING | Create implementation roadmap in `.gsd/ROADMAP.md` |
-| `/execute` | EXECUTION | Implement a specific phase from the roadmap |
-| `/verify` | VERIFICATION | Validate work with empirical evidence (screenshots, test output) |
-| `/pause` | — | Dump state to `.gsd/STATE.md` for clean session handoff |
-| `/resume` | — | Restore context from previous session |
-| `/progress` | — | Show current position in roadmap |
-| `/debug` | — | Systematic debugging with state persistence |
-
----
-
-### 📁 GSD State Files
-
-```
-.gsd/
-├── SPEC.md       # Finalized requirements (must exist before coding)
-├── ROADMAP.md    # Phased implementation plan
-├── STATE.md      # Current position, what was accomplished, next steps
-├── JOURNAL.md    # Session log with decisions and milestones
-└── DECISIONS.md  # Architectural decision records
+```bash
+cd server
+npm install
 ```
 
----
-
-### 🔄 Typical Workflow
-
-```
-1. PLAN   →  /plan "Add receipt export feature"
-              (Agent creates ROADMAP.md with phases)
-
-2. DEBATE →  debate "PDF vs CSV for export format?"
-              (Local AI debates, outputs synthesis)
-
-3. CODE   →  fix src/export.ts "Implement CSV export as planned"
-              (Local AI writes code, saves tokens)
-
-4. TEST   →  gentest src/export.ts
-              (Local AI generates test file)
-
-5. FIX    →  autofix src/export.ts "npm test"
-              (Loops: test → fail → fix → test)
-
-6. VERIFY →  /verify
-              (Agent confirms with empirical evidence)
+Create `.env` file from template:
+```bash
+cp .env.example .env
 ```
 
----
-
-### ⚠️ GSD Rules (Enforced)
-
-| Rule | Description |
-|------|-------------|
-| **Planning Lock 🔒** | No implementation code until `SPEC.md` is FINALIZED |
-| **State Persistence 💾** | Agent updates `STATE.md` after every task |
-| **Context Hygiene 🧹** | After 3 failed debug attempts → state dump + fresh session |
-| **Empirical Validation ✅** | No "trust me" → verify with screenshots/commands |
-
----
-
-### 🧠 When to Use Which Tool?
-
-| Task | ☁️ Cloud Agent | 💻 Local `fix` |
-|------|:--------------:|:--------------:|
-| Plan a new feature | ✅ | ❌ |
-| Create new files | ✅ | ❌ |
-| Debug complex crashes | ✅ | ❌ |
-| Rename variables | ❌ | ✅ |
-| Add comments | ❌ | ✅ |
-| Fix typos | ❌ | ✅ |
-| Simple refactors | ❌ | ✅ |
----
-
-### 🎭 Multi-Agent Orchestration
-
-Modern AI tools support **parallel subagents** for complex tasks:
-
-| Tool | Feature | Capability |
-|------|---------|------------|
-| Claude Code | Subagents | Up to 50 parallel agents |
-| Cursor | Background Agents | Async task execution |
-| Windsurf | Cascade | Auto-parallelization |
-
-**Trigger orchestration with:**
+Edit `.env` and add your Telegram bot token:
 ```
-"Execute in parallel:
- - Agent 1: Implement backend API
- - Agent 2: Build frontend UI
- - Agent 3: Generate tests
- Then synthesize results."
+TELEGRAM_BOT_TOKEN=your_token_here
+ADMIN_IDS=your_telegram_user_id
 ```
 
-**GSD Command:** `/orchestrate "task description"`
-
----
-
-## 📂 Project Structure
-
-```text
-/
-├── frontend/               # React Native/Capacitor App
-│   ├── src/                # UI Source Code
-│   ├── index.html          # Entry point
-│   ├── capacitor.config.json
-│   └── package.json
-├── backend/                # Server-side logic
-│   └── supabase/           # Supabase Cloud functions & config
-├── common/                 # Shared resources (types, configs)
-├── README.md
-└── package.json            # Root scripts
+Start the server:
+```bash
+npm start
 ```
 
----
+## Telegram Bot Setup
 
-## ✨ Core Features
+### Step 1: Create Bot
 
-### 1. Smart Scan & Deduplication
-*   **Unified Scanner:** Auto-detects if a document is a "Shopping Receipt" or "Utility/Tuition Bill".
-*   **Duplicate Protection:** Generates a unique signature (Store + Date + Price + RefCode) for every scan to prevent double-counting expenses.
-*   **HEIC Support:** Native conversion for iPhone photos.
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` command
+3. Follow instructions to name your bot
+4. Copy the bot token provided
+5. Paste token into `server/.env` file
 
-### 2. The Dashboard (Bento Grid)
-*   **Verified Provision:** Tracks money spent specifically on Child/Home needs.
-*   **Evidence Score (0-100):** A gamified metric based on log volume and provision ratio.
-*   **Spending Insights:** AI-driven text summaries (e.g., "Trending 20% lower than average").
+### Step 2: Get Your User ID
 
-### 3. History & Analytics
-*   **Visual Logs:** Thumbnails of original receipts stored alongside data.
-*   **Child-First Analytics:** Breakdowns showing specifically how much went to Education, Health, and Food.
-*   **Restriction Toggle:** Manual override to hide/ban items (like alcohol) from the final report.
+1. Search for `@userinfobot` on Telegram
+2. Start a chat - it will send you your user ID
+3. Add your ID to `ADMIN_IDS` in `.env` file
 
-### 4. Data Export
-*   **Legal Proof:** Generates a structured CSV export containing dates, stores, itemized lists, and prices, ready for printing or emailing to attorneys.
+### Step 3: Start Using
 
----
+1. Search for your bot on Telegram
+2. Send `/start` to see available commands
 
-## 🎉 Recent Enhancements (February 2026)
+## Telegram Bot Commands
 
-### Co-Parenting Widget Rework
-The Co-Parenting card on the dashboard has been completely reworked from a tabbed interface to compact, always-visible widgets.
+- `/start` - Welcome message and command list
+- `/addevent` - Add a new event
+- `/listevents` - View all scheduled events
+- `/deleteevent` - Remove an event
+- `/clearevents` - Delete all events
+- `/help` - Show help message
 
-#### 📊 Compact Visualizations (Always Visible)
-*   **GitHub Grid** (50% width): Monthly calendar grid with color-coded custody days
-*   **Orbital Ring** (50% width): Circular donut chart showing custody day distribution
-*   **DNA Helix** (100% width): Animated double-helix showing custody patterns across the month
-*   All three are visible simultaneously — no tabs to switch between
+### Adding an Event
 
-#### 🧠 AI Smart Insights (10 Types)
-*   **Spending Correlation:** Flags high-spend custody days
-*   **Custody Streaks:** Warns about upcoming multi-day custody stretches
-*   **Transition Prep:** Reminders when custody switches tomorrow
-*   **Weekly Spend Comparison:** Custody-day vs non-custody spending analysis
-*   **Category Analysis:** Top spending category on custody days
-*   **Monthly Balance:** Alerts when custody split deviates from 50/50
-*   **Recurring Stores:** Identifies frequent custody-day shopping habits
-*   **Weekend/Weekday Patterns:** Detects custody schedule patterns
-*   **Quality Time / Stay Connected:** Context-aware daily suggestions
+1. Send `/addevent` to your bot
+2. Reply with event details in this format:
 
-#### 📦 Layout
-*   **Header:** Title + edit button + today's event
-*   **Weekly Strip:** Mon→Sun status dots with event indicators
-*   **Month Summary:** 3-column grid (You / Partner / Split counts + percentages)
-*   **Visualizations Row:** GitHub + Orbital side by side, DNA full width below
-*   **Smart Insights:** Up to 4 AI-driven contextual suggestions
+```
+TITLE: TECHNO NIGHT
+DATE: 2025-12-28 22:00
+DESCRIPTION: Underground beats with DJ NEXUS. Doors open at 22:00.
+```
 
----
+The event will immediately appear on the website!
 
-## 🚀 Getting Started
+## Project Structure
 
-### Prerequisites
-*   Node.js (v18+)
-*   npm or yarn
+```
+nightclub-website/
+├── index.html          # Main HTML file
+├── style.css           # Matrix-style CSS
+├── main.js             # Frontend JavaScript
+├── logo.jpg            # MASTERS logo
+├── package.json        # Frontend config
+├── README.md           # This file
+└── server/
+    ├── server.js       # Express API server
+    ├── bot.js          # Telegram bot logic
+    ├── storage.js      # Event data storage
+    ├── package.json    # Backend dependencies
+    ├── .env.example    # Environment template
+    └── events.json     # Event database (auto-created)
+```
 
-### Installation
+## How It Works
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/yourusername/truetrack.git
-    cd truetrack
-    ```
+1. **Frontend**: Click the MASTERS logo to trigger the Matrix animation
+2. **Matrix Effect**: Green cascading characters appear in the background
+3. **Event Display**: Events slide up from the bottom with typing effects
+4. **Backend**: Express server provides `/api/events` endpoint
+5. **Telegram Bot**: Listens for commands and updates `events.json`
+6. **Real-time**: Website fetches latest events when logo is clicked
 
-2.  **Install dependencies**
-    ```bash
-    npm install
-    ```
+## API Endpoints
 
-3.  **Environment Configuration**
-    Create a `.env` file in the root (optional, app runs in Mock Mode without it).
-    ```env
-    # Required for AI Scanning
-    VITE_GEMINI_API_KEY=your_google_gemini_key
+- `GET /api/events` - Fetch all events
+- `POST /api/events` - Add event (JSON body)
+- `DELETE /api/events/:id` - Delete event by ID
+- `GET /health` - Server health check
 
-    # Required for Real Database (Optional)
-    VITE_SUPABASE_URL=your_supabase_url
-    VITE_SUPABASE_ANON_KEY=your_supabase_key
-    ```
+## Customization
 
-4.  **Run Development Server**
-    ```bash
-    npm run dev
-    ```
+### Change Colors
 
----
+Edit CSS variables in `style.css`:
 
-## 🔒 Security & Privacy
+```css
+:root {
+    --neon-green: #00ff41;
+    --neon-cyan: #00ffff;
+    --neon-pink: #ff00ff;
+}
+```
 
-*   **Data Isolation:** In Mock Mode, all data lives in the user's browser (`localStorage`).
-*   **Restricted Item Filtering:** The "Parental Mode" ensures that even if a father buys a beer with groceries, the generated report for the other parent can exclude that line item to prevent friction.
-*   **Encryption:** In Production Mode (Supabase), Row Level Security (RLS) ensures users can only access their own records.
+### Adjust Animation Speed
 
----
+In `main.js`, modify the Matrix rain interval:
 
-## ⚖️ License
+```javascript
+matrixInterval = setInterval(() => {
+    // ... character creation
+}, 100); // Change this value (milliseconds)
+```
 
-Private / Proprietary. Designed for the TrueTrack Initiative.
+### Change Event Display Timing
+
+In `main.js`, adjust the stagger delay:
+
+```javascript
+setTimeout(() => {
+    // ... display event
+}, index * 300); // Change this multiplier
+```
+
+## Troubleshooting
+
+### Events not showing?
+
+1. Check if backend server is running on port 3000
+2. Open browser console (F12) to see error messages
+3. Verify `API_URL` in `main.js` matches your server
+
+### Telegram bot not responding?
+
+1. Verify bot token in `.env` is correct
+2. Check server logs for errors
+3. Make sure you're an admin (check `ADMIN_IDS`)
+4. Restart the server after changing `.env`
+
+### Logo not displaying?
+
+1. Ensure `logo.jpg` exists in the project root
+2. Check browser console for 404 errors
+3. Try hard refresh (Cmd+Shift+R or Ctrl+Shift+F5)
+
+## Production Deployment
+
+### Frontend
+
+Deploy to any static hosting:
+- Netlify
+- Vercel
+- GitHub Pages
+- Any web server
+
+### Backend
+
+Deploy to:
+- Heroku
+- Railway
+- DigitalOcean
+- Any Node.js hosting
+
+**Important**: Update `API_URL` in `main.js` to your production backend URL.
+
+## License
+
+MIT
