@@ -318,77 +318,45 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                     {showFullImage ? t('common.close') : t('common.back')}
                 </button>
 
-                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-12 pb-24 relative">
+                <div className="h-full overflow-y-auto no-scrollbar px-4 pt-[88px] pb-24 relative">
 
                     {/* Sticky Header Wrapper */}
                     <div className="sticky top-0 z-10 -mx-4 px-4 pb-3 bg-gradient-to-b from-background via-background to-transparent">
                         <div className={`rounded-3xl p-5 shadow-2xl border backdrop-blur-xl ${isBill ? 'bg-slate-900/90 border-indigo-500/30' : 'bg-white/[0.03] border-white/10'} relative overflow-hidden`}>
                             <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${isBill ? 'from-indigo-400 via-blue-500 to-indigo-400' : 'from-primary via-purple-500 to-pink-500'}`}></div>
 
-                            {/* Row 1 — Store Name + Date */}
+                            {/* Row 1 — Store Name + Date + Stats Header */}
                             <div className="mt-1 mb-4">
-                                <h2 className="text-2xl font-heading font-bold text-white tracking-tight truncate">{selectedReceipt.storeName}</h2>
-                                <div className="flex items-center gap-3 mt-1.5">
-                                    <span className="text-sm text-slate-400">{new Date(selectedReceipt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                    <span className="text-xs bg-white/10 text-slate-300 px-2 py-0.5 rounded-full">{visibleItems.length} {visibleItems.length === 1 ? 'item' : 'items'}</span>
-                                </div>
-                            </div>
-
-                            {/* Row 2 — Stats Row */}
-                            <div className="grid grid-cols-3 gap-3 mb-4">
-                                {/* Total */}
-                                <div className={`rounded-2xl p-3 text-center border ${isBill ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/5 border-white/5'}`}>
-                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Total</p>
+                                <div className="flex justify-between items-start gap-4">
+                                    <h2 className="text-2xl font-heading font-bold text-white tracking-tight truncate flex-1">{selectedReceipt.storeName}</h2>
                                     <p className={`text-2xl font-heading font-bold tracking-tight tabular-nums ${isBill ? 'text-indigo-400' : 'text-primary'}`}>€{effectiveTotal.toFixed(2)}</p>
                                 </div>
-
-                                {/* Pie Chart — Child % */}
-                                <div className={`rounded-2xl p-3 flex flex-col items-center justify-center border ${isBill ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/5 border-white/5'}`}>
-                                    <div className="relative">
-                                        <svg width="48" height="48" viewBox="0 0 36 36" className="transform -rotate-90">
-                                            {(() => {
-                                                const childItems = visibleItems.filter(i => i.isChildRelated);
-                                                const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
-                                                const childPercentage = effectiveTotal > 0 ? (childTotal / effectiveTotal) * 100 : 0;
-                                                const circumference = 2 * Math.PI * 15.9155;
-                                                const childStroke = (childPercentage / 100) * circumference;
-                                                const otherStroke = circumference - childStroke;
-
-                                                return (
-                                                    <>
-                                                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3.2" />
-                                                        {childPercentage > 0 && (
-                                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#34d399" strokeWidth="3.2" strokeDasharray={`${childStroke} ${circumference}`} strokeLinecap="round" />
-                                                        )}
-                                                        {childPercentage < 100 && (
-                                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f472b6" strokeWidth="3.2" strokeDasharray={`${otherStroke} ${circumference}`} strokeDashoffset={-childStroke} strokeLinecap="round" />
-                                                        )}
-                                                    </>
-                                                );
-                                            })()}
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="text-[9px] font-bold text-white">
-                                                {(() => {
-                                                    const childItems = visibleItems.filter(i => i.isChildRelated);
-                                                    const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
-                                                    const childPercentage = effectiveTotal > 0 ? Math.round((childTotal / effectiveTotal) * 100) : 0;
-                                                    return `${childPercentage}%`;
-                                                })()}
-                                            </span>
-                                        </div>
+                                <div className="flex flex-col gap-2.5 mt-2">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-sm text-slate-400 font-medium">{new Date(selectedReceipt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider bg-white/10 text-slate-300 px-2.5 py-1 rounded-md">{visibleItems.length} {visibleItems.length === 1 ? 'item' : 'items'}</span>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 mt-1">Child</p>
-                                </div>
-
-                                {/* Categories */}
-                                <div className={`rounded-2xl p-3 text-center border ${isBill ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/5 border-white/5'}`}>
-                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Categories</p>
-                                    <p className={`text-2xl font-heading font-bold tracking-tight ${isBill ? 'text-indigo-400' : 'text-white'}`}>{new Set(visibleItems.map(i => i.category)).size}</p>
+                                    <div className="flex gap-2 flex-wrap text-[11px] font-bold tracking-wider uppercase">
+                                        {Array.from(new Set(visibleItems.map(i => i.category))).map(cat => (
+                                            <span key={cat} className="px-2.5 py-1 rounded-md border bg-slate-800/50 border-white/10 text-slate-300">
+                                                {cat}
+                                            </span>
+                                        ))}
+                                        {(() => {
+                                            const childItems = visibleItems.filter(i => i.isChildRelated);
+                                            const childTotal = childItems.reduce((sum, i) => sum + i.price, 0);
+                                            const childPercentage = effectiveTotal > 0 ? Math.round((childTotal / effectiveTotal) * 100) : 0;
+                                            return childPercentage > 0 ? (
+                                                <span className="px-2.5 py-1 rounded-md border bg-emerald-500/20 border-emerald-500/30 text-emerald-400 flex items-center gap-1.5">
+                                                    <Baby size={14} /> Child {childPercentage}%
+                                                </span>
+                                            ) : null;
+                                        })()}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Row 3 — Action Buttons */}
+                            {/* Row 2 — Action Buttons */}
                             <div className="flex gap-3">
                                 <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/15 text-primary hover:bg-primary/25 transition-all duration-200 font-medium text-sm">
                                     <Share2 size={16} />

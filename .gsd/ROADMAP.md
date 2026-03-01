@@ -140,7 +140,15 @@
 ### Phase 18: Co-Parenting Visualization Details
 *Goal: Enhance the Co-Parenting dashboard widget by adding detailed modal popups when clicking on the Grid, Orbital, or DNA compact visualizations.*
 
-- [ ] **18.1 Co-Parenting Detailed Visuals Modal**
+- [x] **18.1 Co-Parenting Detailed Visuals Modal**
   - Create the `CoParentingVisualsModal` component.
   - Update `CoParentingWidget` to manage modal state and trigger clicks.
   - Add associated translation keys for the modals.
+
+### Phase 19: Receipt View Optimization
+*Goal: Optimize the vertical space in the receipt details view by moving stats to the header and fixing back button spacing.*
+
+- [ ] **19.1 Optimize Receipt Data Layout**
+  - Move categories list and child indicators directly beneath the date.
+  - Remove large Stats Row.
+  - Add bottom padding to the Back button.
