@@ -67,59 +67,38 @@ window.addEventListener('DOMContentLoaded', () => {
         setTimeout(triggerRandomGlitch, 3000);
     }
 
-    // === Stickman Chat Scene ===
-    const chatBubbles = document.getElementById('chatBubbles');
-    if (chatBubbles) {
-        const guyLines = [
-            'YO CHECK THIS',
-            'EVENTS TONIGHT 🔥',
-            'CLICK HERE BRO',
-            'SCHEDULE 👇',
-            'BIG NIGHT',
-            'VIBES ONLY',
-            'TAP FOR INFO',
-            'U COMING?',
-            'LETS GOOO',
-            'CLICK ME 🎶'
-        ];
-        const girlLines = [
-            'OMG YES',
-            'CLICK IT! 💃',
-            'WANNA GO?',
-            'TAP HERE ✨',
-            'SCHEDULE!',
-            'WHATS ON?',
-            'IM DOWN',
-            'TONIGHT? 🎉',
-            'LINEUP THO',
-            'CLICK FOR EVENTS'
-        ];
+    // === Stickman Movie Scenes ===
+    const sceneStage = document.getElementById('sceneStage');
+    if (sceneStage) {
+        const scenes = ['scene-chill', 'scene-rave', 'scene-salsa', 'scene-robot', 'scene-groove'];
+        const hoverMoves = ['hover-highfive', 'hover-jump', 'hover-spin', 'hover-wave', 'hover-lean', 'hover-headbang'];
+        let currentScene = -1;
+        let currentHover = '';
 
-        let isGuyTurn = true;
-        let chatTimeout = null;
-
-        function showChatBubble() {
-            const lines = isGuyTurn ? guyLines : girlLines;
-            const msg = lines[Math.floor(Math.random() * lines.length)];
-            const className = isGuyTurn ? 'from-guy' : 'from-girl';
-
-            const bubble = document.createElement('div');
-            bubble.className = `chat-bubble ${className}`;
-            bubble.textContent = msg;
-            chatBubbles.appendChild(bubble);
-
-            // Remove after animation
-            setTimeout(() => {
-                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-            }, 3000);
-
-            isGuyTurn = !isGuyTurn;
-
-            // Next bubble in 2-5 seconds
-            chatTimeout = setTimeout(showChatBubble, 2000 + Math.random() * 3000);
+        function switchScene() {
+            let next;
+            do { next = Math.floor(Math.random() * scenes.length); } while (next === currentScene);
+            currentScene = next;
+            scenes.forEach(s => sceneStage.classList.remove(s));
+            sceneStage.classList.add(scenes[currentScene]);
+            setTimeout(switchScene, 6000 + Math.random() * 4000);
         }
 
-        // Girl walks in at 4s, first chat at ~5s
-        setTimeout(showChatBubble, 5000);
+        // Random hover interaction on each mouseenter
+        const sceneBtn = document.getElementById('eventsToggleBtn');
+        if (sceneBtn) {
+            sceneBtn.addEventListener('mouseenter', () => {
+                // Remove old hover class
+                hoverMoves.forEach(h => sceneStage.classList.remove(h));
+                // Pick a random hover interaction
+                currentHover = hoverMoves[Math.floor(Math.random() * hoverMoves.length)];
+                sceneStage.classList.add(currentHover);
+            });
+            sceneBtn.addEventListener('mouseleave', () => {
+                hoverMoves.forEach(h => sceneStage.classList.remove(h));
+            });
+        }
+
+        setTimeout(switchScene, 1000);
     }
 });

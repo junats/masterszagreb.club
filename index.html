@@ -22,11 +22,9 @@
 
     <!-- Stickman Movie Scene (Top Right) - Click for Events -->
     <button id="eventsToggleBtn" class="stickman-scene" aria-label="Toggle Events">
-        <div class="scene-stage">
-            <!-- Guy: chilling, smoking -->
+        <div class="scene-stage" id="sceneStage">
             <div class="stick-guy">
-                <div class="guy-smoke">💨</div>
-                <svg viewBox="0 0 80 100" width="40" height="50">
+                <svg viewBox="0 0 80 100" width="75" height="95">
                     <circle class="guy-head" cx="40" cy="15" r="8" fill="none" stroke="currentColor" stroke-width="4" />
                     <line class="guy-body" x1="40" y1="23" x2="40" y2="55" stroke="currentColor" stroke-width="4"
                         stroke-linecap="round" />
@@ -40,9 +38,8 @@
                         stroke-linecap="round" />
                 </svg>
             </div>
-            <!-- Girl: walks in from right -->
             <div class="stick-girl">
-                <svg viewBox="0 0 80 100" width="35" height="45">
+                <svg viewBox="0 0 80 100" width="68" height="86">
                     <circle class="girl-head" cx="40" cy="15" r="8" fill="none" stroke="currentColor"
                         stroke-width="4" />
                     <path class="girl-hair" d="M32 12 Q30 3 40 1 Q50 3 48 12" fill="none" stroke="currentColor"
@@ -62,8 +59,6 @@
                 </svg>
             </div>
         </div>
-        <!-- Chat bubbles appear during conversation -->
-        <div class="chat-bubbles" id="chatBubbles"></div>
         <!-- Close X (shown when active) -->
         <div class="close-x">
             <span></span>
