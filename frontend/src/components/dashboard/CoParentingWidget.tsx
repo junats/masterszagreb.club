@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Check, Users2, Wallet2, Phone, Clock, Flame, Pencil, TrendingUp, ArrowRightLeft, ShoppingBag, CalendarCheck, Repeat, BarChart3, Lightbulb } from 'lucide-react';
 import { HapticsService } from '../../services/haptics';
@@ -6,6 +6,7 @@ import { CustodyDay } from '@common/types';
 import { getLocalYYYYMMDD } from '../../utils/dateUtils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useData } from '../../contexts/DataContext';
+import { CoParentingVisualsModal } from './CoParentingVisualsModal';
 
 export interface CoParentingWidgetProps {
     custodyDays: CustodyDay[];
@@ -15,6 +16,7 @@ export interface CoParentingWidgetProps {
 export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDays, onCustodyClick }) => {
     const { t } = useLanguage();
     const { receipts } = useData();
+    const [activeVisual, setActiveVisual] = useState<'grid' | 'orbital' | 'dna' | null>(null);
 
     const today = new Date();
     const todayStr = getLocalYYYYMMDD(today);
@@ -384,7 +386,10 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                 <div className="grid grid-cols-2 gap-2">
 
                     {/* GitHub Grid */}
-                    <div className="bg-slate-800/30 p-3 rounded-xl border border-white/5 flex flex-col">
+                    <div
+                        className="bg-slate-800/30 p-3 rounded-xl border border-white/5 flex flex-col cursor-pointer hover:bg-slate-800/50 transition-colors"
+                        onClick={() => setActiveVisual('grid')}
+                    >
                         <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider mb-2 text-center">Grid</p>
                         <div className="grid grid-cols-7 gap-1 flex-1">
                             {monthCalendar.map((date, idx) => {
@@ -395,7 +400,8 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                                     <motion.div
                                         key={idx}
                                         initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
+                                        whileInView={{ opacity: 1, scale: 1 }}
+                                        viewport={{ once: true }}
                                         transition={{ delay: idx * 0.01 }}
                                         className={
                                             "aspect-square rounded-sm " +
@@ -412,7 +418,10 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                     </div>
 
                     {/* Orbital Ring Mini */}
-                    <div className="bg-slate-800/30 p-2.5 rounded-xl border border-white/5 flex flex-col items-center">
+                    <div
+                        className="bg-slate-800/30 p-2.5 rounded-xl border border-white/5 flex flex-col items-center cursor-pointer hover:bg-slate-800/50 transition-colors"
+                        onClick={() => setActiveVisual('orbital')}
+                    >
                         <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider mb-1">Orbital</p>
                         <div className="relative w-[72px] h-[72px]">
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -448,7 +457,8 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                                             strokeLinecap="round"
                                             strokeOpacity={status ? 1 : 0.3}
                                             initial={{ pathLength: 0, opacity: 0 }}
-                                            animate={{ pathLength: 1, opacity: 1 }}
+                                            whileInView={{ pathLength: 1, opacity: 1 }}
+                                            viewport={{ once: true }}
                                             transition={{ delay: idx * 0.01, duration: 0.15 }}
                                         />
                                     );
@@ -460,7 +470,10 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                 </div>
 
                 {/* DNA Helix Full Width */}
-                <div className="bg-slate-800/30 p-3 rounded-xl border border-white/5 flex flex-col items-center">
+                <div
+                    className="bg-slate-800/30 p-3 rounded-xl border border-white/5 flex flex-col items-center cursor-pointer hover:bg-slate-800/50 transition-colors"
+                    onClick={() => setActiveVisual('dna')}
+                >
                     <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider mb-1">DNA</p>
                     <svg viewBox="0 0 300 60" className="w-full h-[60px] overflow-visible">
                         {monthCalendar.filter(d => d !== null).map((date, idx, arr) => {
@@ -483,20 +496,20 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                                         <motion.line
                                             x1={x} y1={y1} x2={x} y2={y2}
                                             stroke="#475569" strokeWidth={0.5} strokeOpacity={0.3}
-                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
                                             transition={{ delay: idx * 0.015 }}
                                         />
                                     )}
                                     <motion.circle
                                         cx={x} cy={y1} r={2}
                                         fill={color} fillOpacity={opacity}
-                                        initial={{ scale: 0 }} animate={{ scale: depthScale }}
+                                        initial={{ scale: 0 }} whileInView={{ scale: depthScale }} viewport={{ once: true }}
                                         transition={{ delay: idx * 0.015 }}
                                     />
                                     <motion.circle
                                         cx={x} cy={y2} r={2}
                                         fill={partnerColor} fillOpacity={opacity}
-                                        initial={{ scale: 0 }} animate={{ scale: depthScale }}
+                                        initial={{ scale: 0 }} whileInView={{ scale: depthScale }} viewport={{ once: true }}
                                         transition={{ delay: idx * 0.015 }}
                                     />
                                 </g>
@@ -515,7 +528,8 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                         <motion.div
                             key={idx}
                             initial={{ opacity: 0, x: -8 }}
-                            animate={{ opacity: 1, x: 0 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
                             transition={{ delay: idx * 0.08 }}
                             className={`p-2.5 rounded-xl border ${colorMap[insight.color] || colorMap.purple}`}
                         >
@@ -534,6 +548,15 @@ export const CoParentingWidget: React.FC<CoParentingWidgetProps> = ({ custodyDay
                         </div>
                     )}
                 </div>
+
+                <CoParentingVisualsModal
+                    isOpen={activeVisual !== null}
+                    onClose={() => setActiveVisual(null)}
+                    activeVisual={activeVisual}
+                    custodyDays={custodyDays}
+                    monthStats={monthStats}
+                    monthCalendar={monthCalendar}
+                />
 
             </div>
         </div>

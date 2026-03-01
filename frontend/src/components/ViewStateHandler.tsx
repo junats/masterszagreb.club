@@ -21,7 +21,6 @@ interface ViewStateHandlerProps {
 
 const slideVariants = {
     enter: (direction: number) => ({
-        x: direction > 0 ? '100%' : '-100%',
         position: 'absolute' as const,
         width: '100%',
         height: '100%',
@@ -29,17 +28,16 @@ const slideVariants = {
     }),
     center: {
         zIndex: 1,
-        x: 0,
         position: 'relative' as const,
         width: '100%',
         height: '100%'
     },
     exit: (direction: number) => ({
         zIndex: 0,
-        x: direction < 0 ? '100%' : '-100%',
         position: 'absolute' as const,
         width: '100%',
-        height: '100%'
+        height: '100%',
+        opacity: 0
     })
 };
 
@@ -52,7 +50,7 @@ const ViewStateHandler: React.FC<ViewStateHandlerProps> = ({ currentView, setCur
     };
 
     return (
-        <AnimatePresence initial={false} custom={direction}>
+        <AnimatePresence initial={false} mode="wait">
             <motion.div
                 key={currentView}
                 custom={direction}
@@ -60,9 +58,7 @@ const ViewStateHandler: React.FC<ViewStateHandlerProps> = ({ currentView, setCur
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{
-                    x: { type: "tween", ease: "circOut", duration: 0.3 }
-                }}
+                transition={{ duration: 0 }}
                 className="h-full w-full"
             >
                 <ErrorBoundary>

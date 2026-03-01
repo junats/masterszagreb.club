@@ -66,14 +66,14 @@ export const generateScreenshotData = (): { receipts: Receipt[], custodyDays: Cu
         const dateStr = d.toISOString().split('T')[0];
         const daysFromToday = dayOffset - 60;
 
-        let status: 'me' | 'partner' | 'split' | 'none' = 'none';
+        let status = 'none' as 'me' | 'partner' | 'split' | 'none';
 
         // 2-2-5-5 Schedule pattern commonly used
         const cycleDay = dayOffset % 14;
         if (cycleDay < 2) status = 'me'; // Mon, Tue
         else if (cycleDay < 4) status = 'partner'; // Wed, Thu
         else if (cycleDay < 9) status = 'me'; // Fri, Sat, Sun, Mon, Tue
-        else if (cycleDay < 11) status = 'partner'; // Wed, Thu
+        else if (cycleDay < 11) status = 'split'; // Wed, Thu
         else status = 'partner'; // Fri, Sat, Sun
 
         // Add some realistic activities

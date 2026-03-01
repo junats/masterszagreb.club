@@ -62,7 +62,15 @@
             "aiInsight": "AI Insight",
             "myShare": "My Share",
             "me": "Me",
-            "me_uc": "ME"
+            "me_uc": "ME",
+            "visuals": {
+                "gridTitle": "Custody Grid",
+                "gridDesc": "Full month view of custody assignments.",
+                "orbitalTitle": "Custody Orbital",
+                "orbitalDesc": "Proportional breakdown of custody share.",
+                "dnaTitle": "Custody DNA",
+                "dnaDesc": "Timeline of custody transitions over time."
+            }
         },
         "pulse": {
             "title": "Parenting Pulse",

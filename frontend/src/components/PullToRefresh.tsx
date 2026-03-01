@@ -38,11 +38,14 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         if (disabled || isRefreshing) return;
 
         const scrollTop = scrollRef.current?.scrollTop ?? 0;
+        const mainScrollTop = document.querySelector('main')?.scrollTop ?? 0;
+        const windowScrollTop = typeof window !== 'undefined' ? window.scrollY : 0;
+        const MathScrollTop = Math.max(scrollTop, mainScrollTop, windowScrollTop);
         const timeSinceLastScroll = Date.now() - lastScrollTime.current;
 
         // Only allow pull-to-refresh if we are at the top AND 
         // there hasn't been active scrolling for a short moment (stops momentum triggers)
-        if (scrollTop <= 0 && timeSinceLastScroll > 100) {
+        if (MathScrollTop <= 0 && timeSinceLastScroll > 100) {
             touchStartY.current = e.touches[0].clientY;
         } else {
             touchStartY.current = 0;
@@ -52,9 +55,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         if (disabled || isRefreshing || touchStartY.current === 0) return;
         const scrollTop = scrollRef.current?.scrollTop ?? 0;
+        const mainScrollTop = document.querySelector('main')?.scrollTop ?? 0;
+        const windowScrollTop = typeof window !== 'undefined' ? window.scrollY : 0;
+        const MathScrollTop = Math.max(scrollTop, mainScrollTop, windowScrollTop);
 
         // If we've started scrolling down the list, cancel the pull-to-refresh
-        if (scrollTop > 5) {
+        if (MathScrollTop > 5) {
             touchStartY.current = 0;
             pullDistance.set(0);
             return;
@@ -148,6 +154,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
             >
                 {children}
             </motion.div>

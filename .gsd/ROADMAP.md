@@ -126,3 +126,21 @@
   - Add device mockups (iPhone/iPad) framing the raw captured screenshots.
 - [x] **16.3 Graphics & Typography**
   - Add background gradients, premium lighting effects, and descriptive marketing text (e.g., "Effortless Expense Tracking").
+
+### Phase 17: App Store Assets Redesign (Iteration 2)
+*Goal: Generate high-converting marketing assets natively using the Pencil MCP server. Emphasize deep 3D composition, left-aligned typography, and targeted messaging for iPhone (simplicity) and iPad (power).*
+
+- [x] **17.1 Asset Generation (iPhone)**
+  - Use Pencil to generate 5 screenshot compositions for iPhone following the 6-step formula (excluding social proof for now).
+- [x] **17.2 Asset Generation (iPad)**
+  - Use Pencil to generate 4 screenshot compositions for iPad emphasizing workspace and split-view power.
+- [x] **17.3 Export & Review**
+  - Export the `.pen` canvasses to PNG format suitable for App Store Connect.
+
+### Phase 18: Co-Parenting Visualization Details
+*Goal: Enhance the Co-Parenting dashboard widget by adding detailed modal popups when clicking on the Grid, Orbital, or DNA compact visualizations.*
+
+- [ ] **18.1 Co-Parenting Detailed Visuals Modal**
+  - Create the `CoParentingVisualsModal` component.
+  - Update `CoParentingWidget` to manage modal state and trigger clicks.
+  - Add associated translation keys for the modals.
