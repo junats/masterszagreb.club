@@ -26,7 +26,7 @@ This generates:
 | Type | Directory |
 |------|-----------|
 | iOS App | `ios/App/App/Assets.xcassets/AppIcon.appiconset/` |
-| Widget | `ios/App/TrueTrackWidget/Assets.xcassets/AppIcon.appiconset/` |
+| Widget | `ios/App/MastersWidget/Assets.xcassets/AppIcon.appiconset/` |
 | Web | `frontend/public/` (favicon.png, logo.png) |
 
 ## Updating the Source Icon

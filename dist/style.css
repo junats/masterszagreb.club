@@ -17,11 +17,15 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    overflow-x: hidden;
+}
+
 body {
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
     background: var(--dark-bg);
     color: #fff;
-    overflow-x: hidden;
     min-height: 100vh;
     position: relative;
 }

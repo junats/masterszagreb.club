@@ -15,9 +15,9 @@ export class MatrixEventManager {
     }
     
     setupEventListeners() {
-        const eventsToggleBtn = document.getElementById('eventsToggleBtn');
-        if (eventsToggleBtn) {
-            eventsToggleBtn.addEventListener('click', () => this.toggleMatrix());
+        const morphToggleBtn = document.getElementById('morphToggleBtn');
+        if (morphToggleBtn) {
+            morphToggleBtn.addEventListener('click', () => this.toggleMatrix());
         }
         
         // Close on Escape key
@@ -30,16 +30,16 @@ export class MatrixEventManager {
 
     toggleMatrix() {
         this.matrixActive = !this.matrixActive;
-        const eventsToggleBtn = document.getElementById('eventsToggleBtn');
+        const morphToggleBtn = document.getElementById('morphToggleBtn');
         
         if (this.matrixActive) {
             this.matrixContainer.classList.add('active');
-            if (eventsToggleBtn) eventsToggleBtn.classList.add('active');
+            if (morphToggleBtn) morphToggleBtn.classList.add('active');
             this.startMatrixRain();
             this.loadEvents();
         } else {
             this.matrixContainer.classList.remove('active');
-            if (eventsToggleBtn) eventsToggleBtn.classList.remove('active');
+            if (morphToggleBtn) morphToggleBtn.classList.remove('active');
             this.stopMatrixRain();
             this.clearMessages();
         }

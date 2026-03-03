@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
-            if (!mobileMenu.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            if (!mobileMenu.contains(e.target) && !hamburgerBtn.contains(e.target) && (!vinylBtn || !vinylBtn.contains(e.target))) {
                 hamburgerBtn.classList.remove('active');
                 mobileMenu.classList.remove('active');
             }
@@ -67,38 +67,5 @@ window.addEventListener('DOMContentLoaded', () => {
         setTimeout(triggerRandomGlitch, 3000);
     }
 
-    // === Stickman Movie Scenes ===
-    const sceneStage = document.getElementById('sceneStage');
-    if (sceneStage) {
-        const scenes = ['scene-chill', 'scene-rave', 'scene-salsa', 'scene-robot', 'scene-groove'];
-        const hoverMoves = ['hover-highfive', 'hover-jump', 'hover-spin', 'hover-wave', 'hover-lean', 'hover-headbang'];
-        let currentScene = -1;
-        let currentHover = '';
-
-        function switchScene() {
-            let next;
-            do { next = Math.floor(Math.random() * scenes.length); } while (next === currentScene);
-            currentScene = next;
-            scenes.forEach(s => sceneStage.classList.remove(s));
-            sceneStage.classList.add(scenes[currentScene]);
-            setTimeout(switchScene, 6000 + Math.random() * 4000);
-        }
-
-        // Random hover interaction on each mouseenter
-        const sceneBtn = document.getElementById('eventsToggleBtn');
-        if (sceneBtn) {
-            sceneBtn.addEventListener('mouseenter', () => {
-                // Remove old hover class
-                hoverMoves.forEach(h => sceneStage.classList.remove(h));
-                // Pick a random hover interaction
-                currentHover = hoverMoves[Math.floor(Math.random() * hoverMoves.length)];
-                sceneStage.classList.add(currentHover);
-            });
-            sceneBtn.addEventListener('mouseleave', () => {
-                hoverMoves.forEach(h => sceneStage.classList.remove(h));
-            });
-        }
-
-        setTimeout(switchScene, 1000);
-    }
+    // (Stickman logic successfully removed)
 });

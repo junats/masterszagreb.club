@@ -1,5 +1,5 @@
 ---
-description: Guide to deploying TrueTrack to TestFlight
+description: Guide to deploying MASTERS to TestFlight
 ---
 
 # Deploying to TestFlight
@@ -52,7 +52,7 @@ We have already:
 
 ## Step 6: Internal Testing (Team)
 
-1.  Go to [App Store Connect](https://appstoreconnect.apple.com) > **My Apps** > **TrueTrack** > **TestFlight**.
+1.  Go to [App Store Connect](https://appstoreconnect.apple.com) > **My Apps** > **MASTERS** > **TestFlight**.
 2.  On the left, under **Testers & Groups**, click **App Store Connect Users** (or create a group like "Internal Team").
 3.  Click **(+)** to add testers. They must be people with an Apple ID already listed in your Users & Access tab.
 4.  **Result**: They receive an email immediately. No approval needed.
@@ -72,7 +72,7 @@ To share with anyone (clients, friends) outside your dev team:
 ## Troubleshooting Common Issues
 
 *   **"Missing Icon"**: Verify `AppIcon` in `Assets.xcassets` has all sizes filled.
-*   **"Bundle ID in use"**: If `com.truetrack.app` is taken by someone else, you must change `appId` in `capacitor.config.json`, run `npx cap sync`, and update Bundle ID in Xcode > Signing.
+*   **"Bundle ID in use"**: If `club.masterszagreb.app` is taken by someone else, you must change `appId` in `capacitor.config.json`, run `npx cap sync`, and update Bundle ID in Xcode > Signing.
 *   **"Team is not enrolled in Apple Developer Program"**: You are using a **Personal Team** (free account).
     *   **Fix**: TestFlight requires a paid Apple Developer Program membership ($99/year).
     *   **Alternative**: If you just want to test on *your* device, simply connect your iPhone, select it in the top toolbar, and press the **Play/Run** button in Xcode. You don't need TestFlight for local testing.
