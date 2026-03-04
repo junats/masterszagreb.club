@@ -17,7 +17,7 @@ Thumbs.db
 *.swo
 
 # Build output
-dist/
+# (deploying dist to hosting)
 
 # HEIC source images (only webp should be committed)
 *.HEIC

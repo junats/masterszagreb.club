@@ -1,12 +1,13 @@
 # App State
 
 **Phase:** General Maintenance
-**Task:** Removing dist folder from Git tracking
+**Task:** Re-tracking dist folder for deployment
 **Status:** Complete
 **What was just accomplished:**
-- `dist/` was already in `.gitignore`, but it had been manually tracked by git in the past.
-- Ran `git rm -r --cached dist` to remove it from Git's tracking without deleting the actual files on your machine.
-- Committed the change (`Chore: untrack dist folder`).
+- User clarified that the `dist/` folder must be tracked for their deployment pipeline (likely GitHub Pages or similar static hosting).
+- Removed `dist/` from `.gitignore`.
+- Explicitly re-added `dist/` to git tracking and committed all 31 built files back into the repository.
 
 **Next steps:**
+- 🚀 The website is now ready to be pushed and deployed with the latest build.
 - Await the next objective from the user.
