@@ -1,7 +1,6 @@
 import { BackgroundRotator } from './background-rotator.js';
 import { BackgroundRevealSystem } from './background-reveal.js';
-// COMMENTED OUT: awaiting CMS
-// import { MatrixEventManager } from './matrix-events.js';
+import { MatrixEventManager } from './matrix-events.js';
 import { AudioBorder } from './audio-border.js';
 import { BackgroundEffect } from './bg-effect.js';
 import { CONFIG } from './config.js';
@@ -17,8 +16,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const revealSystem = new BackgroundRevealSystem();
     revealSystem.init();
 
-    // COMMENTED OUT: Matrix Events (awaiting CMS)
-    // const matrixEvents = new MatrixEventManager();
+    // Matrix Events (Google Sheets CMS)
+    const matrixEvents = new MatrixEventManager();
 
     // Initialize Audio-Reactive Logo Border
     const audioBorder = new AudioBorder();

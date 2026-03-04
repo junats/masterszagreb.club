@@ -25,6 +25,12 @@ export const CONFIG = {
     // Audio loop for reactive logo border (drop your file in assests/ and update this path)
     audioBorderLoop: 'assests/loop.mp3',
 
-    // API URL for events (update when backend is ready)
-    API_URL: 'http://localhost:3000/api/events'
+    // ── Google Sheets CMS ──────────────────────────────────────────────
+    // 1. Create a Google Sheet with columns: title | date | time | description
+    // 2. File → Share → Publish to web → select CSV → Publish
+    // 3. Paste the published URL below
+    SHEETS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSixLX4iaHIwcfqdtp4qUyLWdZKJ7ltHgzZ-VmJf4Mf9CVV3rPcLqsk9F-XgRLGUoeXi0FMJIdpOxw_/pub?output=csv',
+
+    // How long (minutes) to cache fetched events in localStorage
+    EVENTS_CACHE_MINUTES: 5
 };

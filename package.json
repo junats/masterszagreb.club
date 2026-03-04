@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "npx -y live-server --port=8000 --no-browser",
         "start": "npx -y serve . -l 8000",
-        "build": "rm -rf dist && mkdir -p dist/js dist/assests && cp index.html style.css logo-glitch.css master-logo.svg robots.txt sitemap.xml dist/ && cp assests/*.webp assests/*.mp3 dist/assests/ && cp js/*.js dist/js/ && cp audio-logo.js dist/ && echo '✅ Build complete'",
+        "build": "rm -rf dist && mkdir -p dist/js dist/assests && cp index.html style.css logo-glitch.css morph-menu.css master-logo.svg favicon.svg robots.txt sitemap.xml dist/ && cp assests/*.webp assests/*.mp3 dist/assests/ && cp js/*.js dist/js/ && cp audio-logo.js dist/ && echo '✅ Build complete'",
         "preview": "cd dist && python3 -m http.server 8080"
     },
     "keywords": [
