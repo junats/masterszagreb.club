@@ -7,7 +7,7 @@
     --light-gray: #cccccc;
     --mid-gray: #666666;
     --ambient-mask: radial-gradient(circle 0px at 50% 50%, transparent 0%, transparent 100%);
-    --bg-image: url('uploaded_image_0_1766709570509.jpg');
+    --bg-image: url('assests/club-01.webp');
     --bg-opacity: 1;
 }
 
@@ -41,7 +41,7 @@ body::before {
     background-image: var(--bg-image);
     background-size: cover;
     background-position: center;
-    filter: brightness(0.12) contrast(1.1) saturate(0.3) blur(10px);
+    filter: brightness(0.22) contrast(1.1) saturate(0.6) blur(10px);
     z-index: -3;
     opacity: var(--bg-opacity);
     transition: opacity 1s ease;
@@ -57,7 +57,7 @@ body::before {
     background-image: var(--bg-image);
     background-size: cover;
     background-position: center;
-    filter: brightness(0.5) contrast(1.2) saturate(0.8);
+    filter: brightness(0.65) contrast(1.2) saturate(1.1);
     z-index: -2;
     opacity: 1;
     mask-image: var(--ambient-mask);

@@ -4,15 +4,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MASTERS - Premium nightclub experience">
-    <title>MASTERS</title>
+
+    <!-- Primary Meta Tags -->
+    <title>MASTERS | Premium Nightclub Experience</title>
+    <meta name="title" content="MASTERS | Premium Nightclub Experience">
+    <meta name="description"
+        content="MASTERS — the ultimate premium nightclub experience. Immersive electronic music, world-class DJs, and an underground atmosphere like no other. Discover upcoming events and join the night.">
+    <meta name="keywords"
+        content="MASTERS nightclub, premium nightclub, electronic music, DJ events, nightlife, underground club, techno, house music, VIP nightclub, club events">
+    <meta name="author" content="MASTERS">
+    <meta name="robots" content="index, follow">
+
+    <!-- Canonical URL — UPDATE with your live domain -->
+    <link rel="canonical" href="https://masters-club.com/">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="master-logo.svg">
+    <link rel="apple-touch-icon" href="assests/club-01.webp">
+
+    <!-- Theme & Mobile Browser Chrome -->
+    <meta name="theme-color" content="#000000">
+    <meta name="msapplication-TileColor" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MASTERS">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://masters-club.com/">
+    <meta property="og:title" content="MASTERS | Premium Nightclub Experience">
+    <meta property="og:description"
+        content="The ultimate premium nightclub experience. Immersive electronic music, world-class DJs, and an underground atmosphere like no other.">
+    <meta property="og:image" content="https://masters-club.com/assests/club-01.webp">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="MASTERS">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://masters-club.com/">
+    <meta name="twitter:title" content="MASTERS | Premium Nightclub Experience">
+    <meta name="twitter:description"
+        content="The ultimate premium nightclub experience. Immersive electronic music, world-class DJs, and an underground atmosphere like no other.">
+    <meta name="twitter:image" content="https://masters-club.com/assests/club-01.webp">
+
+    <!-- Structured Data — JSON-LD (NightClub / LocalBusiness) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "NightClub",
+        "name": "MASTERS",
+        "description": "Premium nightclub experience featuring immersive electronic music, world-class DJs, and an underground atmosphere.",
+        "url": "https://masters-club.com/",
+        "logo": "https://masters-club.com/master-logo.svg",
+        "image": "https://masters-club.com/assests/club-01.webp",
+        "sameAs": [],
+        "openingHoursSpecification": [
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Friday", "Saturday"],
+                "opens": "22:00",
+                "closes": "06:00"
+            }
+        ],
+        "currenciesAccepted": "EUR",
+        "priceRange": "$$"
+    }
+    </script>
+
+    <!-- Performance hints -->
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="logo-glitch.css" as="style">
+
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap"
         rel="stylesheet">
+
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="style.css">
+    <!-- COMMENTED OUT: Menu + Content Pane (awaiting CMS)
     <link rel="stylesheet" href="mobile-menu.css">
     <link rel="stylesheet" href="morph-menu.css">
+    -->
     <link rel="stylesheet" href="logo-glitch.css">
 </head>
 
@@ -20,7 +97,7 @@
     <!-- Film grain overlay -->
     <div class="grain-overlay"></div>
 
-    <!-- Geometric Morph Menu Trigger -->
+    <!-- COMMENTED OUT: Menu Trigger (awaiting CMS)
     <button id="morphToggleBtn" class="morph-menu-btn" aria-label="Toggle Events">
         <div class="morph-grid">
             <span></span><span></span><span></span>
@@ -28,6 +105,7 @@
             <span></span><span></span><span></span>
         </div>
     </button>
+    -->
 
     <!-- Centered SVG Logo -->
     <img id="svgLogo" src="master-logo.svg" alt="MASTERS Logo">
@@ -35,11 +113,12 @@
     <!-- Hidden Pong Canvas -->
     <canvas id="audioLogoCanvas" style="display: none;"></canvas>
 
-    <!-- Matrix Message Container -->
+    <!-- COMMENTED OUT: Matrix Events Content Pane (awaiting CMS)
     <div class="matrix-container" id="matrixContainer">
         <div class="matrix-canvas" id="matrixCanvas"></div>
         <div class="event-messages" id="eventMessages"></div>
     </div>
+    -->
 
     <!-- Background Effects -->
     <div class="bg-gradient"></div>

@@ -1,6 +1,8 @@
 import { BackgroundRotator } from './background-rotator.js';
 import { BackgroundRevealSystem } from './background-reveal.js';
-import { MatrixEventManager } from './matrix-events.js';
+// COMMENTED OUT: awaiting CMS
+// import { MatrixEventManager } from './matrix-events.js';
+import { AudioBorder } from './audio-border.js';
 import { BackgroundEffect } from './bg-effect.js';
 import { CONFIG } from './config.js';
 
@@ -15,10 +17,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const revealSystem = new BackgroundRevealSystem();
     revealSystem.init();
 
-    // Initialize Matrix Events
-    const matrixEvents = new MatrixEventManager();
+    // COMMENTED OUT: Matrix Events (awaiting CMS)
+    // const matrixEvents = new MatrixEventManager();
 
-    // Hamburger Menu Toggle
+    // Initialize Audio-Reactive Logo Border
+    const audioBorder = new AudioBorder();
+    audioBorder.init();
+
+    // COMMENTED OUT: Hamburger Menu Toggle (awaiting CMS)
+    /*
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const mobileMenu = document.getElementById('mobileMenu');
     const mobileMenuLinks = document.querySelectorAll('.mobile-menu-links a');
@@ -29,7 +36,6 @@ window.addEventListener('DOMContentLoaded', () => {
             mobileMenu.classList.toggle('active');
         });
 
-        // Close menu when clicking links
         mobileMenuLinks.forEach(link => {
             link.addEventListener('click', () => {
                 hamburgerBtn.classList.remove('active');
@@ -37,7 +43,6 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!mobileMenu.contains(e.target) && !hamburgerBtn.contains(e.target) && (!vinylBtn || !vinylBtn.contains(e.target))) {
                 hamburgerBtn.classList.remove('active');
@@ -45,6 +50,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    */
 
     // Initialize Three.js Background Effect (from bg-effect.js) if canvas is present
     if (typeof THREE !== 'undefined' && document.getElementById('bgCanvas')) {
