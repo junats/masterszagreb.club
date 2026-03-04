@@ -1,19 +1,15 @@
 # App State
 
-**Phase:** Google Sheets CMS Integration
-**Task:** Events system live with Google Sheets CMS
-**Status:** Complete
+**Milestone:** MVP Refactoring & Asset Integration
+**Phase:** 6 — Mobile Optimisation
+**Status:** In Verification
 **What was just accomplished:**
-- Replaced Telegram bot + Node.js backend with Google Sheets CSV fetching
-- Updated `config.js` with `SHEETS_CSV_URL` and `EVENTS_CACHE_MINUTES`
-- Rewrote `matrix-events.js` with CSV parse, localStorage cache, demo fallback
-- Re-enabled morph toggle button, matrix events pane, and `morph-menu.css`
-- Uncommented `MatrixEventManager` in `main.js`
-- Updated build script to include `morph-menu.css`
-- Deleted `TELEGRAM_SETUP.md`
-- Browser verified: morph button → events pane → typewriter demo events → Escape close ✅
-
+- Automatically executed Plans 6.1 and 6.2 to resolve mobile sizing conflicts.
+- `width: 80vw` (max 250px) assigned to Central Logo.
+- `70vh` assigned to Events Menu container along with `touch-action: pan-y`.
+- `top: 25px; right: 25px;` applied to Morph Button for better hit zones.
+- Embedded `touchmove` events so the `BackgroundEffect` displacement reacts organically to mobile device dragging.
+  
 **Next steps:**
-- User creates Google Sheet with columns: title, date, time, description
-- User publishes sheet as CSV and pastes URL into `config.js` → `SHEETS_CSV_URL`
-- Test with live sheet data
+- Run `/verify 6` to trigger the empirical verification of the new CSS and Javascript touch handlers.
+- Final deployment.

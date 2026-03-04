@@ -110,6 +110,15 @@ export class BackgroundEffect {
             this.targetDisplacement = 5.0; 
             lastMoveTime = Date.now();
         });
+
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                this.targetMouse.x = e.touches[0].clientX / window.innerWidth;
+                this.targetMouse.y = 1.0 - (e.touches[0].clientY / window.innerHeight);
+                this.targetDisplacement = 5.0; 
+                lastMoveTime = Date.now();
+            }
+        }, { passive: true });
         
         setInterval(() => {
             if (Date.now() - lastMoveTime > 100) {

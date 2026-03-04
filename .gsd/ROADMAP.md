@@ -26,6 +26,12 @@
 
 ### Phase 5: Verification & Cleanup
 *Goal: Prove the refactor hasn't broken the visual identity.*
-- [ ] Launch local server.
-- [ ] Verify no browser console errors.
-- [ ] Validate manual interaction (hover, click toggles).
+- [x] Launch local server.
+- [x] Verify no browser console errors.
+- [x] Validate manual interaction (hover, click toggles).
+
+### Phase 6: Mobile Optimisation
+*Goal: Ensure the premium experience translates flawlessly to screens < 768px and touch devices.*
+- [x] Adjust CSS for the central MASTERS logo and Matrix Event Container to prevent overflow.
+- [x] Move the morph toggle button slightly inward to clear iOS/Android safe areas.
+- [x] Implement Touch Listeners (touchmove) in `bg-effect.js` so the 3D displacement responds to finger drags.

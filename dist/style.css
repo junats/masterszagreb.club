@@ -495,15 +495,17 @@ body.mouse-active::after {
     }
 
     .logo {
-        width: 80px;
+        width: 80vw;
+        max-width: 250px;
     }
 
     .matrix-container.active {
-        height: 300px;
+        height: 70vh;
     }
 
     .event-messages {
         padding: 20px;
+        touch-action: pan-y;
     }
 
     .event-message {

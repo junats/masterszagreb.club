@@ -47,8 +47,8 @@
 }
 
 .morph-menu-btn:hover .morph-grid span {
-    background-color: #00ff41;
-    box-shadow: 0 0 8px rgba(0, 255, 65, 0.8);
+    background-color: #ff003c;
+    box-shadow: 0 0 8px rgba(255, 0, 60, 0.8);
 }
 
 /* 
@@ -79,8 +79,8 @@
 
 /* The X structural pieces - stretch them to connect */
 .morph-menu-btn.active .morph-grid span {
-    background-color: #00ff41;
-    box-shadow: 0 0 12px rgba(0, 255, 65, 1);
+    background-color: #ff003c;
+    box-shadow: 0 0 12px rgba(255, 0, 60, 1);
     border-radius: 0;
 }
 
@@ -112,8 +112,8 @@
 /* Mobile Adjustments */
 @media (max-width: 768px) {
     .morph-menu-btn {
-        top: 20px;
-        right: 20px;
+        top: 25px;
+        right: 25px;
         width: 40px;
         height: 40px;
     }

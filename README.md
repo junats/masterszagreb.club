@@ -1,14 +1,15 @@
 # MASTERS Nightclub Website
 
-A premium nightclub website with Matrix-style event messaging system, managed via Telegram bot.
+A premium, 100% static nightclub website with a Matrix-style event messaging system, managed securely via Google Sheets CMS.
 
 ## Features
 
 - 🎨 **Matrix-Style UI**: Cyberpunk aesthetic with neon effects and cascading characters
-- 🎵 **Event Display**: Click the MASTERS logo to reveal upcoming events
-- 🤖 **Telegram Bot**: Manage events directly from Telegram
+- 🎵 **Event Display**: Morph menu button reveals upcoming events with typewriter effects
+- 📊 **Google Sheets CMS**: Manage events via a simple Google Sheet, no backend required
 - 📱 **Responsive Design**: Works on desktop and mobile
-- ✨ **Premium Animations**: Smooth transitions and effects
+- ✨ **Premium Animations**: Smooth transitions, WebGL distortion effects, and interactive audio-reactive borders
+- 🔒 **Hardened Security**: Strict CSP headers, Subresource Integrity, and sanitized DOM APIs
 
 ## Quick Start
 
@@ -21,181 +22,80 @@ npm run dev
 
 Open your browser to `http://localhost:8000`
 
-### 2. Backend Setup (for Telegram integration)
+### 2. Google Sheets CMS Setup
 
-```bash
-cd server
-npm install
-```
+Instead of a complex backend server, this site relies on a published Google Sheet CSV.
 
-Create `.env` file from template:
-```bash
-cp .env.example .env
-```
+1. **Create a Google Sheet** with exactly four columns:
+   - `title` | `date` | `time` | `description`
+2. **Add Event Rows**: Provide the information inside the cells under the headers.
+3. **Publish to the Web**:
+   - Go to `File` → `Share` → `Publish to web`.
+   - Select the sheet and choose **CSV (Comma-separated values)** format.
+   - Click **Publish**.
+4. **Link to Website**:
+   - Copy the generated CSV link.
+   - Open `js/config.js`.
+   - Paste the link into the `CONFIG.SHEETS_CSV_URL` variable.
 
-Edit `.env` and add your Telegram bot token:
-```
-TELEGRAM_BOT_TOKEN=your_token_here
-ADMIN_IDS=your_telegram_user_id
-```
-
-Start the server:
-```bash
-npm start
-```
-
-## Telegram Bot Setup
-
-### Step 1: Create Bot
-
-1. Open Telegram and search for `@BotFather`
-2. Send `/newbot` command
-3. Follow instructions to name your bot
-4. Copy the bot token provided
-5. Paste token into `server/.env` file
-
-### Step 2: Get Your User ID
-
-1. Search for `@userinfobot` on Telegram
-2. Start a chat - it will send you your user ID
-3. Add your ID to `ADMIN_IDS` in `.env` file
-
-### Step 3: Start Using
-
-1. Search for your bot on Telegram
-2. Send `/start` to see available commands
-
-## Telegram Bot Commands
-
-- `/start` - Welcome message and command list
-- `/addevent` - Add a new event
-- `/listevents` - View all scheduled events
-- `/deleteevent` - Remove an event
-- `/clearevents` - Delete all events
-- `/help` - Show help message
-
-### Adding an Event
-
-1. Send `/addevent` to your bot
-2. Reply with event details in this format:
-
-```
-TITLE: TECHNO NIGHT
-DATE: 2025-12-28 22:00
-DESCRIPTION: Underground beats with DJ NEXUS. Doors open at 22:00.
-```
-
-The event will immediately appear on the website!
+The site will now automatically fetch, cache (for 5 minutes by default), and render the events securely. 
 
 ## Project Structure
 
 ```
 nightclub-website/
-├── index.html          # Main HTML file
-├── style.css           # Matrix-style CSS
-├── main.js             # Frontend JavaScript
-├── logo.jpg            # MASTERS logo
-├── package.json        # Frontend config
-├── README.md           # This file
-└── server/
-    ├── server.js       # Express API server
-    ├── bot.js          # Telegram bot logic
-    ├── storage.js      # Event data storage
-    ├── package.json    # Backend dependencies
-    ├── .env.example    # Environment template
-    └── events.json     # Event database (auto-created)
+├── index.html          # Main HTML file (with CSP headers)
+├── style.css           # Base styles & typography
+├── morph-menu.css      # Animated toggle button CSS
+├── logo-glitch.css     # Logo visual effects
+├── js/
+│   ├── main.js              # Entry module
+│   ├── config.js            # General settings & Google Sheets URL
+│   ├── matrix-events.js     # Parses CSV & generates typewriter DOM text
+│   ├── background-rotator.js# Manages background image crossfading
+│   ├── background-reveal.js # Manages chromatic hover reveal layer
+│   ├── audio-border.js      # Drives audio-reactive SVG borders
+│   └── bg-effect.js         # ThreeJS displacement functionality
+├── master-logo.svg     # MASTERS vector logo
+├── package.json        # Frontend commands
+└── README.md           # This file
 ```
 
 ## How It Works
 
-1. **Frontend**: Click the MASTERS logo to trigger the Matrix animation
-2. **Matrix Effect**: Green cascading characters appear in the background
-3. **Event Display**: Events slide up from the bottom with typing effects
-4. **Backend**: Express server provides `/api/events` endpoint
-5. **Telegram Bot**: Listens for commands and updates `events.json`
-6. **Real-time**: Website fetches latest events when logo is clicked
-
-## API Endpoints
-
-- `GET /api/events` - Fetch all events
-- `POST /api/events` - Add event (JSON body)
-- `DELETE /api/events/:id` - Delete event by ID
-- `GET /health` - Server health check
+1. **Frontend**: Background rotator phases through high-quality WebP assets.
+2. **Audio-Reactive Mode**: Clicking the background initiates an audio loop that drives the logo's border and glitch states.
+3. **Matrix Effect**: Upon clicking the top-right toggle, green cascading characters rain down behind the event pane.
+4. **Static CMS Fetch**: `matrix-events.js` fetches the Google Sheets CSV asynchronously, parses handles it safely without `innerHTML`, and begins a sequence of typewriter-style message reveals.
+5. **Security First**: The site runs no legacy server endpoints; all scripts rely on Subresource Integrity (SRI) with Strict `Content-Security-Policy` limits enforced in `index.html`.
 
 ## Customization
 
 ### Change Colors
 
-Edit CSS variables in `style.css`:
+Edit CSS variables in `:root` inside `style.css` and `morph-menu.css`.
 
-```css
-:root {
-    --neon-green: #00ff41;
-    --neon-cyan: #00ffff;
-    --neon-pink: #ff00ff;
-}
-```
+### Change Google Sheets Cache Limit
 
-### Adjust Animation Speed
-
-In `main.js`, modify the Matrix rain interval:
-
-```javascript
-matrixInterval = setInterval(() => {
-    // ... character creation
-}, 100); // Change this value (milliseconds)
-```
-
-### Change Event Display Timing
-
-In `main.js`, adjust the stagger delay:
-
-```javascript
-setTimeout(() => {
-    // ... display event
-}, index * 300); // Change this multiplier
-```
-
-## Troubleshooting
-
-### Events not showing?
-
-1. Check if backend server is running on port 3000
-2. Open browser console (F12) to see error messages
-3. Verify `API_URL` in `main.js` matches your server
-
-### Telegram bot not responding?
-
-1. Verify bot token in `.env` is correct
-2. Check server logs for errors
-3. Make sure you're an admin (check `ADMIN_IDS`)
-4. Restart the server after changing `.env`
-
-### Logo not displaying?
-
-1. Ensure `logo.jpg` exists in the project root
-2. Check browser console for 404 errors
-3. Try hard refresh (Cmd+Shift+R or Ctrl+Shift+F5)
+In `js/config.js`, modify `EVENTS_CACHE_MINUTES` to alter how long users hold the fetched table string in their browser `localStorage`. 
 
 ## Production Deployment
 
-### Frontend
+Because the site is 100% static Javascript without an Express server, you can deploy the `dist/` build output to any standard static hosting platform:
 
-Deploy to any static hosting:
 - Netlify
 - Vercel
 - GitHub Pages
-- Any web server
+- Cloudflare Pages
+- Standard Nginx / Apache web server
 
-### Backend
+### Building for Production
 
-Deploy to:
-- Heroku
-- Railway
-- DigitalOcean
-- Any Node.js hosting
+```bash
+npm run build
+```
 
-**Important**: Update `API_URL` in `main.js` to your production backend URL.
+Upload the contents of the `dist/` directory to your hosting provider. No backend configuration necessary.
 
 ## License
 
