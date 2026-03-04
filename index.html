@@ -22,6 +22,18 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="apple-touch-icon" href="assests/club-01.webp">
 
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self';
+            script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
+            style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+            font-src https://fonts.gstatic.com;
+            img-src 'self' data: https:;
+            connect-src 'self' https://*.google.com https://*.googleapis.com https://*.googleusercontent.com;
+            media-src 'self';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
     <!-- Theme & Mobile Browser Chrome -->
     <meta name="theme-color" content="#000000">
     <meta name="msapplication-TileColor" content="#000000">
@@ -118,7 +130,9 @@
     <div class="scanlines"></div>
 
     <!-- Three.js for Pong game -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        integrity="sha512-dLRExBhpFSJ+MErXhoIk2cVOljfXbBMPeFrMFGihQst+3lRq2FM0j85bRSjaO4TbBKeJ1HKERMRB50IUt1GZUw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="audio-logo.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>

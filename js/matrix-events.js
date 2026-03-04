@@ -47,7 +47,7 @@ export class MatrixEventManager {
 
     startMatrixRain() {
         if (this.matrixCanvas) {
-            this.matrixCanvas.innerHTML = '';
+            this.matrixCanvas.textContent = '';
         }
     }
 
@@ -57,7 +57,7 @@ export class MatrixEventManager {
             this.matrixInterval = null;
         }
         if (this.matrixCanvas) {
-            this.matrixCanvas.innerHTML = '';
+            this.matrixCanvas.textContent = '';
         }
     }
 
@@ -65,7 +65,11 @@ export class MatrixEventManager {
 
     async loadEvents() {
         if (!this.eventMessages) return;
-        this.eventMessages.innerHTML = '<div class="loading-indicator">ACCESSING EVENT DATABASE...</div>';
+        this.eventMessages.textContent = '';
+        const loadingEl = document.createElement('div');
+        loadingEl.className = 'loading-indicator';
+        loadingEl.textContent = 'ACCESSING EVENT DATABASE...';
+        this.eventMessages.appendChild(loadingEl);
         
         try {
             // Check localStorage cache first
@@ -215,7 +219,7 @@ export class MatrixEventManager {
     // ── Display ────────────────────────────────────────────────────────
 
     displayEvents() {
-        this.eventMessages.innerHTML = '';
+        this.eventMessages.textContent = '';
         
         if (this.events.length === 0) {
             this.typeOutText(this.eventMessages, 'NO EVENTS SCHEDULED', 0);
@@ -301,7 +305,7 @@ export class MatrixEventManager {
 
     clearMessages() {
         if (this.eventMessages) {
-            this.eventMessages.innerHTML = '';
+            this.eventMessages.textContent = '';
         }
     }
 }
