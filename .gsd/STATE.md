@@ -1,15 +1,14 @@
 # App State
 
-**Milestone:** MVP Refactoring & Asset Integration
-**Phase:** 6 — Mobile Optimisation
-**Status:** In Verification
+**Phase:** Google Sheets CMS Polish
+**Task:** Make events pane larger
+**Status:** Complete
 **What was just accomplished:**
-- Automatically executed Plans 6.1 and 6.2 to resolve mobile sizing conflicts.
-- `width: 80vw` (max 250px) assigned to Central Logo.
-- `70vh` assigned to Events Menu container along with `touch-action: pan-y`.
-- `top: 25px; right: 25px;` applied to Morph Button for better hit zones.
-- Embedded `touchmove` events so the `BackgroundEffect` displacement reacts organically to mobile device dragging.
-  
+- Updated parsing logic in `telegram-webhook.gs` to ignore empty messages and `/start` commands
+- Fixed parsing in `telegram-webhook.gs` to support `DESCRIPTION:` and `DESC:` formats
+- Increased `.matrix-container.active` height in `style.css` to 75vh on desktop and 85vh on mobile to show more events
+- Rebuilt the application
+
 **Next steps:**
-- Run `/verify 6` to trigger the empirical verification of the new CSS and Javascript touch handlers.
-- Final deployment.
+- User verifies events pane sizing
+- Continue with any remaining roadmap items

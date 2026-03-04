@@ -35,3 +35,8 @@
 - [x] Adjust CSS for the central MASTERS logo and Matrix Event Container to prevent overflow.
 - [x] Move the morph toggle button slightly inward to clear iOS/Android safe areas.
 - [x] Implement Touch Listeners (touchmove) in `bg-effect.js` so the 3D displacement responds to finger drags.
+
+### Phase 7: SMS Webhook Integration
+*Goal: Allow the club owner to text a dedicated number to append rows directly into the Google CMS Sheet.*
+- [ ] Deploy Google Apps Script `doPost` webhook to capture Twilio requests.
+- [ ] Verify Twilio routes incoming messages to the deployed App Script URL.

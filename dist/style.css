@@ -308,7 +308,8 @@ body.mouse-active::after {
 }
 
 .matrix-container.active {
-    height: 400px;
+    height: 75vh;
+    max-height: 1000px;
 }
 
 /* Matrix Canvas Background */
@@ -500,7 +501,7 @@ body.mouse-active::after {
     }
 
     .matrix-container.active {
-        height: 70vh;
+        height: 85vh;
     }
 
     .event-messages {
