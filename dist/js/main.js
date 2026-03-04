@@ -24,8 +24,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const audioBorder = new AudioBorder();
     audioBorder.init();
 
-    // Initialize SoundCloud Manager
-    const scManager = new SoundCloudManager(); // Added initialization
+    // Initialize SoundCloud Manager (COMMENTED OUT FOR NOW)
+    // const scManager = new SoundCloudManager(); 
 
     // COMMENTED OUT: Hamburger Menu Toggle (awaiting CMS)
     /*

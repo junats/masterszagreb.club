@@ -1,13 +1,14 @@
 # App State
 
-**Phase:** Music Integration Polish & Security
-**Task:** Removing Exposed Telegram Credentials
+**Phase:** Music Integration Polish
+**Task:** Disabling SoundCloud Player
 **Status:** Complete
 **What was just accomplished:**
-- Erased `scripts/set-telegram-webhook.js` which contained the exposed Telegram Bot Token.
-- Erased `telegram-webhook.gs` as we are exclusively using the direct Google Sheets CSV publishing method moving forward.
-- Committed the file removals to git to strip them from the active codebase.
+- Per user request, temporarily commented out the `.soundcloud-container` HTML block in `index.html`.
+- Commented out the `https://w.soundcloud.com/player/api.js` script tag in `index.html`.
+- Commented out the `new SoundCloudManager()` initialization in `js/main.js` to ensure the JS logic is paused and throws no errors while the HTML is missing.
+- Rebuilt the project with `npm run build`.
 
 **Next steps:**
-- 🚨 **CRITICAL USER ACTION REQUIRED:** You must still go to **@BotFather** on Telegram and click **Revoke token** for your bot. Deleting the file stops *future* exposure, but GitHub alerts mean the token is already in your repository's git history. Revoking it at the source is the only way to make it completely dead.
-- Continue testing the SoundCloud player and Google Sheets setup.
+- The SoundCloud functionality layout, logic, and configuration remain safely dormant in the codebase.
+- Await the next objective from the user (such as moving forward entirely with the Google Sheets CMS setup).
