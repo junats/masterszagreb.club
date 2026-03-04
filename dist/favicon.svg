@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Dark background for visibility -->
+  <rect width="32" height="32" rx="4" fill="#0a0a0a"/>
+  <!-- Simplified "M" lettermark -->
+  <text x="16" y="24" font-family="Arial, sans-serif" font-size="24" font-weight="bold" font-style="italic" fill="white" text-anchor="middle">M</text>
+</svg>

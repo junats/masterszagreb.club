@@ -1,0 +1,6 @@
+# robots.txt for MASTERS nightclub website
+User-agent: *
+Allow: /
+
+# Sitemap — UPDATE with your live domain
+Sitemap: https://masters-club.com/sitemap.xml
