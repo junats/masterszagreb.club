@@ -4,6 +4,7 @@ import { MatrixEventManager } from './matrix-events.js';
 import { AudioBorder } from './audio-border.js';
 import { BackgroundEffect } from './bg-effect.js';
 import { CONFIG } from './config.js';
+import { SoundCloudManager } from './soundcloud.js'; // Added import
 
 window.addEventListener('DOMContentLoaded', () => {
     console.log('MASTERS system initialized...');
@@ -22,6 +23,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initialize Audio-Reactive Logo Border
     const audioBorder = new AudioBorder();
     audioBorder.init();
+
+    // Initialize SoundCloud Manager
+    const scManager = new SoundCloudManager(); // Added initialization
 
     // COMMENTED OUT: Hamburger Menu Toggle (awaiting CMS)
     /*

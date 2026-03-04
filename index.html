@@ -24,10 +24,11 @@
 
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self';
-            script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
+            script-src 'self' 'unsafe-eval' https://w.soundcloud.com https://cdnjs.cloudflare.com 'unsafe-inline';
             style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
             font-src https://fonts.gstatic.com;
             img-src 'self' data: https:;
+            frame-src 'self' https://w.soundcloud.com https://soundcloud.com;
             connect-src 'self' https://*.google.com https://*.googleapis.com https://*.googleusercontent.com;
             media-src 'self';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -122,14 +123,27 @@
 
     <div class="matrix-container" id="matrixContainer">
         <div class="matrix-canvas" id="matrixCanvas"></div>
-        <div class="event-messages" id="eventMessages"></div>
+        <div class="pane-content-wrapper">
+            <div class="event-messages" id="eventMessages"></div>
+            <div class="soundcloud-container glass-effect">
+                <div class="sc-player-wrapper">
+                    <iframe id="sc-widget" width="100%" height="100%" scrolling="no" frameborder="no" allow="autoplay"
+                        src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/carlcox/carl-cox-global-episode-722&color=%2300ff41&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true"></iframe>
+                </div>
+                <div class="sc-controls">
+                    <button id="sc-prev" class="sc-btn" aria-label="Previous Set">◀◀ PREV</button>
+                    <button id="sc-next" class="sc-btn" aria-label="Next Set">NEXT ▶▶</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Background Effects -->
     <div class="bg-gradient"></div>
     <div class="scanlines"></div>
 
-    <!-- Three.js for Pong game -->
+    <!-- Scripts -->
+    <script src="https://w.soundcloud.com/player/api.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
         integrity="sha512-dLRExBhpFSJ+MErXhoIk2cVOljfXbBMPeFrMFGihQst+3lRq2FM0j85bRSjaO4TbBKeJ1HKERMRB50IUt1GZUw=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>

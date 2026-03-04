@@ -11,7 +11,8 @@ export class AudioBorder {
         this.audioCtx = null;
         this.analyser = null;
         this.dataArray = null;
-        this.audio = null;
+        this.audios = [];
+        this.sources = [];
         this.logo = document.getElementById('svgLogo');
         this.isPlaying = false;
         this.animFrameId = null;
@@ -20,11 +21,14 @@ export class AudioBorder {
     async init() {
         if (!this.logo) return;
 
-        if (CONFIG.audioBorderLoop) {
-            this.audio = new Audio(CONFIG.audioBorderLoop);
-            this.audio.loop = true;
-            this.audio.volume = 0.5;
-            this.audio.crossOrigin = 'anonymous';
+        if (CONFIG.audioLoops && CONFIG.audioLoops.length > 0) {
+            CONFIG.audioLoops.forEach(loopConfig => {
+                const audio = new Audio(loopConfig.url);
+                audio.loop = true;
+                audio.volume = loopConfig.volume || 1.0;
+                audio.crossOrigin = 'anonymous';
+                this.audios.push(audio);
+            });
 
             const startAudio = () => {
                 if (this.isPlaying) return;
@@ -36,23 +40,31 @@ export class AudioBorder {
             document.addEventListener('touchstart', startAudio);
         }
 
-        console.log('🎵 AudioBorder: Ready — click to start audio');
+        console.log(`🎵 AudioBorder: Ready with ${this.audios.length} tracks — click to start audio`);
     }
 
     startAnalysis() {
         try {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = this.audioCtx.createMediaElementSource(this.audio);
             this.analyser = this.audioCtx.createAnalyser();
             this.analyser.fftSize = 256;
             this.analyser.smoothingTimeConstant = 0.75;
-            source.connect(this.analyser);
             this.analyser.connect(this.audioCtx.destination);
+            
+            // Connect every audio track to the shared analyser
+            this.audios.forEach(audio => {
+                const source = this.audioCtx.createMediaElementSource(audio);
+                source.connect(this.analyser);
+                this.sources.push(source);
+            });
+
             this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
 
-            this.audio.play().then(() => {
+            // Play all tracks
+            const playPromises = this.audios.map(audio => audio.play());
+            Promise.all(playPromises).then(() => {
                 this.isPlaying = true;
-                console.log('🎵 AudioBorder: Playing');
+                console.log('🎵 AudioBorder: Playing all tracks');
                 this.animate();
             }).catch(err => console.warn('AudioBorder play failed', err));
         } catch (err) {
@@ -106,7 +118,9 @@ export class AudioBorder {
 
     stop() {
         if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
-        if (this.audio) this.audio.pause();
+        if (this.audios && this.audios.length > 0) {
+            this.audios.forEach(audio => audio.pause());
+        }
         if (this.audioCtx) this.audioCtx.close();
         this.isPlaying = false;
     }
