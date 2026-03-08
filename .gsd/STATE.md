@@ -1,13 +1,14 @@
 # App State
 
 **Phase:** General Maintenance
-**Task:** Updating Deprecated Meta Tags
+**Task:** Cache Busting Implementation
 **Status:** Complete
 **What was just accomplished:**
-- Added `<meta name="mobile-web-app-capable" content="yes">` to `index.html`.
-- Kept the Apple specific `<meta name="apple-mobile-web-app-capable" content="yes">` for legacy iOS support, fulfilling the browser's requirement for the modern tag while retaining full compatibility.
-- Rebuilt the project to update `dist/index.html`.
+- Added `cache-bust.js` script to automatically append `?v={timestamp}` to CSS and JS files in HTML builds.
+- Updated `package.json` to process the build via `cache-bust.js`.
+- Pushed changes to the `main` branch to trigger a pipeline update.
 
 **Next steps:**
-- The console should no longer show the deprecation warning.
-- Waiting on the user for the next task (likely connecting the Google Sheets CMS frontend).
+- The automated GitHub actions pipeline is deploying to the server.
+- Cloudflare will be forced to fetch fresh assets.
+- Open tickets: Connecting frontend with Google Sheets CMS.

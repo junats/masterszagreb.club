@@ -300,7 +300,7 @@ export class MatrixEventManager {
             month: 'short', 
             day: 'numeric'
         };
-        return date.toLocaleDateString('en-US', options).toUpperCase();
+        return date.toLocaleDateString('en-GB', options).toUpperCase();
     }
 
     clearMessages() {
