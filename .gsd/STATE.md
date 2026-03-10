@@ -1,10 +1,12 @@
 # App State
 
 **Phase:** 9. Fix DD.MM.YYYY Date Parsing
-**Task:** Planning complete
-**Status:** Ready for execution
+**Task:** Complete
+**Status:** Complete
 **What was just accomplished:**
-- Created `.gsd/phases/9/01-PLAN.md` to fix date parsing for European format input from Google Sheets.
+- Updated `formatDate` in `js/matrix-events.js` to parse DD.MM.YYYY dates from Google Sheets.
+- Verified all formats (DD.MM.YYYY, ISO, edge cases) render correctly.
+- Committed as `5c042f3`.
 
 **Next steps:**
-1. /execute 9
+- Awaiting next task from the GSD workflow.
