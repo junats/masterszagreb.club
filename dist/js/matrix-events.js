@@ -292,8 +292,23 @@ export class MatrixEventManager {
 
     formatDate(dateString) {
         if (!dateString) return 'TBD';
-        const date = new Date(dateString);
+
+        let date;
+
+        // Handle DD.MM.YYYY format from Google Sheets (e.g. "06.02.2026")
+        const dotParts = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if (dotParts) {
+            const day = parseInt(dotParts[1], 10);
+            const month = parseInt(dotParts[2], 10) - 1; // months are 0-indexed
+            const year = parseInt(dotParts[3], 10);
+            date = new Date(year, month, day);
+        } else {
+            // Fallback for ISO dates (e.g. "2025-12-28") and other formats
+            date = new Date(dateString);
+        }
+
         if (isNaN(date.getTime())) return dateString.toUpperCase();
+
         const options = { 
             weekday: 'short', 
             year: 'numeric', 
