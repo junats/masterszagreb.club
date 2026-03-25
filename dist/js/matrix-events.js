@@ -149,22 +149,22 @@ export class MatrixEventManager {
     getMockEvents() {
         return [
             {
-                id: "mock-1",
-                title: "[MOCK] COMFORT ZONE — MOARE & MORNIK",
-                date: "2026-04-03",
-                time: "23:00",
-                description: "DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.",
-                image: "assests/club-01.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                id: 'demo-1',
+                title: 'COMFORT ZONE — MOARE & MORNIK',
+                date: '03.04.2026',
+                time: '23:00',
+                description: 'DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.',
+                image: 'assests/club-01.webp',
+                instagramUrl: 'https://www.instagram.com/masters.zagreb/'
             },
             {
-                id: "mock-2",
-                title: "[MOCK] GREENLIGHT COLLECTIVE — PER HAMMAR",
-                date: "2026-04-04",
-                time: "23:00",
-                description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj.",
-                image: "assests/club-04.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                id: 'demo-2',
+                title: 'GREENLIGHT COLLECTIVE — PER HAMMAR',
+                date: '04.04.2026',
+                time: '23:00',
+                description: 'Per Hammar (Dirty Hands / Malmö), Andreas, Genco, Ian Staraj.',
+                image: 'assests/club-02.webp',
+                instagramUrl: 'https://www.instagram.com/masters.zagreb/'
             },
             {
                 id: "mock-3",
