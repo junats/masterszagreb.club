@@ -26,7 +26,8 @@
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
     gap: 3px;
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                gap 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* Individual Grid Dots/Squares */
@@ -36,77 +37,69 @@
     height: 6px;
     background-color: #ffffff;
     border-radius: 1px;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     transform-origin: center;
 }
 
-/* Hover State - Grid breathes/expands and glows */
+/* Hover State - subtle scale, stays white */
 .morph-menu-btn:hover .morph-grid {
-    transform: scale(1.15);
-    gap: 4px;
+    transform: scale(1.1);
 }
 
 .morph-menu-btn:hover .morph-grid span {
-    background-color: #ff003c;
-    box-shadow: 0 0 8px rgba(255, 0, 60, 0.8);
+    background-color: #ffffff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
 }
 
 /* 
-  ACTIVE STATE - Morph into an 'X'
-  Grid Indexes (0-based mathematically, 1-based nth-child):
-  1 2 3
-  4 5 6
-  7 8 9
-  
-  To form an X, keep 1, 3, 5, 7, 9.
-  Fade out 2, 4, 6, 8.
+  ACTIVE STATE - Transform into rotating circular "record"
+  All spans become circles arranged in a ring, spinning slowly.
 */
 
 .morph-menu-btn.active .morph-grid {
-    transform: rotate(90deg) scale(1.1);
-    /* Rotate the whole grid for extra flair */
-    gap: 1px;
+    gap: 2px;
+    animation: recordSpin 4s linear infinite;
 }
 
-/* The invisible edge pieces */
+.morph-menu-btn.active .morph-grid span {
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+}
+
+/* Center dot — stays still, acts as the record spindle */
+.morph-menu-btn.active .morph-grid span:nth-child(5) {
+    transform: scale(0.6);
+    background-color: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+}
+
+/* Edge dots fade slightly for ring effect */
 .morph-menu-btn.active .morph-grid span:nth-child(2),
 .morph-menu-btn.active .morph-grid span:nth-child(4),
 .morph-menu-btn.active .morph-grid span:nth-child(6),
 .morph-menu-btn.active .morph-grid span:nth-child(8) {
-    transform: scale(0);
-    opacity: 0;
+    transform: scale(0.7);
+    opacity: 0.5;
 }
 
-/* The X structural pieces - stretch them to connect */
-.morph-menu-btn.active .morph-grid span {
-    background-color: #ff003c;
-    box-shadow: 0 0 12px rgba(255, 0, 60, 1);
-    border-radius: 0;
-}
-
-/* Top Left */
-.morph-menu-btn.active .morph-grid span:nth-child(1) {
-    transform: translate(2px, 2px) scale(1.4);
-}
-
-/* Top Right */
-.morph-menu-btn.active .morph-grid span:nth-child(3) {
-    transform: translate(-2px, 2px) scale(1.4);
-}
-
-/* Center */
-.morph-menu-btn.active .morph-grid span:nth-child(5) {
-    transform: scale(1.5);
-}
-
-/* Bottom Left */
-.morph-menu-btn.active .morph-grid span:nth-child(7) {
-    transform: translate(2px, -2px) scale(1.4);
-}
-
-/* Bottom Right */
+/* Corner dots — full size, form the outer ring */
+.morph-menu-btn.active .morph-grid span:nth-child(1),
+.morph-menu-btn.active .morph-grid span:nth-child(3),
+.morph-menu-btn.active .morph-grid span:nth-child(7),
 .morph-menu-btn.active .morph-grid span:nth-child(9) {
-    transform: translate(-2px, -2px) scale(1.4);
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Active hover — keep white, no color change */
+.morph-menu-btn.active:hover .morph-grid span {
+    background-color: #ffffff;
+}
+
+@keyframes recordSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 /* Mobile Adjustments */

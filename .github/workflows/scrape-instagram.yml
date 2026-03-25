@@ -1,0 +1,51 @@
+name: Scrape Instagram Events
+
+on:
+  schedule:
+    # Run once a day at midnight
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allow manual triggers from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Instagram scraper
+        env:
+          INSTAGRAM_HANDLE: masters.zagreb
+          MAX_POSTS: '12'
+        run: node scripts/scrape-instagram.js
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add data/ assests/events/
+          if git diff --staged --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "📭 No new events found"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📬 New events detected!"
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git commit -m "🤖 Update events from Instagram [skip ci]"
+          git push

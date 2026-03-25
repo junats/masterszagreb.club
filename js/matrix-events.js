@@ -61,7 +61,7 @@ export class MatrixEventManager {
         }
     }
 
-    // ── Google Sheets CSV Fetching ──────────────────────────────────────
+    // ── Events Loading (from scraped Instagram JSON) ────────────────────
 
     async loadEvents() {
         if (!this.eventMessages) return;
@@ -72,94 +72,22 @@ export class MatrixEventManager {
         this.eventMessages.appendChild(loadingEl);
         
         try {
-            // Check localStorage cache first
-            const cached = this.getCachedEvents();
-            if (cached) {
-                this.events = cached;
-            } else if (CONFIG.SHEETS_CSV_URL) {
-                // Fetch from published Google Sheet
-                const response = await fetch(CONFIG.SHEETS_CSV_URL);
-                if (!response.ok) throw new Error(`Sheet fetch failed: ${response.status}`);
-                const csvText = await response.text();
-                this.events = this.parseCSV(csvText);
+            // Always try to fetch fresh data (bypassing old cache)
+            if (CONFIG.EVENTS_JSON_URL) {
+                const response = await fetch(`${CONFIG.EVENTS_JSON_URL}?t=${Date.now()}`);
+                if (!response.ok) throw new Error(`Events fetch failed: ${response.status}`);
+                const events = await response.json();
+                this.events = Array.isArray(events) ? events : [];
                 this.cacheEvents(this.events);
             } else {
-                // No Sheet URL configured — use demo events
-                console.log('No SHEETS_CSV_URL configured, using demo events');
-                this.events = this.getDemoEvents();
+                this.events = this.getCachedEvents() || this.getDemoEvents();
             }
         } catch (error) {
-            console.warn('Sheet fetch failed, using demo events:', error.message);
+            console.warn('Events fetch failed, using demo events:', error.message);
             this.events = this.getDemoEvents();
         }
         
         this.displayEvents();
-    }
-
-    /**
-     * Parse CSV text from Google Sheets into event objects.
-     * Expected columns: title, date, time, description
-     * First row is treated as the header.
-     */
-    parseCSV(csvText) {
-        const lines = csvText.trim().split('\n');
-        if (lines.length < 2) return [];
-
-        // Parse header to find column indices
-        const headers = this.parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-        const titleIdx = headers.indexOf('title');
-        const dateIdx = headers.indexOf('date');
-        const timeIdx = headers.indexOf('time');
-        const descIdx = headers.indexOf('description');
-
-        if (titleIdx === -1) {
-            console.warn('CSV missing "title" column header');
-            return [];
-        }
-
-        const events = [];
-        for (let i = 1; i < lines.length; i++) {
-            const cols = this.parseCSVLine(lines[i]);
-            const title = (cols[titleIdx] || '').trim();
-            if (!title) continue; // skip empty rows
-
-            events.push({
-                title,
-                date: (cols[dateIdx] || '').trim(),
-                time: (cols[timeIdx] || '').trim(),
-                description: (cols[descIdx] || '').trim()
-            });
-        }
-
-        return events;
-    }
-
-    /**
-     * Parse a single CSV line, respecting quoted fields with commas inside.
-     */
-    parseCSVLine(line) {
-        const result = [];
-        let current = '';
-        let inQuotes = false;
-
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                if (inQuotes && line[i + 1] === '"') {
-                    current += '"';
-                    i++; // skip escaped quote
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (char === ',' && !inQuotes) {
-                result.push(current);
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        result.push(current);
-        return result;
     }
 
     // ── LocalStorage Cache ─────────────────────────────────────────────
@@ -196,22 +124,52 @@ export class MatrixEventManager {
     getDemoEvents() {
         return [
             {
-                title: 'TECHNO NIGHT',
-                date: '2025-12-28',
-                time: '22:00',
-                description: 'Underground beats with DJ NEXUS. Doors open at 22:00.'
+                title: "COMFORT ZONE — MOARE & MORNIK",
+                date: "2026-04-03",
+                time: "23:00",
+                description: "DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.",
+                image: "assests/club-01.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: 'NEW YEAR\'S EVE PARTY',
-                date: '2025-12-31',
-                time: '23:00',
-                description: 'Ring in 2026 with the biggest party of the year. VIP tables available.'
+                title: "GREENLIGHT COLLECTIVE — PER HAMMAR",
+                date: "2026-04-04",
+                time: "23:00",
+                description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj.",
+                image: "assests/club-04.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: 'HOUSE SESSIONS',
-                date: '2026-01-04',
-                time: '21:00',
-                description: 'Deep house vibes every Friday. Guest DJ from Berlin.'
+                title: "CARNERO — BORUT CVAJNER",
+                date: "2026-04-10",
+                time: "23:00",
+                description: "Borut Cvajner, Carnero. Minimal techno and deep grooves.",
+                image: "assests/club-05.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+            },
+            {
+                title: "TANZEN — PETAR DUNDOV",
+                date: "2026-04-17",
+                time: "23:00",
+                description: "Master of techno Petar Dundov returns to the booth for a special 3h set.",
+                image: "assests/club-06.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+            },
+            {
+                title: "SUBTILNO — D&B NIGHT",
+                date: "2026-04-24",
+                time: "22:00",
+                description: "High energy Drum & Bass all night long with the Subtilno crew.",
+                image: "assests/club-07.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+            },
+            {
+                title: "MASTERS ALL NIGHTERS",
+                date: "2026-05-01",
+                time: "23:00",
+                description: "Resident DJs exploring the deep crates of electronic history.",
+                image: "assests/club-08.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
             }
         ];
     }
@@ -222,56 +180,114 @@ export class MatrixEventManager {
         this.eventMessages.textContent = '';
         
         if (this.events.length === 0) {
-            this.typeOutText(this.eventMessages, 'NO EVENTS SCHEDULED', 0);
+            const empty = document.createElement('div');
+            empty.className = 'event-message event-title';
+            empty.textContent = 'NO EVENTS SCHEDULED';
+            this.eventMessages.appendChild(empty);
             return;
         }
-        
-        let currentDelay = 500;
-        
-        this.events.forEach((event, index) => {
-            // Separator between events
-            if (index > 0) {
-                setTimeout(() => {
-                    const separator = document.createElement('div');
-                    separator.className = 'event-separator';
-                    separator.textContent = '─'.repeat(60);
-                    this.eventMessages.appendChild(separator);
-                }, currentDelay);
-                currentDelay += 300;
+
+        // Grid container for all event cards
+        const grid = document.createElement('div');
+        grid.className = 'events-grid';
+        this.eventMessages.appendChild(grid);
+
+        // Show only the last 6 events
+        const recentEvents = this.events.slice(-6);
+
+        recentEvents.forEach((event, index) => {
+            // Create card
+            const card = document.createElement('div');
+            card.className = 'event-card';
+            card.style.opacity = '0';
+
+            // Left: flyer image
+            if (event.image) {
+                const imgSide = document.createElement('div');
+                imgSide.className = 'event-card-image';
+
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'event-flyer-wrapper visible';
+
+                const img = document.createElement('img');
+                img.src = event.image;
+                img.alt = `${event.title} flyer`;
+                img.className = 'event-flyer';
+                img.loading = 'lazy';
+                
+                // Fallback for expired Instagram CDN links
+                img.onerror = () => {
+                    img.src = 'assests/club-01.webp';
+                    img.onerror = null; // Prevent infinite loop if fallback fails
+                };
+
+                const scanlines = document.createElement('div');
+                scanlines.className = 'event-flyer-scanlines';
+
+                imgWrapper.appendChild(img);
+                imgWrapper.appendChild(scanlines);
+
+                if (event.instagramUrl) {
+                    const link = document.createElement('a');
+                    link.href = event.instagramUrl;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.className = 'event-flyer-link';
+                    link.appendChild(imgWrapper);
+                    imgSide.appendChild(link);
+                } else {
+                    imgSide.appendChild(imgWrapper);
+                }
+
+                this.startFlyerGlitch(imgWrapper);
+                card.appendChild(imgSide);
             }
-            
-            // Title
-            setTimeout(() => {
-                const titleEl = document.createElement('div');
-                titleEl.className = 'event-message event-title';
-                this.eventMessages.appendChild(titleEl);
-                this.typeOutText(titleEl, `> ${event.title}`, 30);
-            }, currentDelay);
-            currentDelay += (event.title.length * 30) + 200;
-            
-            // Date + Time
+
+            // Right: text details
+            const textSide = document.createElement('div');
+            textSide.className = 'event-card-text';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'event-message event-title';
+            titleEl.textContent = event.title;
+            textSide.appendChild(titleEl);
+
             const dateTimeStr = event.time
-                ? `[${this.formatDate(event.date)} — ${event.time}]`
-                : `[${this.formatDate(event.date)}]`;
-            setTimeout(() => {
-                const dateEl = document.createElement('div');
-                dateEl.className = 'event-message event-date';
-                this.eventMessages.appendChild(dateEl);
-                this.typeOutText(dateEl, dateTimeStr, 20);
-            }, currentDelay);
-            currentDelay += (dateTimeStr.length * 20) + 200;
-            
-            // Description
+                ? `${this.formatDate(event.date)} — ${event.time}`
+                : this.formatDate(event.date);
+            const dateEl = document.createElement('div');
+            dateEl.className = 'event-message event-date';
+            dateEl.textContent = dateTimeStr;
+            textSide.appendChild(dateEl);
+
             if (event.description) {
-                setTimeout(() => {
-                    const descEl = document.createElement('div');
-                    descEl.className = 'event-message event-description';
-                    this.eventMessages.appendChild(descEl);
-                    this.typeOutText(descEl, event.description, 25);
-                }, currentDelay);
-                currentDelay += (event.description.length * 25) + 500;
+                const descEl = document.createElement('div');
+                descEl.className = 'event-message event-description';
+                descEl.textContent = event.description;
+                textSide.appendChild(descEl);
             }
+
+            card.appendChild(textSide);
+            grid.appendChild(card);
+
+            // Staggered fade-in
+            setTimeout(() => {
+                card.style.opacity = '1';
+            }, 300 + index * 200);
         });
+    }
+
+    /**
+     * Random CRT glitch effect on a flyer image wrapper.
+     */
+    startFlyerGlitch(wrapper) {
+        function triggerGlitch() {
+            wrapper.classList.add('flyer-glitch');
+            setTimeout(() => wrapper.classList.remove('flyer-glitch'), 600);
+            const next = 8000 + Math.random() * 12000; // every 8-20s
+            setTimeout(triggerGlitch, next);
+        }
+        setTimeout(triggerGlitch, 3000 + Math.random() * 5000);
     }
 
     typeOutText(element, text, speed = 30) {
@@ -295,7 +311,7 @@ export class MatrixEventManager {
 
         let date;
 
-        // Handle DD.MM.YYYY format from Google Sheets (e.g. "06.02.2026")
+        // Handle DD.MM.YYYY format (e.g. "06.02.2026")
         const dotParts = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
         if (dotParts) {
             const day = parseInt(dotParts[1], 10);
@@ -322,5 +338,15 @@ export class MatrixEventManager {
         if (this.eventMessages) {
             this.eventMessages.textContent = '';
         }
+    }
+
+    /**
+     * Get flyer image paths from loaded events (for background slideshow integration).
+     * @returns {string[]} Array of image paths
+     */
+    getFlyerImages() {
+        return this.events
+            .filter(e => e.image)
+            .map(e => e.image);
     }
 }

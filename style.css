@@ -9,6 +9,7 @@
     --ambient-mask: radial-gradient(circle 0px at 50% 50%, transparent 0%, transparent 100%);
     --bg-image: url('assests/club-01.webp');
     --bg-opacity: 1;
+    --bg-size: cover;
 }
 
 * {
@@ -39,12 +40,14 @@ body::before {
     width: 100%;
     height: 100%;
     background-image: var(--bg-image);
-    background-size: cover;
+    background-size: var(--bg-size);
     background-position: center;
+    background-repeat: no-repeat;
+    background-color: #000;
     filter: brightness(0.22) contrast(1.1) saturate(0.6) blur(10px);
     z-index: -3;
     opacity: var(--bg-opacity);
-    transition: opacity 1s ease;
+    transition: opacity 2.5s ease;
 }
 
 /* Layer 2: Ambient automated reveals with chromatic lens and morph */
@@ -55,8 +58,9 @@ body::before {
     width: 100%;
     height: 100%;
     background-image: var(--bg-image);
-    background-size: cover;
+    background-size: var(--bg-size);
     background-position: center;
+    background-repeat: no-repeat;
     filter: brightness(0.65) contrast(1.2) saturate(1.1);
     z-index: -2;
     opacity: 1;
@@ -64,7 +68,7 @@ body::before {
     -webkit-mask-image: var(--ambient-mask);
     pointer-events: none;
     animation: chromaticLens 10s ease-in-out infinite, morphBackground 15s ease-in-out infinite;
-    transition: opacity 1s ease;
+    transition: opacity 2.5s ease;
 }
 
 @keyframes chromaticLens {
@@ -501,22 +505,194 @@ body.mouse-active::after {
 }
 
 .event-message.event-title {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 700;
     color: #ffffff;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    text-align: left;
 }
 
 .event-message.event-date {
     color: #cccccc;
-    font-size: 14px;
-    margin-bottom: 5px;
+    font-size: 12px;
+    margin-bottom: 6px;
+    text-align: left;
 }
 
 .event-message.event-description {
-    color: #cccccc;
-    font-size: 14px;
-    margin-bottom: 20px;
+    color: #aaaaaa;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
+}
+
+/* ── Events Grid ──────────────────────────────────────────────────────── */
+
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 4px 0;
+}
+
+/* ── Event Card (image left, text right) ──────────────────────────────── */
+
+.event-card {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.event-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.04);
+}
+
+.event-card-image {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px; /* Force square aspect ratio */
+}
+
+.event-card-text {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Event Flyer Images ──────────────────────────────────────────────── */
+
+.event-flyer-wrapper {
+    position: relative;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.event-flyer-wrapper.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.event-flyer {
+    display: block;
+    width: 100%;
+    height: 100%; /* Fill the square container */
+    object-fit: cover; /* Maintain aspect ratio without stretching */
+    filter: brightness(0.85) saturate(0.9);
+    transition: filter 0.3s ease;
+    /* Persistent subtle CRT distortion */
+    animation: flyerPersistentDistort 4s steps(8, end) infinite;
+}
+
+.event-flyer-wrapper:hover .event-flyer {
+    filter: brightness(1) saturate(1.1);
+    animation: none;
+}
+
+/* Persistent subtle flicker on the image */
+@keyframes flyerPersistentDistort {
+    0%, 100% {
+        filter: brightness(0.85) saturate(0.9);
+    }
+    12% {
+        filter: brightness(0.9) saturate(0.85)
+            drop-shadow(2px 0 0 rgba(255, 0, 80, 0.25))
+            drop-shadow(-2px 0 0 rgba(0, 255, 255, 0.25));
+    }
+    25% {
+        filter: brightness(0.8) saturate(0.95);
+    }
+    37% {
+        filter: brightness(0.95) saturate(0.85)
+            drop-shadow(-1px 0 0 rgba(255, 0, 80, 0.3))
+            drop-shadow(1px 0 0 rgba(0, 255, 255, 0.3));
+    }
+    50% {
+        filter: brightness(0.85) saturate(0.9);
+    }
+    62% {
+        filter: brightness(0.75) saturate(1)
+            drop-shadow(2px 0 0 rgba(255, 0, 80, 0.2))
+            drop-shadow(-2px 0 0 rgba(0, 255, 255, 0.2));
+    }
+    75% {
+        filter: brightness(0.9) saturate(0.88);
+    }
+    87% {
+        filter: brightness(0.82) saturate(0.92)
+            drop-shadow(-1px 0 0 rgba(255, 0, 80, 0.15))
+            drop-shadow(1px 0 0 rgba(0, 255, 255, 0.15));
+    }
+}
+
+/* Scanline overlay — always animated (scrolling) */
+.event-flyer-scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.12) 2px,
+        rgba(0, 0, 0, 0.12) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+    animation: scanlineScroll 0.12s linear infinite;
+}
+
+/* Hover glow border */
+.event-flyer-wrapper:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.08),
+                0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.event-flyer-link {
+    text-decoration: none;
+    display: block;
+}
+
+.event-flyer-link:hover .event-flyer-wrapper {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Flyer CRT Glitch Effect ──────────────────────────────────────────── */
+
+.event-flyer-wrapper.flyer-glitch {
+    animation: flyerCrtGlitch 0.6s steps(6, end);
+}
+
+@keyframes flyerCrtGlitch {
+    0%   { filter: none; }
+    15%  { filter: contrast(1.6) brightness(1.4) 
+            drop-shadow(3px 0 0 rgba(255, 0, 80, 0.7))
+            drop-shadow(-3px 0 0 rgba(0, 255, 255, 0.7)); }
+    30%  { filter: contrast(2) brightness(0.5)
+            drop-shadow(-4px 0 0 rgba(255, 0, 80, 0.9))
+            drop-shadow(4px 0 0 rgba(0, 255, 255, 0.9)); }
+    50%  { filter: contrast(1.3) brightness(1.6); }
+    70%  { filter: contrast(2.2) brightness(0.4)
+            drop-shadow(5px 0 0 rgba(255, 0, 80, 0.8))
+            drop-shadow(-5px 0 0 rgba(0, 255, 255, 0.8))
+            drop-shadow(0 2px 0 rgba(0, 255, 0, 0.4)); }
+    85%  { filter: contrast(1.2) brightness(1.1)
+            drop-shadow(2px 0 0 rgba(255, 0, 80, 0.3))
+            drop-shadow(-2px 0 0 rgba(0, 255, 255, 0.3)); }
+    100% { filter: none; }
 }
 
 /* Custom Scrollbar */
@@ -572,33 +748,58 @@ body.mouse-active::after {
         max-width: 250px;
     }
 
+    /* Fullscreen menu on mobile */
     .matrix-container.active {
-        height: 85vh;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
     }
 
     .pane-content-wrapper {
         flex-direction: column;
+        height: 100%;
     }
 
     .event-messages {
-        padding: 20px;
+        padding: 16px;
         touch-action: pan-y;
-        flex: none;
-        /* Let it flow naturally if screen is small */
+        flex: 1;
+        overflow-y: auto;
     }
 
+    /* Hide SoundCloud on mobile to give events full space */
     .soundcloud-container {
-        width: calc(100% - 40px);
-        margin: 0 20px 20px 20px;
-        height: 350px;
-        flex-shrink: 0;
+        display: none;
     }
 
     .event-message {
+        font-size: 13px;
+    }
+
+    .event-message.event-title {
         font-size: 14px;
     }
 
-    .event-message .event-title {
-        font-size: 16px;
+    .event-flyer-wrapper {
+        max-width: 100%;
+    }
+
+    /* 2-column grid on mobile to fit more events */
+    .events-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .event-card {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .event-card-image {
+        width: 60px;
+    }
+
+    .event-message.event-description {
+        font-size: 11px;
     }
 }

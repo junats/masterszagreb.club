@@ -17,8 +17,21 @@ window.addEventListener('DOMContentLoaded', () => {
     const revealSystem = new BackgroundRevealSystem();
     revealSystem.init();
 
-    // Matrix Events (Google Sheets CMS)
+    // Matrix Events (scraped from Instagram @masters.zagreb)
     const matrixEvents = new MatrixEventManager();
+
+    // Load flyer images into background slideshow from scraped events
+    if (CONFIG.FLYERS_IN_SLIDESHOW && CONFIG.EVENTS_JSON_URL) {
+        fetch(CONFIG.EVENTS_JSON_URL)
+            .then(res => res.ok ? res.json() : [])
+            .then(events => {
+                const flyerPaths = events
+                    .filter(e => e.image)
+                    .map(e => e.image);
+                bgRotator.addFlyerImages(flyerPaths);
+            })
+            .catch(() => { /* events file may not exist yet — that's fine */ });
+    }
 
     // Initialize Audio-Reactive Logo Border
     const audioBorder = new AudioBorder();
@@ -62,18 +75,19 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('✅ Background effect initialized!');
     }
 
-    // Random CRT TV glitch effect for logo
+    // ── CRT Glitch Effect — logo only ──
     const svgLogo = document.getElementById('svgLogo');
     if (svgLogo) {
         function triggerRandomGlitch() {
             svgLogo.classList.add('glitch');
             setTimeout(() => {
                 svgLogo.classList.remove('glitch');
-            }, 600);
-            const nextGlitch = 3000 + Math.random() * 4000;
+            }, 800);
+
+            const nextGlitch = 15000 + Math.random() * 10000;
             setTimeout(triggerRandomGlitch, nextGlitch);
         }
-        setTimeout(triggerRandomGlitch, 3000);
+        setTimeout(triggerRandomGlitch, 8000);
     }
 
     // (Stickman logic successfully removed)

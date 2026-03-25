@@ -1,0 +1,56 @@
+[
+  {
+    "title": "COMFORT ZONE — MOARE & MORNIK",
+    "date": "2026-04-03",
+    "time": "23:00",
+    "description": "DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.",
+    "image": "assests/club-01.webp",
+    "instagramUrl": "https://www.instagram.com/masters.zagreb/",
+    "scrapedAt": "2026-03-25T21:00:00Z"
+  },
+  {
+    "title": "GREENLIGHT COLLECTIVE — PER HAMMAR",
+    "date": "2026-04-04",
+    "time": "23:00",
+    "description": "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj.",
+    "image": "assests/club-04.webp",
+    "instagramUrl": "https://www.instagram.com/masters.zagreb/",
+    "scrapedAt": "2026-03-25T21:00:00Z"
+  },
+  {
+    "title": "CARNERO — BORUT CVAJNER",
+    "date": "2026-04-10",
+    "time": "23:00",
+    "description": "Borut Cvajner, Carnero. Minimal techno and deep grooves.",
+    "image": "assests/club-05.webp",
+    "instagramUrl": "https://www.instagram.com/masters.zagreb/",
+    "scrapedAt": "2026-03-25T21:00:00Z"
+  },
+  {
+    "title": "TANZEN — PETAR DUNDOV",
+    "date": "2026-04-17",
+    "time": "23:00",
+    "description": "Master of techno Petar Dundov returns to the booth for a special 3h set.",
+    "image": "assests/club-06.webp",
+    "instagramUrl": "https://www.instagram.com/masters.zagreb/",
+    "scrapedAt": "2026-03-25T21:00:00Z"
+  },
+  {
+    "title": "SUBTILNO — D&B NIGHT",
+    "date": "2026-04-24",
+    "time": "22:00",
+    "description": "High energy Drum & Bass all night long with the Subtilno crew.",
+    "image": "assests/club-07.webp",
+    "instagramUrl": "https://www.instagram.com/masters.zagreb/",
+    "scrapedAt": "2026-03-25T21:00:00Z"
+  },
+  {
+    "title": "MASTERS ALL NIGHTERS",
+    "date": "2026-05-01",
+    "time": "23:00",
+    "description": "Resident DJs exploring the deep crates of electronic history.",
+    "image": "assests/club-08.webp",
+    "instagramUrl": "https://www.instagram.com/masters.zagreb/",
+    "scrapedAt": "2026-03-25T21:00:00Z"
+  }
+]

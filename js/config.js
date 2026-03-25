@@ -18,9 +18,10 @@ export const CONFIG = {
         'assests/club-14.webp'
     ],
     // Background rotation timing in ms
+    // 20s dwell — slow, ambient; 2.5s crossfade — cinematic breathing
     rotationIntervalMs: 8000,
-    transitionDurationMs: 1000,
-    fadeHalfPointMs: 500,
+    transitionDurationMs: 2500,
+    fadeHalfPointMs: 1500,
     
     // Audio loops for reactive logo border (drop your files in assests/ and add them here)
     // All loops in this array will play simultaneously and mix together.
@@ -31,14 +32,16 @@ export const CONFIG = {
         // { url: 'assests/synth.mp3', volume: 0.6 }
     ],
 
-    // ── Google Sheets CMS ──────────────────────────────────────────────
-    // 1. Create a Google Sheet with columns: title | date | time | description
-    // 2. File → Share → Publish to web → select CSV → Publish
-    // 3. Paste the published URL below
-    SHEETS_CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSixLX4iaHIwcfqdtp4qUyLWdZKJ7ltHgzZ-VmJf4Mf9CVV3rPcLqsk9F-XgRLGUoeXi0FMJIdpOxw_/pub?output=csv',
+    // ── Instagram Events (scraped by GitHub Actions bot) ────────────────
+    // The scraper runs on a cron schedule and commits data/events.json
+    // with event data + flyer images extracted from @masters.zagreb posts.
+    EVENTS_JSON_URL: 'data/events.json',
 
     // How long (minutes) to cache fetched events in localStorage
     EVENTS_CACHE_MINUTES: 5,
+
+    // If true, flyer images from events are mixed into the BG slideshow
+    FLYERS_IN_SLIDESHOW: true,
 
     // ── SoundCloud Sets Rotation ───────────────────────────────────────
     // A curated list of "Masters Zagreb" or related DJ sets to cycle through.
