@@ -364,19 +364,30 @@ async function main() {
         });
     }
 
-    // Load existing events to merge (preserve manually edited ones)
-    let existingEvents = [];
-    if (fs.existsSync(EVENTS_FILE)) {
+    // Handle manual overrides (plan B if scraper is blocked)
+    const MANUAL_EVENTS_FILE = path.join(DATA_DIR, 'manual-events.json');
+    let manualEvents = [];
+    if (fs.existsSync(MANUAL_EVENTS_FILE)) {
         try {
-            existingEvents = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8'));
+            manualEvents = JSON.parse(fs.readFileSync(MANUAL_EVENTS_FILE, 'utf-8'));
+            console.log(`  📝 Merging ${manualEvents.length} manually defined events`);
         } catch (e) {
-            console.log('⚠️  Could not parse existing events.json, overwriting');
+            console.warn('  ⚠️ Failed to parse manual-events.json');
         }
     }
 
-    // Write events.json
-    fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2));
-    console.log(`\n✅ Wrote ${events.length} events to data/events.json`);
+    // Combine and limit
+    const finalEvents = [...manualEvents, ...events].slice(0, 12);
+
+    // Save with metadata
+    const output = {
+        lastUpdated: new Date().toISOString(),
+        count: finalEvents.length,
+        events: finalEvents
+    };
+
+    fs.writeFileSync(EVENTS_FILE, JSON.stringify(output, null, 2));
+    console.log(`\n✅ Wrote ${finalEvents.length} total events to data/events.json`);
 
     // Summary
     const withImages = events.filter(e => e.image).length;

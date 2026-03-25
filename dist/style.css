@@ -383,6 +383,40 @@ body.mouse-active::after {
     border-radius: 16px;
 }
 
+/* Events Status Bar */
+.events-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.sync-status {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.sync-status.live {
+    background: rgba(0, 255, 100, 0.1);
+    color: #00ff64;
+    text-shadow: 0 0 5px rgba(0, 255, 100, 0.5);
+}
+
+.sync-status.offline {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#sync-timestamp {
+    color: rgba(255, 255, 255, 0.3);
+}
+
 /* SoundCloud Player Container */
 .soundcloud-container {
     width: 350px;

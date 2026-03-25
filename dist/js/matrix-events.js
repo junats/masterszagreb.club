@@ -72,32 +72,44 @@ export class MatrixEventManager {
         this.eventMessages.appendChild(loadingEl);
         
         try {
-            // Always try to fetch fresh data (bypassing old cache)
             if (CONFIG.EVENTS_JSON_URL) {
-                console.log(`🔍 Accessing event database at: ${CONFIG.EVENTS_JSON_URL}`);
+                console.log(`🔍 Accessing event database: ${CONFIG.EVENTS_JSON_URL}`);
                 const response = await fetch(`${CONFIG.EVENTS_JSON_URL}?t=${Date.now()}`);
                 
                 if (!response.ok) {
-                    console.error(`❌ Event database access denied: ${response.status} ${response.statusText}`);
-                    throw new Error(`Status ${response.status}`);
+                    throw new Error(`DB Error ${response.status}`);
                 }
 
                 const data = await response.json();
                 this.events = data.events && data.events.length > 0 ? data.events : [];
                 
+                const indicator = document.getElementById('sync-indicator');
+                const timestamp = document.getElementById('sync-timestamp');
+
                 if (this.events.length > 0) {
-                    console.log(`✅ Successfully synced ${this.events.length} real events.`);
+                    console.log(`✅ Synced ${this.events.length} real events.`);
+                    if (indicator) {
+                        indicator.textContent = '● LIVE SYNC ACTIVE';
+                        indicator.className = 'sync-status live';
+                    }
+                    if (timestamp) {
+                        const date = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
+                        timestamp.textContent = `LAST UPDATED: ${date.toLocaleTimeString()}`;
+                    }
                     this.cacheEvents(this.events);
                 } else {
-                    console.warn('⚠️ Event database is empty. Using mock data.');
-                    this.events = this.getMockEvents();
+                    console.warn('⚠️ Event database is empty.');
+                    throw new Error('Empty Database');
                 }
-            } else {
-                this.events = this.getCachedEvents() || this.getMockEvents();
             }
         } catch (error) {
-            console.warn('⚠️ Network failure or missing database. Using local mock data:', error.message);
+            console.warn('⚠️ Offline/Mock Mode Active:', error.message);
             this.events = this.getMockEvents();
+            const indicator = document.getElementById('sync-indicator');
+            if (indicator) {
+                indicator.textContent = '● OFFLINE / MOCK MODE';
+                indicator.className = 'sync-status offline';
+            }
         }
         
         this.displayEvents();
