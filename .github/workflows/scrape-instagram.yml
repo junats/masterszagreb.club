@@ -24,22 +24,28 @@ jobs:
         with:
             node-version: '24'
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run Instagram scraper
         env:
             INSTAGRAM_HANDLE: masters.zagreb
             MAX_POSTS: '12'
         run: node scripts/scrape-instagram.js
 
+      - name: Build site
+        run: npm run build
+
       - name: Check for changes
         id: changes
         run: |
-          git add data/ assests/events/
+          git add data/ assests/events/ dist/
           if git diff --staged --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "📭 No new events found"
+            echo "📭 No new events or build changes found"
           else
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "📬 New events detected!"
+            echo "📬 Changes detected (new events or build update)"
           fi
 
       - name: Commit and push
