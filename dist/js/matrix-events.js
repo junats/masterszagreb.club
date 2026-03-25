@@ -9,7 +9,7 @@ export class MatrixEventManager {
         // DOM Elements
         this.matrixContainer = document.getElementById('matrixContainer');
         this.matrixCanvas = document.getElementById('matrixCanvas');
-        this.eventMessages = document.getElementById('eventMessages');
+        this.eventMessages = document.getElementById('event-messages');
         
         this.setupEventListeners();
     }
@@ -229,7 +229,7 @@ export class MatrixEventManager {
         recentEvents.forEach((event, index) => {
             // Create card
             const card = document.createElement('div');
-            card.className = 'event-card';
+            card.className = `event-card ${!event.image ? 'no-image' : ''}`;
             card.style.opacity = '0';
 
             // Left: flyer image
