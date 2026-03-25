@@ -24,9 +24,6 @@ jobs:
         with:
             node-version: '24'
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Run Instagram scraper
         env:
             INSTAGRAM_HANDLE: masters.zagreb
