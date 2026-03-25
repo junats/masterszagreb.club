@@ -95,26 +95,47 @@ function fetchUrl(url, options = {}) {
  * Download an image and save it locally. Returns the relative path.
  */
 async function downloadImage(imageUrl, postId) {
+    if (!imageUrl) return null;
     ensureDir(IMAGES_DIR);
 
-    const ext = 'jpg'; // Instagram serves JPEG by default
+    const ext = 'jpg';
     const filename = `post-${postId}.${ext}`;
     const filepath = path.join(IMAGES_DIR, filename);
     const relativePath = `assests/events/${filename}`;
 
     // Skip if already downloaded
-    if (fs.existsSync(filepath)) {
+    if (fs.existsSync(filepath) && fs.statSync(filepath).size > 1000) {
         console.log(`  ⏭️  Image already exists: ${filename}`);
         return relativePath;
     }
 
+    console.log(`  ⏳ Downloading image for ${postId}...`);
+
     try {
-        const buffer = await fetchUrl(imageUrl, {
-            accept: 'image/webp,image/jpeg,image/png,*/*',
+        // Use a simpler, direct HTTPS GET for images to avoid header issues
+        return new Promise((resolve, reject) => {
+            const options = {
+                headers: { 'User-Agent': USER_AGENT }
+            };
+            https.get(imageUrl, options, (res) => {
+                if (res.statusCode !== 200) {
+                    res.resume();
+                    console.error(`  ❌ Failed: HTTP ${res.statusCode}`);
+                    return resolve(null);
+                }
+
+                const fileStream = fs.createWriteStream(filepath);
+                res.pipe(fileStream);
+                fileStream.on('finish', () => {
+                    fileStream.close();
+                    console.log(`  ✅ Downloaded: ${filename}`);
+                    resolve(relativePath);
+                });
+            }).on('error', (err) => {
+                console.error(`  ❌ Error: ${err.message}`);
+                resolve(null);
+            });
         });
-        fs.writeFileSync(filepath, buffer);
-        console.log(`  📸 Downloaded: ${filename} (${(buffer.length / 1024).toFixed(1)} KB)`);
-        return relativePath;
     } catch (err) {
         console.error(`  ❌ Failed to download image for ${postId}: ${err.message}`);
         return null;
