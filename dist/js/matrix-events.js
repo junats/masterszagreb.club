@@ -9,7 +9,12 @@ export class MatrixEventManager {
         // DOM Elements
         this.matrixContainer = document.getElementById('matrixContainer');
         this.matrixCanvas = document.getElementById('matrixCanvas');
-        this.eventMessages = document.getElementById('eventMessages');
+        this.eventMessages = document.getElementById('event-messages');
+        
+        // Fallback for newer ID if needed
+        if (!this.eventMessages) {
+            this.eventMessages = document.getElementById('eventMessages');
+        }
         
         this.setupEventListeners();
     }
