@@ -74,17 +74,30 @@ export class MatrixEventManager {
         try {
             // Always try to fetch fresh data (bypassing old cache)
             if (CONFIG.EVENTS_JSON_URL) {
+                console.log(`🔍 Accessing event database at: ${CONFIG.EVENTS_JSON_URL}`);
                 const response = await fetch(`${CONFIG.EVENTS_JSON_URL}?t=${Date.now()}`);
-                if (!response.ok) throw new Error(`Events fetch failed: ${response.status}`);
-                const events = await response.json();
-                this.events = Array.isArray(events) ? events : [];
-                this.cacheEvents(this.events);
+                
+                if (!response.ok) {
+                    console.error(`❌ Event database access denied: ${response.status} ${response.statusText}`);
+                    throw new Error(`Status ${response.status}`);
+                }
+
+                const data = await response.json();
+                this.events = data.events && data.events.length > 0 ? data.events : [];
+                
+                if (this.events.length > 0) {
+                    console.log(`✅ Successfully synced ${this.events.length} real events.`);
+                    this.cacheEvents(this.events);
+                } else {
+                    console.warn('⚠️ Event database is empty. Using mock data.');
+                    this.events = this.getMockEvents();
+                }
             } else {
-                this.events = this.getCachedEvents() || this.getDemoEvents();
+                this.events = this.getCachedEvents() || this.getMockEvents();
             }
         } catch (error) {
-            console.warn('Events fetch failed, using demo events:', error.message);
-            this.events = this.getDemoEvents();
+            console.warn('⚠️ Network failure or missing database. Using local mock data:', error.message);
+            this.events = this.getMockEvents();
         }
         
         this.displayEvents();
@@ -121,10 +134,11 @@ export class MatrixEventManager {
 
     // ── Fallback Demo Events ───────────────────────────────────────────
 
-    getDemoEvents() {
+    getMockEvents() {
         return [
             {
-                title: "COMFORT ZONE — MOARE & MORNIK",
+                id: "mock-1",
+                title: "[MOCK] COMFORT ZONE — MOARE & MORNIK",
                 date: "2026-04-03",
                 time: "23:00",
                 description: "DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.",
@@ -132,7 +146,8 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: "GREENLIGHT COLLECTIVE — PER HAMMAR",
+                id: "mock-2",
+                title: "[MOCK] GREENLIGHT COLLECTIVE — PER HAMMAR",
                 date: "2026-04-04",
                 time: "23:00",
                 description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj.",
@@ -140,7 +155,8 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: "CARNERO — BORUT CVAJNER",
+                id: "mock-3",
+                title: "[MOCK] CARNERO — BORUT CVAJNER",
                 date: "2026-04-10",
                 time: "23:00",
                 description: "Borut Cvajner, Carnero. Minimal techno and deep grooves.",
@@ -148,7 +164,8 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: "TANZEN — PETAR DUNDOV",
+                id: "mock-4",
+                title: "[MOCK] TANZEN — PETAR DUNDOV",
                 date: "2026-04-17",
                 time: "23:00",
                 description: "Master of techno Petar Dundov returns to the booth for a special 3h set.",
@@ -156,7 +173,8 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: "SUBTILNO — D&B NIGHT",
+                id: "mock-5",
+                title: "[MOCK] SUBTILNO — D&B NIGHT",
                 date: "2026-04-24",
                 time: "22:00",
                 description: "High energy Drum & Bass all night long with the Subtilno crew.",
@@ -164,7 +182,8 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                title: "MASTERS ALL NIGHTERS",
+                id: "mock-6",
+                title: "[MOCK] MASTERS ALL NIGHTERS",
                 date: "2026-05-01",
                 time: "23:00",
                 description: "Resident DJs exploring the deep crates of electronic history.",
@@ -217,6 +236,7 @@ export class MatrixEventManager {
                 
                 // Fallback for expired Instagram CDN links
                 img.onerror = () => {
+                    console.warn(`⚠️ Flyer failed to load for "${event.title}":`, event.image);
                     img.src = 'assests/club-01.webp';
                     img.onerror = null; // Prevent infinite loop if fallback fails
                 };

@@ -27,7 +27,8 @@ const INSTAGRAM_HANDLE = process.env.INSTAGRAM_HANDLE || 'masters.zagreb';
 const MAX_POSTS = parseInt(process.env.MAX_POSTS || '12', 10);
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
-const EVENTS_JSON = path.join(DATA_DIR, 'events.json');
+ensureDir(DATA_DIR);
+const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const IMAGES_DIR = path.join(PROJECT_ROOT, 'assests', 'events');
 
 // User-Agent to mimic a real browser
@@ -365,16 +366,16 @@ async function main() {
 
     // Load existing events to merge (preserve manually edited ones)
     let existingEvents = [];
-    if (fs.existsSync(EVENTS_JSON)) {
+    if (fs.existsSync(EVENTS_FILE)) {
         try {
-            existingEvents = JSON.parse(fs.readFileSync(EVENTS_JSON, 'utf-8'));
+            existingEvents = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8'));
         } catch (e) {
             console.log('⚠️  Could not parse existing events.json, overwriting');
         }
     }
 
     // Write events.json
-    fs.writeFileSync(EVENTS_JSON, JSON.stringify(events, null, 2));
+    fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2));
     console.log(`\n✅ Wrote ${events.length} events to data/events.json`);
 
     // Summary
