@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
             node-version: '24'
 
@@ -28,21 +28,19 @@ jobs:
         env:
             INSTAGRAM_HANDLE: masters.zagreb
             MAX_POSTS: '12'
+            FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         run: node scripts/scrape-instagram.js
-
-      - name: Build site
-        run: npm run build
 
       - name: Check for changes
         id: changes
         run: |
-          git add data/ assests/events/ dist/
+          git add data/ assests/events/
           if git diff --staged --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "📭 No new events or build changes found"
+            echo "📭 No new events found"
           else
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "📬 Changes detected (new events or build update)"
+            echo "📬 New events detected!"
           fi
 
       - name: Commit and push

@@ -27,8 +27,7 @@ const INSTAGRAM_HANDLE = process.env.INSTAGRAM_HANDLE || 'masters.zagreb';
 const MAX_POSTS = parseInt(process.env.MAX_POSTS || '12', 10);
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
-ensureDir(DATA_DIR);
-const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
+const EVENTS_JSON = path.join(DATA_DIR, 'events.json');
 const IMAGES_DIR = path.join(PROJECT_ROOT, 'assests', 'events');
 
 // User-Agent to mimic a real browser
@@ -96,47 +95,26 @@ function fetchUrl(url, options = {}) {
  * Download an image and save it locally. Returns the relative path.
  */
 async function downloadImage(imageUrl, postId) {
-    if (!imageUrl) return null;
     ensureDir(IMAGES_DIR);
 
-    const ext = 'jpg';
+    const ext = 'jpg'; // Instagram serves JPEG by default
     const filename = `post-${postId}.${ext}`;
     const filepath = path.join(IMAGES_DIR, filename);
     const relativePath = `assests/events/${filename}`;
 
     // Skip if already downloaded
-    if (fs.existsSync(filepath) && fs.statSync(filepath).size > 1000) {
+    if (fs.existsSync(filepath)) {
         console.log(`  ⏭️  Image already exists: ${filename}`);
         return relativePath;
     }
 
-    console.log(`  ⏳ Downloading image for ${postId}...`);
-
     try {
-        // Use a simpler, direct HTTPS GET for images to avoid header issues
-        return new Promise((resolve, reject) => {
-            const options = {
-                headers: { 'User-Agent': USER_AGENT }
-            };
-            https.get(imageUrl, options, (res) => {
-                if (res.statusCode !== 200) {
-                    res.resume();
-                    console.error(`  ❌ Failed: HTTP ${res.statusCode}`);
-                    return resolve(null);
-                }
-
-                const fileStream = fs.createWriteStream(filepath);
-                res.pipe(fileStream);
-                fileStream.on('finish', () => {
-                    fileStream.close();
-                    console.log(`  ✅ Downloaded: ${filename}`);
-                    resolve(relativePath);
-                });
-            }).on('error', (err) => {
-                console.error(`  ❌ Error: ${err.message}`);
-                resolve(null);
-            });
+        const buffer = await fetchUrl(imageUrl, {
+            accept: 'image/webp,image/jpeg,image/png,*/*',
         });
+        fs.writeFileSync(filepath, buffer);
+        console.log(`  📸 Downloaded: ${filename} (${(buffer.length / 1024).toFixed(1)} KB)`);
+        return relativePath;
     } catch (err) {
         console.error(`  ❌ Failed to download image for ${postId}: ${err.message}`);
         return null;
@@ -364,30 +342,19 @@ async function main() {
         });
     }
 
-    // Handle manual overrides (plan B if scraper is blocked)
-    const MANUAL_EVENTS_FILE = path.join(DATA_DIR, 'manual-events.json');
-    let manualEvents = [];
-    if (fs.existsSync(MANUAL_EVENTS_FILE)) {
+    // Load existing events to merge (preserve manually edited ones)
+    let existingEvents = [];
+    if (fs.existsSync(EVENTS_JSON)) {
         try {
-            manualEvents = JSON.parse(fs.readFileSync(MANUAL_EVENTS_FILE, 'utf-8'));
-            console.log(`  📝 Merging ${manualEvents.length} manually defined events`);
+            existingEvents = JSON.parse(fs.readFileSync(EVENTS_JSON, 'utf-8'));
         } catch (e) {
-            console.warn('  ⚠️ Failed to parse manual-events.json');
+            console.log('⚠️  Could not parse existing events.json, overwriting');
         }
     }
 
-    // Combine and limit
-    const finalEvents = [...manualEvents, ...events].slice(0, 12);
-
-    // Save with metadata
-    const output = {
-        lastUpdated: new Date().toISOString(),
-        count: finalEvents.length,
-        events: finalEvents
-    };
-
-    fs.writeFileSync(EVENTS_FILE, JSON.stringify(output, null, 2));
-    console.log(`\n✅ Wrote ${finalEvents.length} total events to data/events.json`);
+    // Write events.json
+    fs.writeFileSync(EVENTS_JSON, JSON.stringify(events, null, 2));
+    console.log(`\n✅ Wrote ${events.length} events to data/events.json`);
 
     // Summary
     const withImages = events.filter(e => e.image).length;
@@ -398,6 +365,6 @@ async function main() {
 }
 
 main().catch(err => {
-    console.error('💥 Fatal error in scraper:', err.message);
-    process.exit(0); // Exit gracefully in CI/CD to avoid blocking subsequent build steps
+    console.error('💥 Fatal error:', err.message);
+    process.exit(1);
 });

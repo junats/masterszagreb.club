@@ -9,7 +9,7 @@ export class MatrixEventManager {
         // DOM Elements
         this.matrixContainer = document.getElementById('matrixContainer');
         this.matrixCanvas = document.getElementById('matrixCanvas');
-        this.eventMessages = document.getElementById('event-messages');
+        this.eventMessages = document.getElementById('eventMessages');
         
         this.setupEventListeners();
     }
@@ -72,44 +72,19 @@ export class MatrixEventManager {
         this.eventMessages.appendChild(loadingEl);
         
         try {
+            // Always try to fetch fresh data (bypassing old cache)
             if (CONFIG.EVENTS_JSON_URL) {
-                console.log(`🔍 Accessing event database: ${CONFIG.EVENTS_JSON_URL}`);
                 const response = await fetch(`${CONFIG.EVENTS_JSON_URL}?t=${Date.now()}`);
-                
-                if (!response.ok) {
-                    throw new Error(`DB Error ${response.status}`);
-                }
-
-                const data = await response.json();
-                this.events = data.events && data.events.length > 0 ? data.events : [];
-                
-                const indicator = document.getElementById('sync-indicator');
-                const timestamp = document.getElementById('sync-timestamp');
-
-                if (this.events.length > 0) {
-                    console.log(`✅ Synced ${this.events.length} real events.`);
-                    if (indicator) {
-                        indicator.textContent = '● LIVE SYNC ACTIVE';
-                        indicator.className = 'sync-status live';
-                    }
-                    if (timestamp) {
-                        const date = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
-                        timestamp.textContent = `LAST UPDATED: ${date.toLocaleTimeString()}`;
-                    }
-                    this.cacheEvents(this.events);
-                } else {
-                    console.warn('⚠️ Event database is empty.');
-                    throw new Error('Empty Database');
-                }
+                if (!response.ok) throw new Error(`Events fetch failed: ${response.status}`);
+                const events = await response.json();
+                this.events = Array.isArray(events) ? events : [];
+                this.cacheEvents(this.events);
+            } else {
+                this.events = this.getCachedEvents() || this.getDemoEvents();
             }
         } catch (error) {
-            console.warn('⚠️ Offline/Mock Mode Active:', error.message);
-            this.events = this.getMockEvents();
-            const indicator = document.getElementById('sync-indicator');
-            if (indicator) {
-                indicator.textContent = '● OFFLINE / MOCK MODE';
-                indicator.className = 'sync-status offline';
-            }
+            console.warn('Events fetch failed, using demo events:', error.message);
+            this.events = this.getDemoEvents();
         }
         
         this.displayEvents();
@@ -146,29 +121,26 @@ export class MatrixEventManager {
 
     // ── Fallback Demo Events ───────────────────────────────────────────
 
-    getMockEvents() {
+    getDemoEvents() {
         return [
             {
-                id: 'demo-1',
-                title: 'COMFORT ZONE — MOARE & MORNIK',
-                date: '03.04.2026',
-                time: '23:00',
-                description: 'DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.',
-                image: 'assests/club-01.webp',
-                instagramUrl: 'https://www.instagram.com/masters.zagreb/'
+                title: "COMFORT ZONE — MOARE & MORNIK",
+                date: "2026-04-03",
+                time: "23:00",
+                description: "DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.",
+                image: "assests/club-01.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                id: 'demo-2',
-                title: 'GREENLIGHT COLLECTIVE — PER HAMMAR',
-                date: '04.04.2026',
-                time: '23:00',
-                description: 'Per Hammar (Dirty Hands / Malmö), Andreas, Genco, Ian Staraj.',
-                image: 'assests/club-02.webp',
-                instagramUrl: 'https://www.instagram.com/masters.zagreb/'
+                title: "GREENLIGHT COLLECTIVE — PER HAMMAR",
+                date: "2026-04-04",
+                time: "23:00",
+                description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj.",
+                image: "assests/club-04.webp",
+                instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                id: "mock-3",
-                title: "[MOCK] CARNERO — BORUT CVAJNER",
+                title: "CARNERO — BORUT CVAJNER",
                 date: "2026-04-10",
                 time: "23:00",
                 description: "Borut Cvajner, Carnero. Minimal techno and deep grooves.",
@@ -176,8 +148,7 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                id: "mock-4",
-                title: "[MOCK] TANZEN — PETAR DUNDOV",
+                title: "TANZEN — PETAR DUNDOV",
                 date: "2026-04-17",
                 time: "23:00",
                 description: "Master of techno Petar Dundov returns to the booth for a special 3h set.",
@@ -185,8 +156,7 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                id: "mock-5",
-                title: "[MOCK] SUBTILNO — D&B NIGHT",
+                title: "SUBTILNO — D&B NIGHT",
                 date: "2026-04-24",
                 time: "22:00",
                 description: "High energy Drum & Bass all night long with the Subtilno crew.",
@@ -194,8 +164,7 @@ export class MatrixEventManager {
                 instagramUrl: "https://www.instagram.com/masters.zagreb/"
             },
             {
-                id: "mock-6",
-                title: "[MOCK] MASTERS ALL NIGHTERS",
+                title: "MASTERS ALL NIGHTERS",
                 date: "2026-05-01",
                 time: "23:00",
                 description: "Resident DJs exploring the deep crates of electronic history.",
@@ -229,60 +198,32 @@ export class MatrixEventManager {
         recentEvents.forEach((event, index) => {
             // Create card
             const card = document.createElement('div');
-            card.className = `event-card ${!event.image ? 'no-image' : ''}`;
+            card.className = 'event-card';
             card.style.opacity = '0';
-
-            // Left: flyer image
-            if (event.image) {
-                const imgSide = document.createElement('div');
-                imgSide.className = 'event-card-image';
-
-                const imgWrapper = document.createElement('div');
-                imgWrapper.className = 'event-flyer-wrapper visible';
-
-                const img = document.createElement('img');
-                img.src = event.image;
-                img.alt = `${event.title} flyer`;
-                img.className = 'event-flyer';
-                img.loading = 'lazy';
-                
-                // Fallback for expired Instagram CDN links
-                img.onerror = () => {
-                    console.warn(`⚠️ Flyer failed to load for "${event.title}":`, event.image);
-                    img.src = 'assests/club-01.webp';
-                    img.onerror = null; // Prevent infinite loop if fallback fails
-                };
-
-                const scanlines = document.createElement('div');
-                scanlines.className = 'event-flyer-scanlines';
-
-                imgWrapper.appendChild(img);
-                imgWrapper.appendChild(scanlines);
-
-                if (event.instagramUrl) {
-                    const link = document.createElement('a');
-                    link.href = event.instagramUrl;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
-                    link.className = 'event-flyer-link';
-                    link.appendChild(imgWrapper);
-                    imgSide.appendChild(link);
-                } else {
-                    imgSide.appendChild(imgWrapper);
-                }
-
-                this.startFlyerGlitch(imgWrapper);
-                card.appendChild(imgSide);
-            }
 
             // Right: text details
             const textSide = document.createElement('div');
             textSide.className = 'event-card-text';
 
-            const titleEl = document.createElement('div');
-            titleEl.className = 'event-message event-title';
-            titleEl.textContent = event.title;
-            textSide.appendChild(titleEl);
+            if (event.instagramUrl) {
+                const link = document.createElement('a');
+                link.href = event.instagramUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.className = 'event-title-link';
+                
+                const titleEl = document.createElement('div');
+                titleEl.className = 'event-message event-title';
+                titleEl.textContent = event.title;
+                link.appendChild(titleEl);
+                textSide.appendChild(link);
+            } else {
+                const titleEl = document.createElement('div');
+                titleEl.className = 'event-message event-title';
+                titleEl.textContent = event.title;
+                textSide.appendChild(titleEl);
+            }
+
 
             const dateTimeStr = event.time
                 ? `${this.formatDate(event.date)} — ${event.time}`
