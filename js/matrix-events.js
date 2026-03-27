@@ -132,49 +132,41 @@ export class MatrixEventManager {
                 title: "COMFORT ZONE — MOARE & MORNIK",
                 date: "2026-04-03",
                 time: "23:00",
-                description: "DJ duo Comfort Zone performing All Night Long. House, Deep House, Electro.",
+                description: "All Night Long set. Sound at the intersection of house, deep house, and electro.",
                 image: "assests/club-01.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                instagramUrl: "https://www.instagram.com/p/DWUXDt0CDf5/"
             },
             {
-                title: "GREENLIGHT COLLECTIVE — PER HAMMAR",
+                title: "GREENLIGHT — PER HAMMAR",
                 date: "2026-04-04",
                 time: "23:00",
-                description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj.",
+                description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj. Dug-out vinyl and original re-edits.",
                 image: "assests/club-04.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                instagramUrl: "https://www.instagram.com/p/DWRSrghCJoI/"
             },
             {
-                title: "CARNERO — BORUT CVAJNER",
+                title: "CARNERO B2B BORUT CVAJNER",
                 date: "2026-04-10",
                 time: "23:00",
-                description: "Borut Cvajner, Carnero. Minimal techno and deep grooves.",
+                description: "Carnero and Borut Cvajner go back-to-back for a night of deep grooves.",
                 image: "assests/club-05.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                instagramUrl: "https://www.instagram.com/p/DWOR1K8Db-2/"
             },
             {
-                title: "TANZEN — PETAR DUNDOV",
-                date: "2026-04-17",
+                title: "GRUV HIPNOZA — DLV",
+                date: "2026-05-09",
                 time: "23:00",
-                description: "Master of techno Petar Dundov returns to the booth for a special 3h set.",
+                description: "Old school meets new techno. DLV vinyl-only set on the terrace.",
                 image: "assests/club-06.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                instagramUrl: "https://www.instagram.com/p/DWWrdt4DGaA/"
             },
             {
-                title: "SUBTILNO — D&B NIGHT",
-                date: "2026-04-24",
-                time: "22:00",
-                description: "High energy Drum & Bass all night long with the Subtilno crew.",
-                image: "assests/club-07.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
-            },
-            {
-                title: "MASTERS ALL NIGHTERS",
-                date: "2026-05-01",
+                title: "MINDBEND — DAV BIRTHDAY CELEBRATION",
+                date: "2026-05-23",
                 time: "23:00",
-                description: "Resident DJs exploring the deep crates of electronic history.",
-                image: "assests/club-08.webp",
-                instagramUrl: "https://www.instagram.com/masters.zagreb/"
+                description: "Mindbend returns with DAV and Tau Car for a special birthday celebration.",
+                image: "assests/club-07.webp",
+                instagramUrl: "https://www.instagram.com/p/DWUAcl0iqrR/"
             }
         ];
     }
