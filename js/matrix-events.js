@@ -277,7 +277,7 @@ export class MatrixEventManager {
     }
 
     formatDate(dateString) {
-        if (!dateString) return 'TBD';
+        if (!dateString || dateString === 'DATE PENDING') return 'DATE PENDING';
 
         let date;
 
@@ -293,7 +293,7 @@ export class MatrixEventManager {
             date = new Date(dateString);
         }
 
-        if (isNaN(date.getTime())) return dateString.toUpperCase();
+        if (isNaN(date.getTime())) return 'DATE PENDING';
 
         const options = { 
             weekday: 'short', 

@@ -325,6 +325,10 @@ async function main() {
         // Parse caption into structured event data
         const parsed = parseCaption(post.caption, post.timestamp);
 
+        if (!parsed.date) {
+            console.warn(`  ⚠️  No date found in caption for post ${post.id}. Marking as DATE PENDING.`);
+        }
+
         // Download flyer image
         let imagePath = null;
         if (post.imageUrl && !post.isVideo) {
@@ -333,7 +337,7 @@ async function main() {
 
         events.push({
             title: parsed.title,
-            date: parsed.date,
+            date: parsed.date || 'DATE PENDING',
             time: parsed.time,
             description: parsed.description,
             image: imagePath,

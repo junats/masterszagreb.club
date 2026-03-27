@@ -3,21 +3,15 @@
  * Extracts structured event data from Instagram captions.
  */
 
-/**
- * Common date patterns found in nightclub Instagram captions:
- *  - "28.03.2026", "28/03/2026", "28-03-2026"
- *  - "28.03.", "28/03"
- *  - "March 28", "28 March"
- *  - "Petak 28.03." (Croatian weekday + date)
- */
+// Common date patterns found in nightclub Instagram captions:
 const DATE_PATTERNS = [
     // DD.MM.YYYY or DD/MM/YYYY or DD-MM-YYYY
     /(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/,
     // DD.MM. (no year — assume current/next occurrence)
     /(\d{1,2})[.\/-](\d{1,2})\./,
-    // Written months (English)
-    /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
-    /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
+    // Written months (English) with optional ordinals (rd, th, st, nd)
+    /(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+    /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?/i,
     // Croatian month names
     /(\d{1,2})\.\s*(siječnja|veljače|ožujka|travnja|svibnja|lipnja|srpnja|kolovoza|rujna|listopada|studenoga|prosinca)/i,
 ];
@@ -34,6 +28,12 @@ const ENGLISH_MONTHS = {
     'september': 9, 'october': 10, 'november': 11, 'december': 12,
 };
 
+const WEEKDAYS = {
+    'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0,
+    'ponedjeljak': 1, 'utorak': 2, 'srijeda': 3, 'četvrtak': 4, 'petak': 5, 'subota': 6, 'nedjelja': 0,
+    'pon': 1, 'uto': 2, 'sri': 3, 'čet': 4, 'pet': 5, 'sub': 6, 'ned': 0
+};
+
 // Time patterns: "22:00", "22h", "23.00", "at 22:00", "doors 22:00"
 const TIME_PATTERNS = [
     /(?:doors|vrata|start|početak|at|od|from)?\s*(\d{1,2})[:.h](\d{2})?\s*(?:h|hrs|sati)?/i,
@@ -42,14 +42,14 @@ const TIME_PATTERNS = [
 /**
  * Parse an Instagram caption into structured event data.
  * @param {string} caption - Raw Instagram caption text
- * @param {string} postDate - ISO timestamp of the post (fallback date)
+ * @param {string} postDate - ISO timestamp of the post (reference date)
  * @returns {{ title: string, date: string, time: string, description: string }}
  */
 function parseCaption(caption, postDate) {
     if (!caption) {
         return {
             title: 'MASTERS EVENT',
-            date: formatFallbackDate(postDate),
+            date: '', // No date found
             time: '',
             description: '',
         };
@@ -87,13 +87,26 @@ function extractTitle(lines, fullCaption) {
 }
 
 /**
- * Extract a date from the caption text.
+ * Extract a date from the caption text, using postDate as reference.
  */
-function extractDate(caption, postDate) {
-    const now = new Date();
-    const currentYear = now.getFullYear();
+function extractDate(caption, postDateStr) {
+    const postDate = new Date(postDateStr);
+    const referenceDate = isNaN(postDate.getTime()) ? new Date() : postDate;
+    const currentYear = referenceDate.getFullYear();
+    const lcCaption = caption.toLowerCase();
 
-    // Try DD.MM.YYYY first
+    // 1. Check for relative terms (Tonight, Tomorrow, Večeras, Sutra)
+    if (lcCaption.includes('večeras') || lcCaption.includes('tonight')) {
+        return formatDateObject(referenceDate);
+    }
+    
+    if (lcCaption.includes('sutra') || lcCaption.includes('tomorrow')) {
+        const tomorrow = new Date(referenceDate);
+        tomorrow.setDate(referenceDate.getDate() + 1);
+        return formatDateObject(tomorrow);
+    }
+
+    // 2. Try DD.MM.YYYY first
     let match = caption.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);
     if (match) {
         const day = match[1].padStart(2, '0');
@@ -101,33 +114,36 @@ function extractDate(caption, postDate) {
         return `${day}.${month}.${match[3]}`;
     }
 
-    // DD.MM. (no year)
+    // 3. DD.MM. (no year)
     match = caption.match(/(\d{1,2})[.\/-](\d{1,2})\./);
     if (match) {
         const day = match[1].padStart(2, '0');
         const month = match[2].padStart(2, '0');
-        // Assume current year, or next year if date has passed
+        // Assume current year if it's near or after postDate, or next year if it's in the past relative to postDate
         let year = currentYear;
         const testDate = new Date(year, parseInt(month) - 1, parseInt(day));
-        if (testDate < now) year++;
+        if (testDate < referenceDate && (referenceDate - testDate) > 1000 * 60 * 60 * 24 * 60) {
+            // More than 60 days in the past? Assume next year.
+            year++;
+        }
         return `${day}.${month}.${year}`;
     }
 
-    // English month names
-    match = caption.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
+    // 4. English month names with ordinals
+    match = caption.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
     if (match) {
         const day = match[1].padStart(2, '0');
         const month = String(ENGLISH_MONTHS[match[2].toLowerCase()]).padStart(2, '0');
         return `${day}.${month}.${currentYear}`;
     }
-    match = caption.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i);
+    match = caption.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
     if (match) {
         const day = match[2].padStart(2, '0');
         const month = String(ENGLISH_MONTHS[match[1].toLowerCase()]).padStart(2, '0');
         return `${day}.${month}.${currentYear}`;
     }
 
-    // Croatian month names
+    // 5. Croatian month names
     match = caption.match(/(\d{1,2})\.\s*(siječnja|veljače|ožujka|travnja|svibnja|lipnja|srpnja|kolovoza|rujna|listopada|studenoga|prosinca)/i);
     if (match) {
         const day = match[1].padStart(2, '0');
@@ -135,14 +151,29 @@ function extractDate(caption, postDate) {
         return `${day}.${month}.${currentYear}`;
     }
 
-    // Fallback to post timestamp
-    return formatFallbackDate(postDate);
+    // 6. Weekday mention (This Friday, Saturday, etc.)
+    // Only if it's near the start of the caption or mentions "Petak" / "Friday"
+    for (const [name, dayIndex] of Object.entries(WEEKDAYS)) {
+        if (lcCaption.includes(name)) {
+            const date = new Date(referenceDate);
+            const currentDay = referenceDate.getDay();
+            let daysAhead = (dayIndex - currentDay + 7) % 7;
+            
+            // If it's the same day, assume next week unless "tonight" or "večeras" is mentioned
+            if (daysAhead === 0 && !lcCaption.includes('večeras') && !lcCaption.includes('tonight')) {
+                daysAhead = 7;
+            }
+            
+            date.setDate(referenceDate.getDate() + daysAhead);
+            return formatDateObject(date);
+        }
+    }
+
+    // No date found - return empty string to indicate "TBD"
+    return '';
 }
 
-function formatFallbackDate(isoDate) {
-    if (!isoDate) return '';
-    const d = new Date(isoDate);
-    if (isNaN(d.getTime())) return '';
+function formatDateObject(d) {
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     return `${day}.${month}.${d.getFullYear()}`;
@@ -167,7 +198,7 @@ function extractTime(caption) {
     const hourMatch = caption.match(/\b(\d{1,2})\s*h\b/i);
     if (hourMatch) {
         const hours = parseInt(hourMatch[1]);
-        if (hours >= 18 || hours <= 6) {
+        if (hours >= 18 || hours <= 23 || hours <= 6) {
             return `${String(hours).padStart(2, '0')}:00`;
         }
     }
