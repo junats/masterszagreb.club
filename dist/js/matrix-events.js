@@ -171,129 +171,193 @@ export class MatrixEventManager {
         ];
     }
 
-    // ── Display ────────────────────────────────────────────────────────
+    // ── Display Logic ──────────────────────────────────────────────
 
     displayEvents() {
+        if (!this.eventMessages) return;
         this.eventMessages.textContent = '';
         
-        if (this.events.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'event-message event-title';
-            empty.textContent = 'NO EVENTS SCHEDULED';
-            this.eventMessages.appendChild(empty);
-            return;
-        }
-
         // Grid container for all event cards
         const grid = document.createElement('div');
         grid.className = 'events-grid';
         this.eventMessages.appendChild(grid);
 
-        // Show only the last 6 events
-        const recentEvents = this.events.slice(-6);
+        // 1. Calculate current weekend dates (Fri, Sat, Sun)
+        const weekendDates = this.getWeekendDates(new Date());
+        
+        // 2. Separate into rows
+        const topRow = []; // Current weekend Fri, Sat, Sun
+        const bottomRow = []; // Future events
 
-        recentEvents.forEach((event, index) => {
-            // Create card
-            const card = document.createElement('div');
-            card.className = 'event-card';
-            card.style.opacity = '0';
-
-            // Right: text details
-            const textSide = document.createElement('div');
-            textSide.className = 'event-card-text';
-
-            if (event.instagramUrl) {
-                const link = document.createElement('a');
-                link.href = event.instagramUrl;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                link.className = 'event-title-link';
-                
-                const titleEl = document.createElement('div');
-                titleEl.className = 'event-message event-title';
-                titleEl.textContent = event.title;
-                link.appendChild(titleEl);
-                textSide.appendChild(link);
+        // Step A: Fill top row with current weekend
+        weekendDates.forEach(dateInfo => {
+            const match = this.events.find(e => this.compareDates(e.date, dateInfo.iso));
+            if (match) {
+                topRow.push(match);
             } else {
-                const titleEl = document.createElement('div');
-                titleEl.className = 'event-message event-title';
-                titleEl.textContent = event.title;
-                textSide.appendChild(titleEl);
+                // Return a "TBA" placeholder
+                topRow.push({
+                    title: "TBA — NIGHTCLUB EVENT",
+                    date: dateInfo.iso,
+                    description: "Schedule pending. Check Instagram for updates.",
+                    instagramUrl: "https://www.instagram.com/masters.zagreb/",
+                    isTBA: true
+                });
             }
+        });
 
+        // Step B: Fill bottom row with future events (after this Sunday)
+        const sundayDate = new Date(weekendDates[2].iso);
+        const futureEvents = this.events
+            .filter(e => {
+                const eDate = this.parseDateString(e.date);
+                return eDate && eDate > sundayDate;
+            })
+            .sort((a, b) => this.parseDateString(a.date) - this.parseDateString(b.date));
 
-            const dateTimeStr = event.time
-                ? `${this.formatDate(event.date)} — ${event.time}`
-                : this.formatDate(event.date);
-            const dateEl = document.createElement('div');
-            dateEl.className = 'event-message event-date';
-            dateEl.textContent = dateTimeStr;
-            textSide.appendChild(dateEl);
+        // Take the next 3 upcoming events for the bottom row
+        bottomRow.push(...futureEvents.slice(0, 3));
 
-            if (event.description) {
-                const descEl = document.createElement('div');
-                descEl.className = 'event-message event-description';
-                descEl.textContent = event.description;
-                textSide.appendChild(descEl);
-            }
+        // Fill empty bottom row slots if needed
+        while (bottomRow.length < 3) {
+            bottomRow.push({
+                title: "UPCOMING EVENT",
+                date: "ACCESSING...",
+                description: "Database update in progress.",
+                isTBA: true
+            });
+        }
 
-            card.appendChild(textSide);
+        // Combine for a single staggered rendering
+        const allToShow = [...topRow, ...bottomRow];
+
+        allToShow.forEach((event, index) => {
+            const card = this.createEventCard(event, index);
             grid.appendChild(card);
-
-            // Staggered fade-in
-            setTimeout(() => {
-                card.style.opacity = '1';
-            }, 300 + index * 200);
         });
     }
 
-    /**
-     * Random CRT glitch effect on a flyer image wrapper.
-     */
-    startFlyerGlitch(wrapper) {
-        function triggerGlitch() {
-            wrapper.classList.add('flyer-glitch');
-            setTimeout(() => wrapper.classList.remove('flyer-glitch'), 600);
-            const next = 8000 + Math.random() * 12000; // every 8-20s
-            setTimeout(triggerGlitch, next);
+    createEventCard(event, index) {
+        const card = document.createElement('div');
+        card.className = `event-card ${event.isTBA ? 'tba-card' : ''}`;
+        card.style.opacity = '0';
+
+        const textSide = document.createElement('div');
+        textSide.className = 'event-card-text';
+
+        // Title (Link if available)
+        if (event.instagramUrl) {
+            const link = document.createElement('a');
+            link.href = event.instagramUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'event-title-link';
+            
+            const titleEl = document.createElement('div');
+            titleEl.className = 'event-message event-title';
+            titleEl.textContent = event.title;
+            link.appendChild(titleEl);
+            textSide.appendChild(link);
+        } else {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'event-message event-title';
+            titleEl.textContent = event.title;
+            textSide.appendChild(titleEl);
         }
-        setTimeout(triggerGlitch, 3000 + Math.random() * 5000);
+
+        // Date & Time
+        const dateTimeStr = event.time
+            ? `${this.formatDate(event.date)} — ${event.time}`
+            : this.formatDate(event.date);
+        const dateEl = document.createElement('div');
+        dateEl.className = 'event-message event-date';
+        dateEl.textContent = dateTimeStr;
+        textSide.appendChild(dateEl);
+
+        // Description
+        if (event.description) {
+            const descEl = document.createElement('div');
+            descEl.className = 'event-message event-description';
+            descEl.textContent = event.description;
+            textSide.appendChild(descEl);
+        }
+
+        card.appendChild(textSide);
+
+        // Staggered fade-in
+        setTimeout(() => {
+            card.style.opacity = '1';
+        }, 300 + index * 150);
+
+        return card;
     }
 
-    typeOutText(element, text, speed = 30) {
-        let index = 0;
-        element.textContent = '';
-        element.classList.add('typing-cursor');
+    // ── Date Helpers ──────────────────────────────────────────────────
+
+    /**
+     * Returns Fri, Sat, Sun dates for the 'active' week.
+     * Mon-Wed -> upcoming weekend
+     * Thu-Sun -> current weekend
+     */
+    getWeekendDates(now) {
+        const day = now.getDay(); // 0(Sun) - 6(Sat)
+        let offset = 0;
         
-        const typeInterval = setInterval(() => {
-            if (index < text.length) {
-                element.textContent += text[index];
-                index++;
-            } else {
-                clearInterval(typeInterval);
-                element.classList.remove('typing-cursor');
-            }
-        }, speed);
+        // Define offset to the weekend's Friday
+        switch(day) {
+            case 1: offset = 4; break; // Mon -> +4
+            case 2: offset = 3; break; // Tue -> +3
+            case 3: offset = 2; break; // Wed -> +2
+            case 4: offset = 1; break; // Thu -> +1
+            case 5: offset = 0; break; // Fri -> 0
+            case 6: offset = -1; break; // Sat -> -1
+            case 0: offset = -2; break; // Sun -> -2
+        }
+
+        const fri = new Date(now);
+        fri.setDate(now.getDate() + offset);
+        
+        const sat = new Date(fri);
+        sat.setDate(fri.getDate() + 1);
+        
+        const sun = new Date(fri);
+        sun.setDate(fri.getDate() + 2);
+
+        return [
+            { day: 'Friday', iso: this.toISODate(fri) },
+            { day: 'Saturday', iso: this.toISODate(sat) },
+            { day: 'Sunday', iso: this.toISODate(sun) }
+        ];
+    }
+
+    toISODate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    parseDateString(dateString) {
+        if (!dateString || dateString === 'DATE PENDING') return null;
+        let date;
+        const dotParts = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if (dotParts) {
+            date = new Date(parseInt(dotParts[3]), parseInt(dotParts[2]) - 1, parseInt(dotParts[1]));
+        } else {
+            date = new Date(dateString);
+        }
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    compareDates(d1, d2) {
+        const date1 = this.toISODate(this.parseDateString(d1) || new Date(0));
+        const date2 = this.toISODate(this.parseDateString(d2) || new Date(0));
+        return date1 === date2;
     }
 
     formatDate(dateString) {
         if (!dateString || dateString === 'DATE PENDING') return 'DATE PENDING';
+        if (dateString === 'ACCESSING...') return dateString;
 
-        let date;
-
-        // Handle DD.MM.YYYY format (e.g. "06.02.2026")
-        const dotParts = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-        if (dotParts) {
-            const day = parseInt(dotParts[1], 10);
-            const month = parseInt(dotParts[2], 10) - 1; // months are 0-indexed
-            const year = parseInt(dotParts[3], 10);
-            date = new Date(year, month, day);
-        } else {
-            // Fallback for ISO dates (e.g. "2025-12-28") and other formats
-            date = new Date(dateString);
-        }
-
-        if (isNaN(date.getTime())) return 'DATE PENDING';
+        const date = this.parseDateString(dateString);
+        if (!date) return 'DATE PENDING';
 
         const options = { 
             weekday: 'short', 
@@ -310,10 +374,6 @@ export class MatrixEventManager {
         }
     }
 
-    /**
-     * Get flyer image paths from loaded events (for background slideshow integration).
-     * @returns {string[]} Array of image paths
-     */
     getFlyerImages() {
         return this.events
             .filter(e => e.image)

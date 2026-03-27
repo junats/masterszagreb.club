@@ -573,6 +573,23 @@ body.mouse-active::after {
     min-width: 0;
 }
 
+/* ── TBA / Placeholder Card ─────────────────────────────────────────── */
+
+.tba-card {
+    opacity: 0.4 !important;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.tba-card .event-title {
+    color: var(--mid-gray);
+}
+
+.tba-card .event-date {
+    color: var(--mid-gray);
+    opacity: 0.6;
+}
 
 
 /* Custom Scrollbar */
