@@ -1,12 +1,12 @@
 # App State
 
-**Phase:** 9. Fix DD.MM.YYYY Date Parsing
-**Task:** Complete
-**Status:** Complete
+**Phase:** 8. Mobile Events UI & Instagram Bot
+**Task:** Planning complete
+**Status:** Ready for execution
 **What was just accomplished:**
-- Updated `formatDate` in `js/matrix-events.js` to parse DD.MM.YYYY dates from Google Sheets.
-- Verified all formats (DD.MM.YYYY, ISO, edge cases) render correctly.
-- Committed as `5c042f3`.
+- Updated SPEC.md and ROADMAP.md with Phase 8 requirements.
+- Created Phase 8 research in `.gsd/phases/8/RESEARCH.md`.
+- Created plans 8.1 and 8.2 for mobile UI and Instagram bot.
 
 **Next steps:**
-- Awaiting next task from the GSD workflow.
+1. /execute 8

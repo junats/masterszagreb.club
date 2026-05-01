@@ -40,3 +40,8 @@
 *Goal: Allow the club owner to text a dedicated number to append rows directly into the Google CMS Sheet.*
 - [ ] Deploy Google Apps Script `doPost` webhook to capture Twilio requests.
 - [ ] Verify Twilio routes incoming messages to the deployed App Script URL.
+
+### Phase 8: Mobile Events UI & Instagram Bot
+*Goal: Enhance mobile events navigation with an 80vh glassmorphism scrollable container, and implement a daily Instagram bot for event updates.*
+- [ ] Style mobile events container (80vh, scrollbar, glass effect).
+- [ ] Develop Instagram checking bot/script to run once daily for event updates.
