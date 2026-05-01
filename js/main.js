@@ -1,7 +1,6 @@
 import { BackgroundRotator } from './background-rotator.js';
 import { BackgroundRevealSystem } from './background-reveal.js';
 import { MatrixEventManager } from './matrix-events.js';
-import { AudioBorder } from './audio-border.js';
 import { BackgroundEffect } from './bg-effect.js';
 import { CONFIG } from './config.js';
 import { SoundCloudManager } from './soundcloud.js'; // Added import
@@ -33,9 +32,7 @@ window.addEventListener('DOMContentLoaded', () => {
             .catch(() => { /* events file may not exist yet — that's fine */ });
     }
 
-    // Initialize Audio-Reactive Logo Border
-    const audioBorder = new AudioBorder();
-    audioBorder.init();
+    // Audio-Reactive Logo Border functionality has been completely removed as per Phase 9.
 
     // Initialize SoundCloud Manager (COMMENTED OUT FOR NOW)
     // const scManager = new SoundCloudManager(); 
