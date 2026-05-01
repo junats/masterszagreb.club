@@ -20,7 +20,8 @@ The MASTERS nightclub website codebase needs to be refactored to improve its arc
 - **Maintained Functionality**: All existing visual effects (Three.js distortions, matrix typing, Audio Reactive Logo) must continue to function exactly as they do now.
 - **Mobile Events UI**: Mobile navigation with events should take 80% of vertical viewport with a scrollbar and a glassmorphism background effect.
 - **Instagram Bot**: A bot/automation that checks Instagram once a day to update events.
-
+- **Audio Cleanup**: Ensure no background music loops automatically upon loading.
+- **UI Adjustments**: Add an "EVENTS" text label immediately to the left of the hamburger menu toggle.
 ### 3.2 Technical Constraints
 - Must retain the Vanilla HTML/CSS/JS stack, unless otherwise specified.
 - Use native ES6 Modules (`import`/`export`).

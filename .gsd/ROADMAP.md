@@ -46,3 +46,8 @@
 *Goal: Enhance mobile events navigation with an 80vh glassmorphism scrollable container, and implement a daily Instagram bot for event updates.*
 - [x] Style mobile events container (80vh, scrollbar, glass effect).
 - [x] Develop Instagram checking bot/script to run once daily for event updates.
+
+### Phase 9: UI Polish & Audio Cleanup
+*Goal: Remove background music loop and add an "EVENTS" label next to the hamburger menu for better discoverability.*
+- [ ] Remove audio elements or logic responsible for the background music loop.
+- [ ] Update UI to include an "EVENTS" label to the left of the hamburger menu.
