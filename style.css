@@ -645,11 +645,14 @@ body.mouse-active::after {
         max-width: 250px;
     }
 
-    /* Fullscreen menu on mobile */
+    /* Mobile Events Container - 80vh with Glass Effect */
     .matrix-container.active {
-        height: 100vh;
-        max-height: 100vh;
-        border-radius: 0;
+        height: 80vh;
+        max-height: 80vh;
+        border-radius: 16px 16px 0 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
     }
 
     .pane-content-wrapper {
