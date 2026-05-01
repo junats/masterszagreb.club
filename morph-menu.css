@@ -1,10 +1,27 @@
-/* Minimalist Geometric Morph Trigger */
-
-.morph-menu-btn {
+/* Header Nav Container */
+.header-nav-container {
     position: fixed;
     top: 30px;
     right: 30px;
     z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.events-label {
+    font-family: 'Orbitron', sans-serif;
+    color: #ffffff;
+    font-size: 14px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+}
+
+/* Minimalist Geometric Morph Trigger */
+
+.morph-menu-btn {
     width: 44px;
     height: 44px;
     background: transparent;
@@ -104,9 +121,16 @@
 
 /* Mobile Adjustments */
 @media (max-width: 768px) {
-    .morph-menu-btn {
+    .header-nav-container {
         top: 25px;
         right: 25px;
+    }
+
+    .events-label {
+        font-size: 12px;
+    }
+
+    .morph-menu-btn {
         width: 40px;
         height: 40px;
     }
