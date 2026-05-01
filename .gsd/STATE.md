@@ -1,12 +1,13 @@
 # App State
 
-**Phase:** 8. Mobile Events UI & Instagram Bot
-**Task:** Planning complete
-**Status:** Ready for execution
-**What was just accomplished:**
-- Updated SPEC.md and ROADMAP.md with Phase 8 requirements.
-- Created Phase 8 research in `.gsd/phases/8/RESEARCH.md`.
-- Created plans 8.1 and 8.2 for mobile UI and Instagram bot.
+**Phase:** 8 (completed)
+**Task:** All tasks complete
+**Status:** Verified
 
-**Next steps:**
-1. /execute 8
+## Last Session Summary
+Phase 8 executed successfully. 2 plans, 2 tasks completed.
+- Applied 80vh height and glassmorphism effect to mobile events navigation.
+- Created `scripts/instagram-bot.js` for daily event updates via Instagram.
+
+## Next Steps
+1. Proceed to next phase or await further instructions.

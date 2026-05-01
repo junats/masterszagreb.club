@@ -42,6 +42,7 @@
 - [ ] Verify Twilio routes incoming messages to the deployed App Script URL.
 
 ### Phase 8: Mobile Events UI & Instagram Bot
+**Status**: ✅ Complete
 *Goal: Enhance mobile events navigation with an 80vh glassmorphism scrollable container, and implement a daily Instagram bot for event updates.*
-- [ ] Style mobile events container (80vh, scrollbar, glass effect).
-- [ ] Develop Instagram checking bot/script to run once daily for event updates.
+- [x] Style mobile events container (80vh, scrollbar, glass effect).
+- [x] Develop Instagram checking bot/script to run once daily for event updates.
