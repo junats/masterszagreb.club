@@ -17,7 +17,6 @@ export class BackgroundRotator {
         this.isCurrentlyFlyer = true;
         
         this.grainOverlay = document.querySelector('.grain-overlay');
-        this.flyerOverlay = document.getElementById('flyerOverlay');
         this.svgLogo = document.getElementById('svgLogo');
         
         // Initial slide: first Instagram event flyer
@@ -36,26 +35,6 @@ export class BackgroundRotator {
         }
     }
 
-    _setFlyerBg(src) {
-        if (this.flyerOverlay) {
-            if (src) {
-                this.flyerOverlay.style.backgroundImage = `url('${src}')`;
-                this.flyerOverlay.style.setProperty('--flyer-image', `url('${src}')`);
-                document.body.style.setProperty('--flyer-image', `url('${src}')`);
-            } else {
-                this.flyerOverlay.style.backgroundImage = 'none';
-                this.flyerOverlay.style.setProperty('--flyer-image', 'none');
-                document.body.style.removeProperty('--flyer-image');
-            }
-        }
-    }
-
-    _setFlyerOpacity(val) {
-        if (this.flyerOverlay) {
-            this.flyerOverlay.style.opacity = String(val);
-        }
-    }
-
     _setOpacity(val) {
         document.body.style.setProperty('--bg-opacity', String(val));
         if (this.grainOverlay) {
@@ -65,8 +44,6 @@ export class BackgroundRotator {
 
     _applySlide(src, isFlyer) {
         this._setBg(src);
-        this._setFlyerBg(src);
-        this._setFlyerOpacity(1);
         this._setOpacity(1);
         
         if (isFlyer) {
@@ -151,9 +128,6 @@ export class BackgroundRotator {
         this.busy = true;
         const transitionSec = (CONFIG.transitionDurationMs || 1000) / 1000;
         this.grainOverlay.style.transition = `opacity ${transitionSec}s ease`;
-        if (this.flyerOverlay) {
-            this.flyerOverlay.style.transition = `opacity ${transitionSec}s ease`;
-        }
 
         // Trigger subtle logo glitch animation on slide change
         if (this.svgLogo) {
@@ -167,14 +141,12 @@ export class BackgroundRotator {
 
         // Fade out current slide
         this._setOpacity(0);
-        this._setFlyerOpacity(0);
         await this._wait(CONFIG.transitionDurationMs || 1000);
 
         // Determine next slide (alternating flyer -> random club photo -> flyer)
         const next = this._getNextSlide();
 
         this._setBg(next.src);
-        this._setFlyerBg(next.src);
         
         if (next.isFlyer) {
             document.body.classList.add('showing-flyer');
@@ -182,10 +154,9 @@ export class BackgroundRotator {
             document.body.classList.remove('showing-flyer');
         }
 
-        // Fade in new slide with center overlay ALWAYS visible (opacity = 1)
+        // Fade in new slide
         await this._wait(50);
         this._setOpacity(1);
-        this._setFlyerOpacity(1);
         await this._wait(CONFIG.fadeHalfPointMs || 500);
 
         this.busy = false;
