@@ -48,6 +48,7 @@ export class BackgroundRotator {
         this.busy = false;
         this.rotationTimer = null;
         this.colorThemeIndex = 0;
+        this.gsap = window.gsap || null;
         
         // Active scraped Instagram event flyers
         this.flyerImages = [...(CONFIG.flyerImages || CONFIG.backgroundImages || [])];
@@ -73,14 +74,28 @@ export class BackgroundRotator {
 
     _applyColorTheme(isFlyer) {
         if (isFlyer) {
-            // Event flyers retain their crisp, authentic original poster colors
-            document.documentElement.style.setProperty('--club-hue', '0deg');
+            if (window.gsap) {
+                window.gsap.to(document.documentElement, {
+                    '--club-hue': '0deg',
+                    duration: 0.6,
+                    ease: 'sine.out'
+                });
+            } else {
+                document.documentElement.style.setProperty('--club-hue', '0deg');
+            }
             document.documentElement.style.setProperty('--club-gradient', 'none');
         } else {
-            // Club atmosphere photos cycle dynamically through diverse, vibrant color themes
             const theme = CLUB_COLOR_THEMES[this.colorThemeIndex % CLUB_COLOR_THEMES.length];
             this.colorThemeIndex++;
-            document.documentElement.style.setProperty('--club-hue', theme.hueRotate);
+            if (window.gsap) {
+                window.gsap.to(document.documentElement, {
+                    '--club-hue': theme.hueRotate,
+                    duration: 0.8,
+                    ease: 'power2.out'
+                });
+            } else {
+                document.documentElement.style.setProperty('--club-hue', theme.hueRotate);
+            }
             document.documentElement.style.setProperty('--club-gradient', theme.gradient);
         }
     }
@@ -93,17 +108,61 @@ export class BackgroundRotator {
         }
     }
 
-    _setOpacity(val) {
-        document.body.style.setProperty('--bg-opacity', String(val));
-        if (this.grainOverlay) {
-            this.grainOverlay.style.opacity = String(val);
+    _setOpacity(val, duration = 0.6) {
+        if (window.gsap) {
+            return window.gsap.to(document.body, {
+                '--bg-opacity': val,
+                duration: duration,
+                ease: 'power2.inOut',
+                onUpdate: () => {
+                    if (this.grainOverlay) {
+                        this.grainOverlay.style.opacity = String(val);
+                    }
+                }
+            });
+        } else {
+            document.body.style.setProperty('--bg-opacity', String(val));
+            if (this.grainOverlay) {
+                this.grainOverlay.style.opacity = String(val);
+            }
+            return Promise.resolve();
+        }
+    }
+
+    _triggerLogoGlitch() {
+        if (!this.svgLogo) return;
+
+        if (window.gsap) {
+            const tl = window.gsap.timeline();
+            tl.to(this.svgLogo, {
+                x: () => (Math.random() - 0.5) * 8,
+                y: () => (Math.random() - 0.5) * 6,
+                filter: 'contrast(2.2) brightness(1.6) drop-shadow(4px 0 0 rgba(255,0,80,0.9)) drop-shadow(-4px 0 0 rgba(0,255,255,0.9))',
+                duration: 0.08,
+                repeat: 3,
+                yoyo: true,
+                ease: 'steps(2)'
+            }).to(this.svgLogo, {
+                x: 0,
+                y: 0,
+                filter: 'contrast(1.1) brightness(1.05)',
+                duration: 0.15,
+                ease: 'power2.out'
+            });
+        } else {
+            this.svgLogo.classList.remove('glitch');
+            void this.svgLogo.offsetWidth;
+            this.svgLogo.classList.add('glitch');
+            setTimeout(() => {
+                this.svgLogo.classList.remove('glitch');
+            }, 800);
         }
     }
 
     _applySlide(src, isFlyer) {
         this.isCurrentlyFlyer = isFlyer;
         this._setBg(src);
-        this._setOpacity(1);
+        this._setOpacity(1, 0.4);
         this._applyColorTheme(isFlyer);
         
         if (isFlyer) {
@@ -174,9 +233,7 @@ export class BackgroundRotator {
     _scheduleRotation() {
         if (this.rotationTimer) clearTimeout(this.rotationTimer);
 
-        // Rotate if we have at least one flyer and club images, or multiple slides
         if (this.flyerImages.length > 0 || this.clubImages.length > 0) {
-            // Event flyer slides stay longer (8s) for readability; non-event club slides are shorter & punchier (2.6s)
             const dwell = this.isCurrentlyFlyer
                 ? (CONFIG.eventIntervalMs || 8000)
                 : (CONFIG.clubIntervalMs || 2600);
@@ -191,22 +248,25 @@ export class BackgroundRotator {
         }
         
         this.busy = true;
-        const transitionSec = (CONFIG.transitionDurationMs || 800) / 1000;
-        this.grainOverlay.style.transition = `opacity ${transitionSec}s ease`;
+        const fadeSec = (CONFIG.transitionDurationMs || 800) / 1000;
 
-        // Trigger subtle logo glitch animation on slide change
-        if (this.svgLogo) {
-            this.svgLogo.classList.remove('glitch');
-            void this.svgLogo.offsetWidth;
-            this.svgLogo.classList.add('glitch');
-            setTimeout(() => {
-                this.svgLogo.classList.remove('glitch');
-            }, 800);
+        // Trigger GSAP logo glitch shockwave
+        this._triggerLogoGlitch();
+
+        // GSAP Fade Out current slide
+        if (window.gsap) {
+            await new Promise(resolve => {
+                window.gsap.to(document.body, {
+                    '--bg-opacity': 0,
+                    duration: fadeSec * 0.7,
+                    ease: 'power2.inOut',
+                    onComplete: resolve
+                });
+            });
+        } else {
+            this._setOpacity(0);
+            await this._wait(CONFIG.transitionDurationMs || 800);
         }
-
-        // Fade out current slide
-        this._setOpacity(0);
-        await this._wait(CONFIG.transitionDurationMs || 800);
 
         // Determine next slide (alternating flyer -> random club photo -> flyer)
         const next = this._getNextSlide();
@@ -223,10 +283,21 @@ export class BackgroundRotator {
             document.body.classList.add('showing-club-glitch');
         }
 
-        // Fade in new slide
-        await this._wait(50);
-        this._setOpacity(1);
-        await this._wait(CONFIG.fadeHalfPointMs || 400);
+        // GSAP Fade In new slide
+        if (window.gsap) {
+            await new Promise(resolve => {
+                window.gsap.to(document.body, {
+                    '--bg-opacity': 1,
+                    duration: fadeSec * 0.7,
+                    ease: 'power2.out',
+                    onComplete: resolve
+                });
+            });
+        } else {
+            await this._wait(50);
+            this._setOpacity(1);
+            await this._wait(CONFIG.fadeHalfPointMs || 400);
+        }
 
         this.busy = false;
         this._scheduleRotation();

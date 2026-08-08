@@ -108,10 +108,31 @@
         </div>
     </div>
 
-    <!-- Background Effects -->
-    <div class="bg-gradient"></div>
-    <div class="scanlines"></div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.gsap) {
+                gsap.from('.merch-title', { autoAlpha: 0, y: -30, duration: 0.6, ease: 'power3.out' });
+                gsap.from('.merch-item', { autoAlpha: 0, y: 40, scale: 0.95, stagger: 0.08, duration: 0.55, ease: 'back.out(1.2)' });
+                
+                document.querySelectorAll('.merch-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        gsap.fromTo(btn, { scale: 0.9 }, { scale: 1, duration: 0.3, ease: 'back.out(2)' });
+                        const originalText = btn.textContent;
+                        btn.textContent = '✓ ADDED';
+                        btn.style.borderColor = '#00ff41';
+                        btn.style.color = '#00ff41';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.borderColor = '';
+                            btn.style.color = '';
+                        }, 1200);
+                    });
+                });
+            }
+        });
+    </script>
     <script src="main.js"></script>
 </body>
 

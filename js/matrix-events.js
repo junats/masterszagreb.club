@@ -5,6 +5,7 @@ export class MatrixEventManager {
         this.matrixActive = false;
         this.events = [];
         this.matrixInterval = null;
+        this.gsap = window.gsap || null;
         
         // DOM Elements
         this.matrixContainer = document.getElementById('matrixContainer');
@@ -49,15 +50,46 @@ export class MatrixEventManager {
         if (this.matrixActive) {
             document.body.classList.add('events-open');
             this.matrixContainer.classList.add('active');
+            
+            if (window.gsap) {
+                const tl = window.gsap.timeline();
+                tl.fromTo(this.matrixContainer, 
+                    { autoAlpha: 0, scale: 0.95, y: 35 }, 
+                    { autoAlpha: 1, scale: 1, y: 0, duration: 0.45, ease: 'power3.out' }
+                ).fromTo('.matrix-dialog-header',
+                    { opacity: 0, y: -15 },
+                    { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' },
+                    '-=0.25'
+                );
+            }
+
             if (logo) {
                 logo.classList.add('events-active');
                 logo.setAttribute('aria-expanded', 'true');
+                if (window.gsap) {
+                    window.gsap.fromTo(logo, { scale: 0.9 }, { scale: 1, duration: 0.3, ease: 'back.out(2)' });
+                }
             }
             this.startMatrixRain();
             this.loadEvents();
         } else {
-            document.body.classList.remove('events-open');
-            this.matrixContainer.classList.remove('active');
+            if (window.gsap) {
+                window.gsap.to(this.matrixContainer, {
+                    autoAlpha: 0,
+                    scale: 0.96,
+                    y: 20,
+                    duration: 0.25,
+                    ease: 'power2.in',
+                    onComplete: () => {
+                        document.body.classList.remove('events-open');
+                        this.matrixContainer.classList.remove('active');
+                    }
+                });
+            } else {
+                document.body.classList.remove('events-open');
+                this.matrixContainer.classList.remove('active');
+            }
+
             if (logo) {
                 logo.classList.remove('events-active');
                 logo.setAttribute('aria-expanded', 'false');
@@ -92,6 +124,10 @@ export class MatrixEventManager {
         loadingEl.className = 'loading-indicator';
         loadingEl.textContent = 'ACCESSING EVENT DATABASE...';
         this.eventMessages.appendChild(loadingEl);
+
+        if (window.gsap) {
+            window.gsap.fromTo(loadingEl, { opacity: 0.3 }, { opacity: 1, duration: 0.6, repeat: -1, yoyo: true, ease: 'power1.inOut' });
+        }
         
         try {
             // Clean up old localStorage keys
@@ -118,48 +154,63 @@ export class MatrixEventManager {
             const pool = Array.isArray(activeEvents) ? [...activeEvents] : [];
             if (Array.isArray(archiveEvents)) {
                 for (const item of archiveEvents) {
-                    const exists = pool.some(e => 
-                        (e.date && e.date === item.date) || 
-                        (e.title && e.title.toLowerCase().trim() === item.title.toLowerCase().trim())
-                    );
-                    if (!exists) pool.push(item);
+                    if (!pool.some(e => e.id === item.id || (e.title === item.title && e.date === item.date))) {
+                        pool.push(item);
+                    }
                 }
             }
 
-            this.events = pool.length > 0 ? pool : this.getDemoEvents();
-        } catch (error) {
-            console.warn('Events fetch failed, using demo events:', error.message);
-            this.events = this.getDemoEvents();
+            if (pool.length > 0) {
+                this.events = pool;
+                this.displayEvents();
+            } else {
+                this.renderSyntheticEvents();
+            }
+        } catch (err) {
+            console.warn('Events loading warning:', err.message);
+            this.renderSyntheticEvents();
         }
+    }
+
+    renderSyntheticEvents() {
+        if (!this.eventMessages) return;
+        this.eventMessages.textContent = '';
         
+        const now = new Date();
+        const { friStr, satStr } = this.getWeekendDates(now);
+
+        const syntheticUpcoming = [
+            {
+                title: 'MASTERS CLUB NIGHT // FRIDAY',
+                date: friStr,
+                description: 'Pure vinyl underground house and techno on our audiophile soundsystem. Covered heated summer terrace & dancefloor.',
+                image: 'assests/club-01.webp'
+            },
+            {
+                title: 'WEEKEND ODYSSEY // SATURDAY',
+                date: satStr,
+                description: 'Zagreb underground selectors taking over the booth until dawn. Minimal, electro, and deep grooves.',
+                image: 'assests/club-04.webp'
+            }
+        ];
+
+        this.events = syntheticUpcoming;
         this.displayEvents();
     }
 
-    // ── Fallback Demo Events ───────────────────────────────────────────
-
-    getDemoEvents() {
-        const now = new Date();
-        const todayStr = this.formatDateISOLike(now);
-
-        return [
-            {
-                title: "SUBOTA 8.8.  MOZER × SPINNSKI",
-                date: todayStr,
-                time: "23:00",
-                description: "vinyl all night",
-                image: "assests/events/post-DbodVNtI17B.jpg",
-                instagramUrl: "https://www.instagram.com/p/DbodVNtI17B/"
-            }
-        ];
+    parseDateString(dateString) {
+        if (!dateString || dateString === 'DATE PENDING' || dateString === 'TBC') return null;
+        const dotParts = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if (dotParts) {
+            return new Date(parseInt(dotParts[3], 10), parseInt(dotParts[2], 10) - 1, parseInt(dotParts[1], 10));
+        }
+        const isoParts = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (isoParts) {
+            return new Date(parseInt(isoParts[1], 10), parseInt(isoParts[2], 10) - 1, parseInt(isoParts[3], 10));
+        }
+        const fallback = new Date(dateString);
+        return isNaN(fallback.getTime()) ? null : fallback;
     }
-
-    formatDateISOLike(d) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        return `${day}.${month}.${d.getFullYear()}`;
-    }
-
-    // ── Display Logic (Next 5 Upcoming & Last 10 Past Events) ──────────
 
     displayEvents() {
         if (!this.eventMessages) return;
@@ -168,35 +219,26 @@ export class MatrixEventManager {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-        // 1. Next 5 Upcoming Events (on or after today, earliest first)
-        const upcomingEvents = this.events
-            .filter(e => {
-                const eDate = this.parseDateString(e.date);
-                return eDate && eDate >= today;
-            })
-            .sort((a, b) => {
-                const dA = this.parseDateString(a.date);
-                const dB = this.parseDateString(b.date);
-                return dA - dB;
-            })
-            .slice(0, 5);
+        const upcomingEvents = [];
+        const pastEvents = [];
 
-        // 2. Last 10 Past Events (before today, most recent first)
-        const pastEvents = this.events
-            .filter(e => {
-                const eDate = this.parseDateString(e.date);
-                return eDate && eDate < today;
-            })
-            .sort((a, b) => {
-                const dA = this.parseDateString(a.date);
-                const dB = this.parseDateString(b.date);
-                return dB - dA; // most recent first
-            })
-            .slice(0, 10);
+        for (const item of this.events) {
+            const parsed = this.parseDateString(item.date);
+            if (parsed && parsed >= today) {
+                upcomingEvents.push({ ...item, _dateObj: parsed });
+            } else if (parsed && parsed < today) {
+                pastEvents.push({ ...item, _dateObj: parsed });
+            } else {
+                upcomingEvents.push({ ...item, _dateObj: new Date(2099, 0, 1) });
+            }
+        }
+
+        upcomingEvents.sort((a, b) => a._dateObj.getTime() - b._dateObj.getTime());
+        pastEvents.sort((a, b) => b._dateObj.getTime() - a._dateObj.getTime());
 
         if (upcomingEvents.length === 0 && pastEvents.length === 0) {
             const empty = document.createElement('div');
-            empty.className = 'loading-indicator';
+            empty.className = 'empty-search-state';
             empty.textContent = 'NO EVENTS FOUND IN DATABASE';
             this.eventMessages.appendChild(empty);
             return;
@@ -239,6 +281,22 @@ export class MatrixEventManager {
             pastSection.appendChild(grid);
             this.eventMessages.appendChild(pastSection);
         }
+
+        // GSAP Stagger Entrance for All Event Cards
+        if (window.gsap) {
+            window.gsap.fromTo('.event-card', 
+                { autoAlpha: 0, y: 30, scale: 0.95 },
+                { 
+                    autoAlpha: 1, 
+                    y: 0, 
+                    scale: 1, 
+                    duration: 0.45, 
+                    stagger: 0.04, 
+                    ease: 'back.out(1.1)',
+                    clearProps: 'transform'
+                }
+            );
+        }
     }
 
     getNightclubFallback(index, seed = '') {
@@ -263,7 +321,9 @@ export class MatrixEventManager {
     createEventCard(event, index, isPast = false) {
         const card = document.createElement('div');
         card.className = `event-card ${isPast ? 'past-card' : ''}`;
-        card.style.opacity = '0';
+        if (!window.gsap) {
+            card.style.opacity = '0';
+        }
 
         // Select initial image: flyer image or atmospheric nightclub photo fallback
         const fallbackSrc = this.getNightclubFallback(index, event.title);
@@ -322,7 +382,20 @@ export class MatrixEventManager {
 
         card.appendChild(textSection);
 
-        setTimeout(() => { card.style.opacity = '1'; }, 100 + index * 60);
+        // GSAP Micro-interaction on Hover
+        if (window.gsap) {
+            card.addEventListener('mouseenter', () => {
+                window.gsap.to(card, { scale: 1.02, y: -3, duration: 0.25, ease: 'power2.out' });
+                window.gsap.to(flyerImg, { scale: 1.06, duration: 0.35, ease: 'power2.out' });
+            });
+            card.addEventListener('mouseleave', () => {
+                window.gsap.to(card, { scale: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+                window.gsap.to(flyerImg, { scale: 1, duration: 0.35, ease: 'power2.out' });
+            });
+        } else {
+            setTimeout(() => { card.style.opacity = '1'; }, 100 + index * 60);
+        }
+
         return card;
     }
 
@@ -348,70 +421,17 @@ export class MatrixEventManager {
         
         const sat = new Date(fri);
         sat.setDate(fri.getDate() + 1);
-        
-        const sun = new Date(fri);
-        sun.setDate(fri.getDate() + 2);
 
-        return [
-            { iso: this.toISODate(fri) },
-            { iso: this.toISODate(sat) },
-            { iso: this.toISODate(sun) }
-        ];
-    }
+        const pad = (n) => String(n).padStart(2, '0');
+        const friStr = `${pad(fri.getDate())}.${pad(fri.getMonth() + 1)}.${fri.getFullYear()}`;
+        const satStr = `${pad(sat.getDate())}.${pad(sat.getMonth() + 1)}.${sat.getFullYear()}`;
 
-    /**
-     * Converts a Date object to YYYY-MM-DD using local time components.
-     * Avoids .toISOString() which can shift dates by 1 day due to UTC conversion.
-     */
-    toISODate(date) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-
-    /**
-     * Parses date strings into local Date objects.
-     */
-    parseDateString(dateString) {
-        if (!dateString || dateString === 'DATE PENDING' || dateString === 'TBC') return null;
-        
-        // DD.MM.YYYY
-        const dotParts = dateString.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-        if (dotParts) {
-            return new Date(parseInt(dotParts[3]), parseInt(dotParts[2]) - 1, parseInt(dotParts[1]));
-        }
-        
-        // YYYY-MM-DD
-        const isoParts = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-        if (isoParts) {
-            return new Date(parseInt(isoParts[1]), parseInt(isoParts[2]) - 1, parseInt(isoParts[3]));
-        }
-
-        const fallback = new Date(dateString);
-        return isNaN(fallback.getTime()) ? null : fallback;
-    }
-
-    compareDates(d1, d2) {
-        const iso1 = this.toISODate(this.parseDateString(d1) || new Date(0));
-        const iso2 = this.toISODate(this.parseDateString(d2) || new Date(0));
-        return iso1 === iso2;
-    }
-
-    formatDate(dateString) {
-        if (!dateString || dateString === 'DATE PENDING') return 'DATE PENDING';
-        const date = this.parseDateString(dateString);
-        if (!date) return 'DATE PENDING';
-
-        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-        return date.toLocaleDateString('en-GB', options).toUpperCase();
+        return { friStr, satStr };
     }
 
     clearMessages() {
-        if (this.eventMessages) this.eventMessages.textContent = '';
-    }
-
-    getFlyerImages() {
-        return this.events.filter(e => e.image).map(e => e.image);
+        if (this.eventMessages) {
+            this.eventMessages.textContent = '';
+        }
     }
 }

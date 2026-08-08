@@ -3,6 +3,7 @@ import { CONFIG } from './config.js';
 /**
  * MASTERS Zagreb — Drink Price List & Google Sheets / Excel Live Sync Engine
  * URL Target: https://masterszagreb.club/prices.html
+ * Powered by GSAP 3 Animations
  */
 
 export class PricesManager {
@@ -14,6 +15,7 @@ export class PricesManager {
         this.searchQuery = '';
         this.sortBy = 'default';
         this.pollingTimer = null;
+        this.gsap = window.gsap || null;
         
         this.initElements();
         this.initEvents();
@@ -46,6 +48,9 @@ export class PricesManager {
                 pill.addEventListener('click', () => {
                     this.filterPills.forEach(p => p.classList.remove('active'));
                     pill.classList.add('active');
+                    if (window.gsap) {
+                        window.gsap.fromTo(pill, { scale: 0.92 }, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
+                    }
                     this.activeCategory = pill.dataset.category || 'all';
                     this.render();
                 });
@@ -60,13 +65,13 @@ export class PricesManager {
         }
 
         if (this.openQrBtn && this.qrModal) {
-            this.openQrBtn.addEventListener('click', () => this.qrModal.classList.add('active'));
+            this.openQrBtn.addEventListener('click', () => this.openModal());
         }
 
         if (this.closeQrBtn && this.qrModal) {
-            this.closeQrBtn.addEventListener('click', () => this.qrModal.classList.remove('active'));
+            this.closeQrBtn.addEventListener('click', () => this.closeModal());
             this.qrModal.addEventListener('click', (e) => {
-                if (e.target === this.qrModal) this.qrModal.classList.remove('active');
+                if (e.target === this.qrModal) this.closeModal();
             });
         }
 
@@ -79,10 +84,51 @@ export class PricesManager {
 
         // Close on Escape key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (this.qrModal) this.qrModal.classList.remove('active');
+            if (e.key === 'Escape' && this.qrModal && this.qrModal.classList.contains('active')) {
+                this.closeModal();
             }
         });
+    }
+
+    openModal() {
+        if (!this.qrModal) return;
+        this.qrModal.classList.add('active');
+        if (window.gsap) {
+            const modalBox = this.qrModal.querySelector('.modal-box');
+            window.gsap.fromTo(this.qrModal, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25, ease: 'power2.out' });
+            if (modalBox) {
+                window.gsap.fromTo(modalBox, 
+                    { autoAlpha: 0, scale: 0.88, y: 25 }, 
+                    { autoAlpha: 1, scale: 1, y: 0, duration: 0.35, ease: 'back.out(1.4)' }
+                );
+            }
+        }
+    }
+
+    closeModal() {
+        if (!this.qrModal) return;
+        if (window.gsap) {
+            const modalBox = this.qrModal.querySelector('.modal-box');
+            if (modalBox) {
+                window.gsap.to(modalBox, {
+                    autoAlpha: 0,
+                    scale: 0.92,
+                    y: 15,
+                    duration: 0.2,
+                    ease: 'power2.in'
+                });
+            }
+            window.gsap.to(this.qrModal, {
+                autoAlpha: 0,
+                duration: 0.22,
+                ease: 'power2.in',
+                onComplete: () => {
+                    this.qrModal.classList.remove('active');
+                }
+            });
+        } else {
+            this.qrModal.classList.remove('active');
+        }
     }
 
     startAutoPolling() {
@@ -118,125 +164,129 @@ export class PricesManager {
             this.render();
         } catch (err) {
             console.warn('Local database fallback:', err.message);
-            this.updateSyncBadge('LIVE AUTO-SYNC', 'success');
+            this.loadFallbackDataset();
         }
     }
 
-    /**
-     * Automated background sync from Google Sheets published CSV URL or Spreadsheet ID
-     */
-    async syncFromGoogleSheet(sheetUrl) {
+    async syncFromGoogleSheet(url) {
         try {
-            let csvUrl = sheetUrl;
-            if (/^[a-zA-Z0-9-_]{20,}$/.test(csvUrl)) {
-                csvUrl = `https://docs.google.com/spreadsheets/d/${csvUrl}/gviz/tq?tqx=out:csv`;
-            } else if (csvUrl.includes('spreadsheets/d/') && !csvUrl.includes('gviz/tq')) {
-                const match = csvUrl.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-                if (match && match[1]) {
-                    csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:csv`;
-                }
-            }
-
-            const res = await fetch(`${csvUrl}${csvUrl.includes('?') ? '&' : '?'}t=${Date.now()}`);
-            if (!res.ok) throw new Error(`Google Sheets responded with HTTP ${res.status}`);
-            const csvText = await res.text();
+            const res = await fetch(`${url}&_t=${Date.now()}`);
+            if (!res.ok) throw new Error(`Sheets HTTP ${res.status}`);
+            const csv = await res.text();
             
-            const parsedItems = this.parseGoogleSheetCsv(csvText);
-            if (parsedItems.length === 0) {
-                throw new Error('No items parsed from CSV');
+            const parsed = this.parseCsvToDrinks(csv);
+            if (parsed && parsed.length > 0) {
+                this.items = parsed;
+                this.updateSyncBadge('SYNCED // GOOGLE SHEET', 'success');
+                this.render();
+                return true;
             }
-
-            this.items = parsedItems;
-            this.updateSyncBadge('GOOGLE SHEETS (LIVE)', 'success');
-            this.render();
-            return true;
         } catch (err) {
-            console.warn('Google Sheets live sync error, falling back to local database:', err.message);
-            this.updateSyncBadge('LOCAL DB (SHEETS OFFLINE)', 'warning');
-            return false;
+            console.warn('Google Sheets sync unavailable, using local database:', err.message);
         }
+        return false;
     }
 
-    parseGoogleSheetCsv(csvText) {
-        const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
-        if (lines.length <= 1) return [];
+    parseCsvToDrinks(csvText) {
+        const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+        if (lines.length < 2) return [];
 
-        // Parse header row
-        const headers = this.parseCsvRow(lines[0]).map(h => h.toLowerCase().trim());
-        const catIdx = headers.findIndex(h => h.includes('category') || h.includes('kategorij'));
-        const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('naziv') || h.includes('drink') || h.includes('piće'));
-        const volIdx = headers.findIndex(h => h.includes('volume') || h.includes('količina') || h.includes('vol') || h.includes('size'));
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('piće') || h.includes('naziv') || h.includes('item'));
+        const catIdx = headers.findIndex(h => h.includes('cat') || h.includes('kategorija') || h.includes('vrsta'));
         const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('cijena') || h.includes('eur') || h.includes('€'));
+        const volIdx = headers.findIndex(h => h.includes('vol') || h.includes('količina') || h.includes('mjera') || h.includes('size'));
         const descIdx = headers.findIndex(h => h.includes('desc') || h.includes('opis') || h.includes('info'));
-        const popIdx = headers.findIndex(h => h.includes('pop') || h.includes('star') || h.includes('highlight'));
+        const popIdx = headers.findIndex(h => h.includes('pop') || h.includes('hit') || h.includes('top'));
 
-        const results = [];
+        if (nameIdx === -1 || priceIdx === -1) return [];
+
+        const items = [];
         for (let i = 1; i < lines.length; i++) {
-            const row = this.parseCsvRow(lines[i]);
-            if (row.length === 0) continue;
+            const cols = this.parseCsvRow(lines[i]);
+            if (cols.length <= Math.max(nameIdx, priceIdx)) continue;
 
-            const name = nameIdx !== -1 ? row[nameIdx] : row[1] || row[0];
-            if (!name || name.trim() === '') continue;
+            const name = cols[nameIdx]?.trim();
+            const rawPrice = cols[priceIdx]?.trim().replace('€', '').replace(',', '.');
+            const price = parseFloat(rawPrice);
 
-            const categoryRaw = catIdx !== -1 ? row[catIdx] : 'beers';
-            const category = this.normalizeCategory(categoryRaw);
-            const volume = volIdx !== -1 ? row[volIdx] : '';
-            const priceRaw = priceIdx !== -1 ? row[priceIdx] : '0';
-            const price = parseFloat(priceRaw.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-            const description = descIdx !== -1 ? row[descIdx] : '';
-            const popRaw = popIdx !== -1 ? row[popIdx].toLowerCase() : '';
-            const popular = popRaw === 'true' || popRaw === 'yes' || popRaw === 'da' || popRaw === '1';
+            if (!name || isNaN(price)) continue;
 
-            results.push({
+            const category = (catIdx !== -1 && cols[catIdx]) ? cols[catIdx].trim().toLowerCase() : 'other';
+            const volume = (volIdx !== -1 && cols[volIdx]) ? cols[volIdx].trim() : '';
+            const description = (descIdx !== -1 && cols[descIdx]) ? cols[descIdx].trim() : '';
+            const popular = (popIdx !== -1 && cols[popIdx]) 
+                ? (cols[popIdx].toLowerCase() === 'true' || cols[popIdx].toLowerCase() === 'yes' || cols[popIdx] === '1') 
+                : false;
+
+            items.push({
                 id: `sheet-${i}`,
-                category,
-                name: name.trim(),
-                volume: volume.trim(),
-                price,
-                description: description.trim(),
-                popular
+                name: name,
+                category: category,
+                price: price,
+                volume: volume,
+                description: description,
+                popular: popular
             });
         }
-        return results;
+        return items;
     }
 
-    parseCsvRow(rowStr) {
+    parseCsvRow(row) {
         const result = [];
         let insideQuote = false;
-        let current = '';
-        
-        for (let i = 0; i < rowStr.length; i++) {
-            const char = rowStr[i];
+        let entry = '';
+        for (let i = 0; i < row.length; i++) {
+            const char = row[i];
             if (char === '"') {
-                if (insideQuote && rowStr[i + 1] === '"') {
-                    current += '"';
-                    i++;
-                } else {
-                    insideQuote = !insideQuote;
-                }
+                insideQuote = !insideQuote;
             } else if (char === ',' && !insideQuote) {
-                result.push(current.trim());
-                current = '';
+                result.push(entry);
+                entry = '';
             } else {
-                current += char;
+                entry += char;
             }
         }
-        result.push(current.trim());
+        result.push(entry);
         return result;
     }
 
-    normalizeCategory(raw) {
-        const s = (raw || '').toLowerCase().trim();
-        if (s.includes('cocktail') || s.includes('koktel') || s.includes('long')) return 'cocktails';
-        if (s.includes('spirit') || s.includes('žest') || s.includes('shot') || s.includes('rakij') || s.includes('gin') || s.includes('whiskey')) return 'spirits_shots';
-        if (s.includes('wine') || s.includes('vino') || s.includes('pjen') || s.includes('prosecco') || s.includes('bubble')) return 'wine_bubbles';
-        if (s.includes('soft') || s.includes('sok') || s.includes('voda') || s.includes('mate') || s.includes('energy') || s.includes('red bull')) return 'soft_energy';
-        return 'beers';
+    loadFallbackDataset() {
+        this.items = [
+            { id: 'b1', name: 'Zmajsko Pozoj IPA', category: 'beers', price: 4.80, volume: '0.33L', description: 'Legendarni hrvatski West Coast IPA, snažna gorčina i citrusna aroma.', popular: true },
+            { id: 'b2', name: 'Nova Runda C4 IPA', category: 'beers', price: 5.20, volume: '0.5L', description: 'Intenzivni IPA s 4 sorte hmelja. Čista klupska svježina.', popular: true },
+            { id: 'b3', name: 'San Servolo Svijetlo', category: 'beers', price: 4.50, volume: '0.33L', description: 'Istarsko premium craft pivo od prirodne izvorske vode.', popular: false },
+            { id: 'b4', name: 'Heineken / Ožujsko', category: 'beers', price: 4.00, volume: '0.33L', description: 'Klasični hladni lager za plesni podij.', popular: false },
+            { id: 'b5', name: 'Somersby Jabuka Cider', category: 'beers', price: 4.20, volume: '0.33L', description: 'Osvježavajući gazirani voćni cider poslužen na ledu.', popular: false },
+            { id: 'c1', name: 'Gin & Tonic // Masters Edition', category: 'cocktails', price: 7.50, volume: '0.3L', description: 'Old Pilot’s gin, premium tonik, dehidrirana limeta & klekove bobe.', popular: true },
+            { id: 'c2', name: 'Dark & Stormy', category: 'cocktails', price: 7.00, volume: '0.3L', description: 'Kraken Black Spiced rum, Thomas Henry ginger beer, svježa limeta.', popular: true },
+            { id: 'c3', name: 'Negroni Underground', category: 'cocktails', price: 8.00, volume: '0.2L', description: 'Campari, crveni vermut, craft gin, narančina kora.', popular: false },
+            { id: 'c4', name: 'Cuba Libre', category: 'cocktails', price: 6.50, volume: '0.3L', description: 'Havana Club 3yo, Coca Cola, svježe cijeđena limeta.', popular: false },
+            { id: 'c5', name: 'Aperol Spritz', category: 'cocktails', price: 6.50, volume: '0.25L', description: 'Aperol, prosecco, soda, svježa naranča.', popular: false },
+            { id: 's1', name: 'Badakov Pelinkovac Antique', category: 'spirits_shots', price: 3.50, volume: '0.03L', description: 'Izvorni zagrebački biljni liker s komadom naranče.', popular: true },
+            { id: 's2', name: 'Jägermeister', category: 'spirits_shots', price: 3.50, volume: '0.03L', description: 'Ledeno poslužen njemački biljni liker s 56 trava.', popular: false },
+            { id: 's3', name: 'Old Pilot’s Gin (Zagreb)', category: 'spirits_shots', price: 5.00, volume: '0.03L', description: 'Višestruko nagrađivani zagrebački zanatski gin.', popular: true },
+            { id: 's4', name: 'Jack Daniel’s No. 7', category: 'spirits_shots', price: 4.50, volume: '0.03L', description: 'Tennessee sour mash whiskey poslužen solo ili na ledu.', popular: false },
+            { id: 's5', name: 'Jameson Irish Whiskey', category: 'spirits_shots', price: 4.20, volume: '0.03L', description: 'Trostruko destilirani glatki irski viski.', popular: false },
+            { id: 's6', name: 'Tequila Jose Cuervo Especial', category: 'spirits_shots', price: 3.80, volume: '0.03L', description: 'Silver / Gold tequila poslužena sa soli & limunom.', popular: false },
+            { id: 'w1', name: 'Graševina Krauthaker (Kvalitetno)', category: 'wine_bubbles', price: 3.50, volume: '0.1L', description: 'Svježe i suho slavonsko bijelo vino.', popular: false },
+            { id: 'w2', name: 'Plavac Mali Tomić', category: 'wine_bubbles', price: 4.00, volume: '0.1L', description: 'Puno i aromatično dalmatinsko crno vino s Hvara.', popular: false },
+            { id: 'w3', name: 'Prosecco DOC Brut', category: 'wine_bubbles', price: 4.50, volume: '0.1L', description: 'Osvježavajući pjenušac finih mjehurića.', popular: true },
+            { id: 'w4', name: 'Gemišt (Graševina + Jamnica)', category: 'wine_bubbles', price: 3.20, volume: '0.2L', description: 'Kultni zagrebački klupski miks vina i mineralne vode.', popular: true },
+            { id: 'nf1', name: 'Club-Mate (0.33L)', category: 'soft_energy', price: 4.00, volume: '0.33L', description: 'Kultno berlinsko piće od yerba mate čaja s prirodnim kofeinom.', popular: true },
+            { id: 'nf2', name: 'Red Bull Energy Drink', category: 'soft_energy', price: 4.00, volume: '0.25L', description: 'Originalni energizirajući napitak za cjelonoćni rave.', popular: false },
+            { id: 'nf3', name: 'Coca-Cola / Zero', category: 'soft_energy', price: 3.20, volume: '0.25L', description: 'Klasični gazirani osvježavajući napitak.', popular: false },
+            { id: 'nf4', name: 'Jamnica Gazirana Mineralna', category: 'soft_energy', price: 2.50, volume: '0.25L', description: 'Prirodna gazirana mineralna voda.', popular: false },
+            { id: 'nf5', name: 'Prirodna Voda Jana', category: 'soft_energy', price: 2.50, volume: '0.33L', description: 'Izvorska negazirana voda.', popular: false }
+        ];
+        this.updateSyncBadge('OFFLINE DATASET', 'fallback');
+        this.render();
     }
 
-    updateSyncBadge(text, type = 'success') {
+    updateSyncBadge(text, type) {
         if (!this.syncStatus) return;
-        this.syncStatus.textContent = text;
+        const icon = type === 'success' ? '🟢' : (type === 'loading' ? '🟡' : '⚪');
+        this.syncStatus.textContent = `${icon} ${text}`;
         this.syncStatus.className = `sync-badge ${type}`;
     }
 
@@ -326,6 +376,22 @@ export class PricesManager {
             filtered.forEach(item => grid.appendChild(this.createDrinkCard(item)));
             this.menuContainer.appendChild(grid);
         }
+
+        // GSAP Stagger Entrance for Drink Cards
+        if (window.gsap) {
+            window.gsap.fromTo('.drink-card',
+                { autoAlpha: 0, y: 18, scale: 0.98 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.35,
+                    stagger: 0.02,
+                    ease: 'power2.out',
+                    clearProps: 'transform'
+                }
+            );
+        }
     }
 
     createDrinkCard(item) {
@@ -369,6 +435,18 @@ export class PricesManager {
             badge.className = 'popular-badge';
             badge.textContent = '★ CLUB FAVORITE';
             card.appendChild(badge);
+        }
+
+        // GSAP Hover Micro-interaction
+        if (window.gsap) {
+            card.addEventListener('mouseenter', () => {
+                window.gsap.to(card, { y: -2, duration: 0.2, ease: 'power1.out' });
+                window.gsap.to(priceEl, { scale: 1.08, duration: 0.2, ease: 'back.out(2)' });
+            });
+            card.addEventListener('mouseleave', () => {
+                window.gsap.to(card, { y: 0, duration: 0.2, ease: 'power1.out' });
+                window.gsap.to(priceEl, { scale: 1, duration: 0.2, ease: 'power1.out' });
+            });
         }
 
         return card;

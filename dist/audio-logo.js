@@ -397,7 +397,12 @@ class LogoParticleSystem {
             }
         }
 
-        requestAnimationFrame(() => this.tick());
+        if (window.gsap && !this._hasGsapTicker) {
+            this._hasGsapTicker = true;
+            window.gsap.ticker.add(() => this.tick());
+        } else if (!window.gsap) {
+            requestAnimationFrame(() => this.tick());
+        }
     }
 }
 
