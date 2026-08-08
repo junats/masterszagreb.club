@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 async function generateQR() {
-    const targetUrl = 'https://masterszagreb.club/prices';
+    const targetUrl = 'https://masterszagreb.club/prices.html';
     const assestsDir = path.join(__dirname, '..', 'assests');
     
     if (!fs.existsSync(assestsDir)) {

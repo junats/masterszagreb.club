@@ -248,22 +248,22 @@ const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/
 async function fetchViaDirectWebAPI() {
     const cookies = process.env.INSTAGRAM_COOKIES;
     const sessionId = process.env.INSTAGRAM_SESSION_ID;
-    if (!cookies && !sessionId) {
-        throw new Error('No Instagram cookies/session available for direct Web API');
-    }
 
     console.log(`📡 Fetching timeline directly via Instagram Web API (@${INSTAGRAM_HANDLE})...`);
-    const cookieHeader = cookies || `sessionid=${sessionId}`;
+    const headers = {
+        'User-Agent': USER_AGENT,
+        'X-IG-App-ID': '936619743392459',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': `https://www.instagram.com/${INSTAGRAM_HANDLE}/`
+    };
+    if (cookies || sessionId) {
+        headers['Cookie'] = cookies || `sessionid=${sessionId}`;
+    }
+
     const url = `https://www.instagram.com/api/v1/users/web_profile_info/?username=${INSTAGRAM_HANDLE}`;
 
     const res = await axios.get(url, {
-        headers: {
-            'User-Agent': USER_AGENT,
-            'Cookie': cookieHeader,
-            'X-IG-App-ID': '936619743392459',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Referer': 'https://www.instagram.com/'
-        },
+        headers: headers,
         timeout: 15000
     });
 

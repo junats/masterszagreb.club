@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 
 /**
  * MASTERS Zagreb — Drink Price List & Google Sheets / Excel Live Sync Engine
- * URL Target: https://masterszagreb.club/prices
+ * URL Target: https://masterszagreb.club/prices.html
  */
 
 export class PricesManager {
