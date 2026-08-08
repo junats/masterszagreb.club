@@ -2,8 +2,8 @@ name: Scrape Instagram Events
 
 on:
   schedule:
-    # Run once a day at midnight
-    - cron: '0 0 * * *'
+    # Run once a month at midnight on the 1st
+    - cron: '0 0 1 * *'
   workflow_dispatch:
     # Allow manual triggers from the Actions tab
 
@@ -29,8 +29,17 @@ jobs:
       - name: Run Instagram scraper
         env:
             INSTAGRAM_HANDLE: masters.zagreb
-            MAX_POSTS: '12'
+            MAX_POSTS: '30'
+            INSTAGRAM_SESSION_ID: ${{ secrets.INSTAGRAM_SESSION_ID }}
+            APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
         run: node scripts/scrape-instagram.js
+
+      - name: Run Instagram story scraper
+        env:
+            INSTAGRAM_HANDLE: masters.zagreb
+            INSTAGRAM_SESSION_ID: ${{ secrets.INSTAGRAM_SESSION_ID }}
+            APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+        run: node scripts/scrape-stories.js
 
       - name: Check for changes
         id: changes

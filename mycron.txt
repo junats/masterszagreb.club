@@ -1,0 +1,1 @@
+0 2 1 * * /usr/bin/env node /Users/mark/Projects/masters/nightclub-website/scripts/scrape-instagram.js >> /Users/mark/Projects/masters/nightclub-website/cron.log 2>&1

@@ -114,19 +114,22 @@ function extractDate(caption, postDateStr) {
         return `${day}.${month}.${match[3]}`;
     }
 
-    // 3. DD.MM. (no year)
-    match = caption.match(/(\d{1,2})[.\/-](\d{1,2})\./);
+    // 3. DD.MM. or DD.MM (with or without trailing dot, e.g. 8.8. or 22.08)
+    match = caption.match(/(?:^|[^\d])(\d{1,2})[.\/-](\d{1,2})(?:\.|\b)/);
     if (match) {
-        const day = match[1].padStart(2, '0');
-        const month = match[2].padStart(2, '0');
-        // Assume current year if it's near or after postDate, or next year if it's in the past relative to postDate
-        let year = currentYear;
-        const testDate = new Date(year, parseInt(month) - 1, parseInt(day));
-        if (testDate < referenceDate && (referenceDate - testDate) > 1000 * 60 * 60 * 24 * 60) {
-            // More than 60 days in the past? Assume next year.
-            year++;
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10);
+        // Validate range to avoid matching times like "23.59."
+        if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+            const dayStr = String(day).padStart(2, '0');
+            const monthStr = String(month).padStart(2, '0');
+            let year = currentYear;
+            const testDate = new Date(year, month - 1, day);
+            if (testDate < referenceDate && (referenceDate - testDate) > 1000 * 60 * 60 * 24 * 60) {
+                year++;
+            }
+            return `${dayStr}.${monthStr}.${year}`;
         }
-        return `${day}.${month}.${year}`;
     }
 
     // 4. English month names with ordinals

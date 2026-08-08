@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 const version = Date.now();
-const files = ['dist/index.html', 'dist/merch.html'];
+const files = ['dist/index.html', 'dist/merch.html', 'dist/prices.html'];
 
 files.forEach(file => {
     if (fs.existsSync(file)) {

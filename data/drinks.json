@@ -1,0 +1,359 @@
+{
+  "updatedAt": "2026-08-08T18:10:00.000Z",
+  "currency": "EUR",
+  "currencySymbol": "€",
+  "googleSheetSyncUrl": "",
+  "categories": [
+    {
+      "id": "beers",
+      "name": "Beers & Ciders",
+      "subtitle": "Točeno pivo & Craft selekcija"
+    },
+    {
+      "id": "cocktails",
+      "name": "Cocktails & Long Drinks",
+      "subtitle": "Klupski klasici & Signature miksevi"
+    },
+    {
+      "id": "spirits_shots",
+      "name": "Spirits & Shots",
+      "subtitle": "Domaća žestica, Gin, Vodka & Whiskey"
+    },
+    {
+      "id": "wine_bubbles",
+      "name": "Wine & Bubbles",
+      "subtitle": "Lokalna vina & Pjenušci"
+    },
+    {
+      "id": "soft_energy",
+      "name": "Soft & Energy",
+      "subtitle": "Club Mate, Red Bull & Bezalkoholna"
+    }
+  ],
+  "items": [
+    {
+      "id": "b-01",
+      "category": "beers",
+      "name": "Ožujsko Točeno",
+      "volume": "0.50L",
+      "price": 3.80,
+      "description": "Svježe točeno svijetlo pivo",
+      "popular": true
+    },
+    {
+      "id": "b-02",
+      "category": "beers",
+      "name": "Ožujsko Točeno",
+      "volume": "0.33L",
+      "price": 3.00,
+      "description": "Svježe točeno svijetlo pivo",
+      "popular": false
+    },
+    {
+      "id": "b-03",
+      "category": "beers",
+      "name": "Karlovačko",
+      "volume": "0.50L",
+      "price": 3.80,
+      "description": "Hrvatsko lager pivo u boci",
+      "popular": false
+    },
+    {
+      "id": "b-04",
+      "category": "beers",
+      "name": "San Servolo Istarsko Craft IPA",
+      "volume": "0.33L",
+      "price": 5.20,
+      "description": "Autentični istarski nefiltrirani craft IPA",
+      "popular": true
+    },
+    {
+      "id": "b-05",
+      "category": "beers",
+      "name": "San Servolo Red Ale",
+      "volume": "0.33L",
+      "price": 5.00,
+      "description": "Crveno craft pivo bogatog okusa",
+      "popular": false
+    },
+    {
+      "id": "b-06",
+      "category": "beers",
+      "name": "Heineken",
+      "volume": "0.33L",
+      "price": 4.50,
+      "description": "Premium lager",
+      "popular": false
+    },
+    {
+      "id": "b-07",
+      "category": "beers",
+      "name": "Guinness Extra Stout",
+      "volume": "0.33L",
+      "price": 5.50,
+      "description": "Tamni irski stout",
+      "popular": false
+    },
+    {
+      "id": "b-08",
+      "category": "beers",
+      "name": "Somersby Apple Cider",
+      "volume": "0.33L",
+      "price": 4.20,
+      "description": "Osvježavajući cider od jabuke",
+      "popular": false
+    },
+    {
+      "id": "c-01",
+      "category": "cocktails",
+      "name": "Club Mate Vodka",
+      "volume": "0.40L",
+      "price": 7.50,
+      "description": "Berlin clubbing klasika: Club Mate + Smirnoff Vodka",
+      "popular": true
+    },
+    {
+      "id": "c-02",
+      "category": "cocktails",
+      "name": "Gin Tonic Tanqueray",
+      "volume": "0.30L",
+      "price": 7.00,
+      "description": "Tanqueray London Dry, Thomas Henry Tonic, limeta, smreka",
+      "popular": true
+    },
+    {
+      "id": "c-03",
+      "category": "cocktails",
+      "name": "Hendrick's Gin Tonic",
+      "volume": "0.30L",
+      "price": 8.50,
+      "description": "Hendrick's Gin, Premium Tonic, svježi krastavac i papar",
+      "popular": false
+    },
+    {
+      "id": "c-04",
+      "category": "cocktails",
+      "name": "Vodka Red Bull",
+      "volume": "0.30L",
+      "price": 7.50,
+      "description": "Smirnoff Vodka + Red Bull Energy",
+      "popular": true
+    },
+    {
+      "id": "c-05",
+      "category": "cocktails",
+      "name": "Cuba Libre",
+      "volume": "0.30L",
+      "price": 7.00,
+      "description": "Havana Club Especial 7y, Coca-Cola, limeta",
+      "popular": false
+    },
+    {
+      "id": "c-06",
+      "category": "cocktails",
+      "name": "Moscow Mule",
+      "volume": "0.30L",
+      "price": 8.00,
+      "description": "Vodka, đumbirovo pivo, svježi sok limete, menta",
+      "popular": true
+    },
+    {
+      "id": "c-07",
+      "category": "cocktails",
+      "name": "Aperol Spritz",
+      "volume": "0.25L",
+      "price": 6.80,
+      "description": "Aperol, Prosecco, soda, kriška naranče",
+      "popular": false
+    },
+    {
+      "id": "c-08",
+      "category": "cocktails",
+      "name": "Negroni",
+      "volume": "0.15L",
+      "price": 8.00,
+      "description": "Campari, Tanqueray Gin, Slatki Vermouth, narančina kora",
+      "popular": true
+    },
+    {
+      "id": "s-01",
+      "category": "spirits_shots",
+      "name": "Pelinkovac Antique",
+      "volume": "0.03L",
+      "price": 3.20,
+      "description": "Autentični hrvatski biljni liker iz 1862.",
+      "popular": true
+    },
+    {
+      "id": "s-02",
+      "category": "spirits_shots",
+      "name": "Pelinkovac Badel",
+      "volume": "0.03L",
+      "price": 2.80,
+      "description": "Klasični gorki biljni liker",
+      "popular": false
+    },
+    {
+      "id": "s-03",
+      "category": "spirits_shots",
+      "name": "Jägermeister",
+      "volume": "0.03L",
+      "price": 3.50,
+      "description": "Ledeni biljni liker",
+      "popular": true
+    },
+    {
+      "id": "s-04",
+      "category": "spirits_shots",
+      "name": "Domaća Šljivovica",
+      "volume": "0.03L",
+      "price": 3.00,
+      "description": "Odležana voćna rakija od šljive",
+      "popular": false
+    },
+    {
+      "id": "s-05",
+      "category": "spirits_shots",
+      "name": "Travarica Vrhunska",
+      "volume": "0.03L",
+      "price": 3.00,
+      "description": "Aromatična dalmatinska travarica",
+      "popular": false
+    },
+    {
+      "id": "s-06",
+      "category": "spirits_shots",
+      "name": "Tequila Olmeca Silver / Gold",
+      "volume": "0.03L",
+      "price": 3.50,
+      "description": "Meksička tekila",
+      "popular": true
+    },
+    {
+      "id": "s-07",
+      "category": "spirits_shots",
+      "name": "Jack Daniel's No. 7",
+      "volume": "0.03L",
+      "price": 4.50,
+      "description": "Tennessee Whiskey",
+      "popular": true
+    },
+    {
+      "id": "s-08",
+      "category": "spirits_shots",
+      "name": "Jameson Irish Whiskey",
+      "volume": "0.03L",
+      "price": 4.20,
+      "description": "Trostruko destilirani irski viski",
+      "popular": false
+    },
+    {
+      "id": "s-09",
+      "category": "spirits_shots",
+      "name": "Belvedere Vodka",
+      "volume": "0.03L",
+      "price": 5.50,
+      "description": "Ultra-premium ražena vodka",
+      "popular": false
+    },
+    {
+      "id": "w-01",
+      "category": "wine_bubbles",
+      "name": "Graševina Krauthaker (Bijelo)",
+      "volume": "0.15L",
+      "price": 4.20,
+      "description": "Vrhunsko slavonsko suho bijelo vino",
+      "popular": true
+    },
+    {
+      "id": "w-02",
+      "category": "wine_bubbles",
+      "name": "Malvazija Istarska Kozlović",
+      "volume": "0.15L",
+      "price": 4.80,
+      "description": "Svježa istarska malvazija mineralnih nota",
+      "popular": true
+    },
+    {
+      "id": "w-03",
+      "category": "wine_bubbles",
+      "name": "Plavac Mali Dingač (Crno)",
+      "volume": "0.15L",
+      "price": 5.00,
+      "description": "Moćno pelješko crno vino",
+      "popular": false
+    },
+    {
+      "id": "w-04",
+      "category": "wine_bubbles",
+      "name": "Prosecco DOC Brut",
+      "volume": "0.15L",
+      "price": 5.00,
+      "description": "Talijanski pjenušac",
+      "popular": true
+    },
+    {
+      "id": "w-05",
+      "category": "wine_bubbles",
+      "name": "Moët & Chandon Brut Impérial",
+      "volume": "0.75L",
+      "price": 95.00,
+      "description": "Francuski premium šampanjac (boca)",
+      "popular": false
+    },
+    {
+      "id": "na-01",
+      "category": "soft_energy",
+      "name": "Club Mate",
+      "volume": "0.33L",
+      "price": 4.50,
+      "description": "Kultni prirodni napitak s ekstraktom mate čaja",
+      "popular": true
+    },
+    {
+      "id": "na-02",
+      "category": "soft_energy",
+      "name": "Red Bull Energy Drink",
+      "volume": "0.25L",
+      "price": 4.20,
+      "description": "Original / Sugarfree",
+      "popular": true
+    },
+    {
+      "id": "na-03",
+      "category": "soft_energy",
+      "name": "Jamnica Mineralna Gazirana",
+      "volume": "0.50L",
+      "price": 2.50,
+      "description": "Prirodna mineralna voda",
+      "popular": false
+    },
+    {
+      "id": "na-04",
+      "category": "soft_energy",
+      "name": "Jana Negazirana Voda",
+      "volume": "0.50L",
+      "price": 2.50,
+      "description": "Prirodna izvorska voda",
+      "popular": false
+    },
+    {
+      "id": "na-05",
+      "category": "soft_energy",
+      "name": "Coca-Cola / Zero",
+      "volume": "0.25L",
+      "price": 3.20,
+      "description": "Staklena bočica",
+      "popular": false
+    },
+    {
+      "id": "na-06",
+      "category": "soft_energy",
+      "name": "Thomas Henry Tonic Water",
+      "volume": "0.20L",
+      "price": 3.50,
+      "description": "Premium craft tonik",
+      "popular": false
+    }
+  ]
+}

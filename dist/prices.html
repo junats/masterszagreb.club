@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
+    <title>MASTERS Zagreb — Bar Drinks & Price List</title>
+    <meta name="title" content="MASTERS Zagreb — Bar Drinks & Price List">
+    <meta name="description"
+        content="Official bar drinks menu and price list for MASTERS Zagreb. Craft beers, signature cocktails, authentic Croatian spirits, wines, Club Mate, and non-alcoholic drinks.">
+    <meta name="keywords"
+        content="MASTERS Zagreb, drinks menu, price list, bar prices, craft beer, cocktails, Pelinkovac, Club Mate, Zagreb nightlife">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://masterszagreb.club/prices">
+    <meta property="og:title" content="MASTERS Zagreb — Bar Drinks & Price List">
+    <meta property="og:description"
+        content="Official bar drinks menu and price list for MASTERS Zagreb. Craft beers, signature cocktails, Croatian spirits, wines, Club Mate, and energy drinks.">
+    <meta property="og:image" content="https://masterszagreb.club/assests/qr-prices.png">
+    <meta property="og:site_name" content="MASTERS Zagreb">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://masterszagreb.club/prices">
+    <meta name="twitter:title" content="MASTERS Zagreb — Bar Drinks & Price List">
+    <meta name="twitter:description"
+        content="Official bar drinks menu and price list for MASTERS Zagreb in EUR (€).">
+    <meta name="twitter:image" content="https://masterszagreb.club/assests/qr-prices.png">
+
+    <!-- Structured Data — Menu / Bar -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Menu",
+        "name": "MASTERS Zagreb Bar Menu",
+        "description": "Beverages, craft beers, cocktails, Croatian spirits, and soft drinks price list.",
+        "url": "https://masterszagreb.club/prices",
+        "inLanguage": "en,hr",
+        "mainEntityOfPage": "https://masterszagreb.club/prices"
+    }
+    </script>
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://masterszagreb.club/prices">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="prices.css?v=1786207344874">
+</head>
+
+<body>
+    <!-- Ambient Film Grain -->
+    <div class="grain-overlay"></div>
+
+    <!-- Sticky Navigation & Sync Bar -->
+    <header class="prices-header">
+        <div class="header-container">
+            <div class="header-left">
+                <a href="index.html" class="back-btn" aria-label="Return to Masters Home">
+                    <span>◀</span> MASTERS HOME
+                </a>
+                <div class="header-brand">
+                    <span class="brand-title">MASTERS // BAR</span>
+                    <span class="brand-subtitle">ZAGREB UNDERGROUND DRINKS</span>
+                </div>
+            </div>
+
+            <!-- Header right actions (Commented out)
+            <div class="header-right">
+                <div id="syncStatus" class="sync-badge success">🟢 LIVE AUTO-SYNC</div>
+                <button class="action-btn primary" id="openQrBtn" title="View & Download Bar QR Code">
+                    📱 BAR QR CODE
+                </button>
+                <button class="action-btn" onclick="window.print()" title="Print Physical Menu">
+                    🖨 PRINT
+                </button>
+            </div>
+            -->
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main>
+        <!-- Hero Section -->
+        <section class="prices-hero">
+            <div class="hero-main">
+                <div>
+                    <h1 class="hero-headline">BAR & DRINKS <span>PRICES</span></h1>
+                    <p class="hero-desc">
+                        Official beverage price list for MASTERS Zagreb. All prices are in EUR (€) including VAT.
+                    </p>
+                </div>
+
+                <!-- Mini QR Badge (Commented out)
+                <div class="qr-mini-badge" id="miniQrBadge" onclick="document.getElementById('qrModal').classList.add('active')">
+                    <div class="qr-thumb">
+                        <img src="assests/qr-prices.svg" alt="MASTERS Bar QR Code">
+                    </div>
+                    <div>
+                        <div class="qr-info-title">📱 SCAN TO VIEW ON MOBILE</div>
+                        <div class="qr-info-url">masterszagreb.club/prices</div>
+                    </div>
+                </div>
+                -->
+            </div>
+
+            <!-- Controls (Search, Categories & Sorting) -->
+            <div class="controls-bar">
+                <div class="search-row">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="drinksSearch" class="search-input"
+                            placeholder="Search drinks (e.g. Gin, Beer, Mate, Pelinkovac, IPA)..."
+                            aria-label="Search drinks menu">
+                    </div>
+
+                    <select id="sortSelect" class="sort-select" aria-label="Sort drinks">
+                        <option value="default">SORT: DEFAULT</option>
+                        <option value="popular">SORT: POPULAR FIRST</option>
+                        <option value="price-asc">PRICE: LOW TO HIGH</option>
+                        <option value="price-desc">PRICE: HIGH TO LOW</option>
+                    </select>
+                </div>
+
+                <div class="pills-row" role="tablist" aria-label="Drink categories">
+                    <button class="category-pill active" data-category="all">ALL DRINKS</button>
+                    <button class="category-pill" data-category="beers">BEERS & CIDERS</button>
+                    <button class="category-pill" data-category="cocktails">COCKTAILS & LONG DRINKS</button>
+                    <button class="category-pill" data-category="spirits_shots">SPIRITS & SHOTS</button>
+                    <button class="category-pill" data-category="wine_bubbles">WINE & BUBBLES</button>
+                    <button class="category-pill" data-category="soft_energy">SOFT & ENERGY</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Drinks Listing Container -->
+        <section class="prices-content" id="drinksContainer" aria-live="polite">
+            <!-- Rendered dynamically by js/prices-sync.js -->
+        </section>
+    </main>
+
+    <!-- QR Code Modal Dialog -->
+    <div class="modal-backdrop" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title" id="qrModalTitle">📱 BAR QR CODE // MASTERS ZAGREB</div>
+                <button class="modal-close-btn" id="closeQrBtn" aria-label="Close QR Modal">✕</button>
+            </div>
+
+            <div class="qr-display-wrap">
+                <div class="qr-large-frame">
+                    <img src="assests/qr-prices.svg" alt="MASTERS Bar QR Code">
+                </div>
+                <div class="qr-target-url">URL: https://masterszagreb.club/prices</div>
+                <p style="font-size: 11px; color: #888888; max-width: 380px;">
+                    Scan with any phone camera to instantly access the live drinks menu at the bar.
+                    Print-ready SVG and PNG formats available for table stands and bar displays.
+                </p>
+                <div class="qr-actions">
+                    <a href="assests/qr-prices.svg" download="masters-bar-qr.svg" class="action-btn primary">
+                        ⬇ DOWNLOAD SVG
+                    </a>
+                    <a href="assests/qr-prices.png" download="masters-bar-qr.png" class="action-btn">
+                        ⬇ DOWNLOAD PNG
+                    </a>
+                    <button class="action-btn" onclick="window.print()">
+                        🖨 PRINT QR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Engine Scripts -->
+    <script type="module" src="js/prices-sync.js?v=1786207344874"></script>
+</body>
+
+</html>

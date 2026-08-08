@@ -1,6 +1,6 @@
-# robots.txt for MASTERS nightclub website
+# robots.txt for MASTERS Zagreb
 User-agent: *
 Allow: /
 
-# Sitemap — UPDATE with your live domain
-Sitemap: https://masters-club.com/sitemap.xml
+# Sitemap
+Sitemap: https://masterszagreb.club/sitemap.xml

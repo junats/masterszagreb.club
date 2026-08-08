@@ -20,9 +20,18 @@ export class MatrixEventManager {
     }
     
     setupEventListeners() {
-        const morphToggleBtn = document.getElementById('morphToggleBtn');
-        if (morphToggleBtn) {
-            morphToggleBtn.addEventListener('click', () => this.toggleMatrix());
+        // Logo in top-left corner is the toggle trigger
+        const logo = document.getElementById('svgLogo');
+        if (logo) {
+            logo.addEventListener('click', () => this.toggleMatrix());
+        }
+
+        // Close button inside dialog
+        const closeBtn = document.getElementById('matrixCloseBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                if (this.matrixActive) this.toggleMatrix();
+            });
         }
         
         // Close on Escape key
@@ -35,16 +44,24 @@ export class MatrixEventManager {
 
     toggleMatrix() {
         this.matrixActive = !this.matrixActive;
-        const morphToggleBtn = document.getElementById('morphToggleBtn');
+        const logo = document.getElementById('svgLogo');
         
         if (this.matrixActive) {
+            document.body.classList.add('events-open');
             this.matrixContainer.classList.add('active');
-            if (morphToggleBtn) morphToggleBtn.classList.add('active');
+            if (logo) {
+                logo.classList.add('events-active');
+                logo.setAttribute('aria-expanded', 'true');
+            }
             this.startMatrixRain();
             this.loadEvents();
         } else {
+            document.body.classList.remove('events-open');
             this.matrixContainer.classList.remove('active');
-            if (morphToggleBtn) morphToggleBtn.classList.remove('active');
+            if (logo) {
+                logo.classList.remove('events-active');
+                logo.setAttribute('aria-expanded', 'false');
+            }
             this.stopMatrixRain();
             this.clearMessages();
         }
@@ -66,7 +83,7 @@ export class MatrixEventManager {
         }
     }
 
-    // ── Events Loading (from scraped Instagram JSON) ────────────────────
+    // ── Events Loading (from active and archive Instagram JSON) ────────
 
     async loadEvents() {
         if (!this.eventMessages) return;
@@ -77,16 +94,39 @@ export class MatrixEventManager {
         this.eventMessages.appendChild(loadingEl);
         
         try {
-            // Always try to fetch fresh data (bypassing old cache)
-            if (CONFIG.EVENTS_JSON_URL) {
-                const response = await fetch(`${CONFIG.EVENTS_JSON_URL}?t=${Date.now()}`);
-                if (!response.ok) throw new Error(`Events fetch failed: ${response.status}`);
-                const events = await response.json();
-                this.events = Array.isArray(events) ? events : [];
-                this.cacheEvents(this.events);
-            } else {
-                this.events = this.getCachedEvents() || this.getDemoEvents();
+            // Clean up old localStorage keys
+            try {
+                localStorage.removeItem('masters_events_cache');
+                localStorage.removeItem('masters_events_cache_v2');
+            } catch (e) {}
+
+            // Fetch both active events and archived events
+            const [activeRes, archiveRes] = await Promise.allSettled([
+                fetch(`data/events.json?t=${Date.now()}`),
+                fetch(`data/events-archive.json?t=${Date.now()}`)
+            ]);
+
+            const activeEvents = (activeRes.status === 'fulfilled' && activeRes.value.ok) 
+                ? await activeRes.value.json() 
+                : [];
+            
+            const archiveEvents = (archiveRes.status === 'fulfilled' && archiveRes.value.ok) 
+                ? await archiveRes.value.json() 
+                : [];
+
+            // Combine and deduplicate
+            const pool = Array.isArray(activeEvents) ? [...activeEvents] : [];
+            if (Array.isArray(archiveEvents)) {
+                for (const item of archiveEvents) {
+                    const exists = pool.some(e => 
+                        (e.date && e.date === item.date) || 
+                        (e.title && e.title.toLowerCase().trim() === item.title.toLowerCase().trim())
+                    );
+                    if (!exists) pool.push(item);
+                }
             }
+
+            this.events = pool.length > 0 ? pool : this.getDemoEvents();
         } catch (error) {
             console.warn('Events fetch failed, using demo events:', error.message);
             this.events = this.getDemoEvents();
@@ -95,185 +135,194 @@ export class MatrixEventManager {
         this.displayEvents();
     }
 
-    // ── LocalStorage Cache ─────────────────────────────────────────────
-
-    getCachedEvents() {
-        try {
-            const raw = localStorage.getItem('masters_events_cache');
-            if (!raw) return null;
-            const { events, timestamp } = JSON.parse(raw);
-            const ageMinutes = (Date.now() - timestamp) / 60000;
-            if (ageMinutes > CONFIG.EVENTS_CACHE_MINUTES) {
-                localStorage.removeItem('masters_events_cache');
-                return null;
-            }
-            return events;
-        } catch {
-            return null;
-        }
-    }
-
-    cacheEvents(events) {
-        try {
-            localStorage.setItem('masters_events_cache', JSON.stringify({
-                events,
-                timestamp: Date.now()
-            }));
-        } catch {
-            // localStorage full or unavailable — no big deal
-        }
-    }
-
     // ── Fallback Demo Events ───────────────────────────────────────────
 
     getDemoEvents() {
+        const now = new Date();
+        const todayStr = this.formatDateISOLike(now);
+
         return [
             {
-                title: "COMFORT ZONE — MOARE & MORNIK",
-                date: "2026-04-03",
+                title: "SUBOTA 8.8.  MOZER × SPINNSKI",
+                date: todayStr,
                 time: "23:00",
-                description: "All Night Long set. Sound at the intersection of house, deep house, and electro.",
-                image: "assests/club-01.webp",
-                instagramUrl: "https://www.instagram.com/p/DWUXDt0CDf5/"
-            },
-            {
-                title: "GREENLIGHT — PER HAMMAR",
-                date: "2026-04-04",
-                time: "23:00",
-                description: "Per Hammar (Dirty Hands / Malmö), Andreas, Grenco, Ian Staraj. Dug-out vinyl and original re-edits.",
-                image: "assests/club-04.webp",
-                instagramUrl: "https://www.instagram.com/p/DWRSrghCJoI/"
-            },
-            {
-                title: "CARNERO B2B BORUT CVAJNER",
-                date: "2026-04-10",
-                time: "23:00",
-                description: "Carnero and Borut Cvajner go back-to-back for a night of deep grooves.",
-                image: "assests/club-05.webp",
-                instagramUrl: "https://www.instagram.com/p/DWOR1K8Db-2/"
-            },
-            {
-                title: "GRUV HIPNOZA — DLV",
-                date: "2026-05-09",
-                time: "23:00",
-                description: "Old school meets new techno. DLV vinyl-only set on the terrace.",
-                image: "assests/club-06.webp",
-                instagramUrl: "https://www.instagram.com/p/DWWrdt4DGaA/"
-            },
-            {
-                title: "MINDBEND — DAV BIRTHDAY CELEBRATION",
-                date: "2026-05-23",
-                time: "23:00",
-                description: "Mindbend returns with DAV and Tau Car for a special birthday celebration.",
-                image: "assests/club-07.webp",
-                instagramUrl: "https://www.instagram.com/p/DWUAcl0iqrR/"
+                description: "vinyl all night",
+                image: "assests/events/post-DbodVNtI17B.jpg",
+                instagramUrl: "https://www.instagram.com/p/DbodVNtI17B/"
             }
         ];
     }
 
-    // ── Display Logic ──────────────────────────────────────────────
+    formatDateISOLike(d) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}.${month}.${d.getFullYear()}`;
+    }
+
+    // ── Display Logic (Next 5 Upcoming & Last 10 Past Events) ──────────
 
     displayEvents() {
         if (!this.eventMessages) return;
         this.eventMessages.textContent = '';
-        
-        const grid = document.createElement('div');
-        grid.className = 'events-grid';
-        this.eventMessages.appendChild(grid);
 
-        // 1. Precise local date calculation for current weekend
         const now = new Date();
-        const weekendDates = this.getWeekendDates(now);
-        
-        const topRow = [];
-        const bottomRow = [];
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-        // Step A: Top row MUST be Friday, Saturday, Sunday of this week
-        weekendDates.forEach(dateInfo => {
-            const match = this.events.find(e => this.compareDates(e.date, dateInfo.iso));
-            if (match) {
-                topRow.push({ ...match, isTBA: false });
-            } else {
-                topRow.push({
-                    title: "TBA — NIGHTCLUB EVENT",
-                    date: dateInfo.iso,
-                    description: "Schedule pending. See Instagram for details.",
-                    instagramUrl: "https://www.instagram.com/masters.zagreb/",
-                    isTBA: true
-                });
-            }
-        });
-
-        // Step B: Bottom row shows the next 3 future events AFTER Sunday
-        const lastWeekendDay = this.parseDateString(weekendDates[2].iso);
-        const futureEvents = this.events
+        // 1. Next 5 Upcoming Events (on or after today, earliest first)
+        const upcomingEvents = this.events
             .filter(e => {
                 const eDate = this.parseDateString(e.date);
-                return eDate && eDate > lastWeekendDay;
+                return eDate && eDate >= today;
             })
-            .sort((a, b) => this.parseDateString(a.date) - this.parseDateString(b.date));
+            .sort((a, b) => {
+                const dA = this.parseDateString(a.date);
+                const dB = this.parseDateString(b.date);
+                return dA - dB;
+            })
+            .slice(0, 5);
 
-        bottomRow.push(...futureEvents.slice(0, 3));
+        // 2. Last 10 Past Events (before today, most recent first)
+        const pastEvents = this.events
+            .filter(e => {
+                const eDate = this.parseDateString(e.date);
+                return eDate && eDate < today;
+            })
+            .sort((a, b) => {
+                const dA = this.parseDateString(a.date);
+                const dB = this.parseDateString(b.date);
+                return dB - dA; // most recent first
+            })
+            .slice(0, 10);
 
-        // Fill gaps if less than 3 upcoming events exist
-        while (bottomRow.length < 3) {
-            bottomRow.push({
-                title: "UPCOMING EVENT",
-                date: "TBC",
-                description: "Scanning for next transmission...",
-                isTBA: true
-            });
+        if (upcomingEvents.length === 0 && pastEvents.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'loading-indicator';
+            empty.textContent = 'NO EVENTS FOUND IN DATABASE';
+            this.eventMessages.appendChild(empty);
+            return;
         }
 
-        // Render all 6 slots
-        [...topRow, ...bottomRow].forEach((event, index) => {
-            grid.appendChild(this.createEventCard(event, index));
-        });
+        // Render Section 1: Next 5 Upcoming Events
+        if (upcomingEvents.length > 0) {
+            const upcomingSection = document.createElement('div');
+            upcomingSection.className = 'events-section';
+
+            const sectionTitle = document.createElement('div');
+            sectionTitle.className = 'events-section-title';
+            sectionTitle.innerHTML = `<span>NEXT EVENTS</span><span class="badge">[${upcomingEvents.length} UPCOMING]</span>`;
+            upcomingSection.appendChild(sectionTitle);
+
+            const grid = document.createElement('div');
+            grid.className = 'events-grid';
+            upcomingEvents.forEach((event, index) => {
+                grid.appendChild(this.createEventCard(event, index, false));
+            });
+            upcomingSection.appendChild(grid);
+            this.eventMessages.appendChild(upcomingSection);
+        }
+
+        // Render Section 2: Last 10 Past Events
+        if (pastEvents.length > 0) {
+            const pastSection = document.createElement('div');
+            pastSection.className = 'events-section';
+
+            const sectionTitle = document.createElement('div');
+            sectionTitle.className = 'events-section-title';
+            sectionTitle.innerHTML = `<span>PAST EVENTS</span><span class="badge">[LAST ${pastEvents.length} ARCHIVES]</span>`;
+            pastSection.appendChild(sectionTitle);
+
+            const grid = document.createElement('div');
+            grid.className = 'events-grid';
+            pastEvents.forEach((event, index) => {
+                grid.appendChild(this.createEventCard(event, index, true));
+            });
+            pastSection.appendChild(grid);
+            this.eventMessages.appendChild(pastSection);
+        }
     }
 
-    createEventCard(event, index) {
+    getNightclubFallback(index, seed = '') {
+        const list = (CONFIG.clubImages && CONFIG.clubImages.length > 0)
+            ? CONFIG.clubImages
+            : [
+                'assests/club-01.webp', 'assests/club-04.webp', 'assests/club-05.webp',
+                'assests/club-06.webp', 'assests/club-07.webp', 'assests/club-08.webp',
+                'assests/club-09.webp', 'assests/club-10.webp', 'assests/club-11.webp',
+                'assests/club-12.webp', 'assests/club-12a.webp', 'assests/club-13.webp',
+                'assests/club-14.webp'
+            ];
+        let hash = 0;
+        const str = String(seed || index);
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash * 31 + str.charCodeAt(i)) | 0;
+        }
+        const idx = Math.abs(hash + index) % list.length;
+        return list[idx];
+    }
+
+    createEventCard(event, index, isPast = false) {
         const card = document.createElement('div');
-        card.className = `event-card ${event.isTBA ? 'tba-card' : ''}`;
+        card.className = `event-card ${isPast ? 'past-card' : ''}`;
         card.style.opacity = '0';
 
-        const textSide = document.createElement('div');
-        textSide.className = 'event-card-text';
+        // Select initial image: flyer image or atmospheric nightclub photo fallback
+        const fallbackSrc = this.getNightclubFallback(index, event.title);
+        const imageSrc = event.image || fallbackSrc;
+
+        const flyerImg = document.createElement('img');
+        flyerImg.src = imageSrc;
+        flyerImg.alt = `${event.title} Flyer`;
+        flyerImg.className = 'event-flyer-img';
+
+        // If image fails to load, gracefully fall back to atmospheric nightclub shot
+        flyerImg.onerror = () => {
+            if (!flyerImg.dataset.failed) {
+                flyerImg.dataset.failed = 'true';
+                flyerImg.src = fallbackSrc;
+            }
+        };
 
         if (event.instagramUrl) {
-            const link = document.createElement('a');
-            link.href = event.instagramUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.className = 'event-title-link';
-            const titleEl = document.createElement('div');
-            titleEl.className = 'event-message event-title';
-            titleEl.textContent = event.title;
-            link.appendChild(titleEl);
-            textSide.appendChild(link);
+            const flyerLink = document.createElement('a');
+            flyerLink.href = event.instagramUrl;
+            flyerLink.target = '_blank';
+            flyerLink.rel = 'noopener noreferrer';
+            flyerLink.className = 'event-flyer-link';
+            flyerLink.appendChild(flyerImg);
+            card.appendChild(flyerLink);
         } else {
-            const titleEl = document.createElement('div');
-            titleEl.className = 'event-message event-title';
-            titleEl.textContent = event.title;
-            textSide.appendChild(titleEl);
+            const flyerWrap = document.createElement('div');
+            flyerWrap.className = 'event-flyer-link';
+            flyerWrap.appendChild(flyerImg);
+            card.appendChild(flyerWrap);
         }
 
-        const dateStr = event.date === 'TBC' ? 'DATE TBC' : this.formatDate(event.date);
-        const dateTimeStr = (event.time && event.date !== 'TBC') ? `${dateStr} — ${event.time}` : dateStr;
-        
+        // Text metadata below the portrait image
+        const textSection = document.createElement('div');
+        textSection.className = 'event-card-text';
+
         const dateEl = document.createElement('div');
         dateEl.className = 'event-message event-date';
-        dateEl.textContent = dateTimeStr;
-        textSide.appendChild(dateEl);
+        dateEl.textContent = event.date || 'DATE TBD';
+        textSection.appendChild(dateEl);
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'event-message event-title';
+        titleEl.textContent = event.title;
+        textSection.appendChild(titleEl);
 
         if (event.description) {
             const descEl = document.createElement('div');
             descEl.className = 'event-message event-description';
-            descEl.textContent = event.description;
-            textSide.appendChild(descEl);
+            descEl.textContent = event.description.length > 120 
+                ? event.description.substring(0, 120) + '…' 
+                : event.description;
+            textSection.appendChild(descEl);
         }
 
-        card.appendChild(textSide);
-        setTimeout(() => { card.style.opacity = '1'; }, 200 + index * 100);
+        card.appendChild(textSection);
+
+        setTimeout(() => { card.style.opacity = '1'; }, 100 + index * 60);
         return card;
     }
 

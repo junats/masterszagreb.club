@@ -1,8 +1,11 @@
-// Configuration and Constants
-
 export const CONFIG = {
-    // Array of new background images from the assests folder
-    backgroundImages: [
+    // Verified active & upcoming scraped Instagram event flyers
+    flyerImages: [
+        'assests/events/post-DbodVNtI17B.jpg',
+        'assests/events/post-Dbs8BJqIqBJ.jpg'
+    ],
+    // Authentic atmospheric nightclub photos
+    clubImages: [
         'assests/club-01.webp',
         'assests/club-04.webp',
         'assests/club-05.webp',
@@ -17,11 +20,16 @@ export const CONFIG = {
         'assests/club-13.webp',
         'assests/club-14.webp'
     ],
+    // Fallback backgroundImages property for backward compatibility
+    backgroundImages: [
+        'assests/events/post-DbodVNtI17B.jpg',
+        'assests/events/post-Dbs8BJqIqBJ.jpg'
+    ],
     // Background rotation timing in ms
-    // 20s dwell — slow, ambient; 2.5s crossfade — cinematic breathing
-    rotationIntervalMs: 8000,
-    transitionDurationMs: 2500,
-    fadeHalfPointMs: 1500,
+    // 7s dwell per slide; 1.0s crossfade
+    rotationIntervalMs: 7000,
+    transitionDurationMs: 1000,
+    fadeHalfPointMs: 500,
     
     // Audio loops for reactive logo border (drop your files in assests/ and add them here)
     // All loops in this array will play simultaneously and mix together.
@@ -42,6 +50,14 @@ export const CONFIG = {
 
     // If true, flyer images from events are mixed into the BG slideshow
     FLYERS_IN_SLIDESHOW: true,
+
+    // ── Google Sheets / Excel Live Price Sync ──────────────────────────
+    // Whenever someone edits and saves the Google Sheet, prices update automatically.
+    // Replace with your published Google Sheet CSV URL or Spreadsheet ID:
+    googleSheetPricesUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_MASTERS_ZAGREB_DRINKS/pub?output=csv',
+    
+    // Auto-polling interval in milliseconds (30 seconds)
+    sheetPollingIntervalMs: 30000,
 
     // ── SoundCloud Sets Rotation ───────────────────────────────────────
     // A curated list of "Masters Zagreb" or related DJ sets to cycle through.
