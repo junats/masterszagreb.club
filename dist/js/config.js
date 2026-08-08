@@ -26,10 +26,12 @@ export const CONFIG = {
         'assests/events/post-Dbs8BJqIqBJ.jpg'
     ],
     // Background rotation timing in ms
-    // 7s dwell per slide; 1.0s crossfade
-    rotationIntervalMs: 7000,
-    transitionDurationMs: 1000,
-    fadeHalfPointMs: 500,
+    // Event flyer slides stay longer (8s) for readability; non-event club slides are shorter & punchier (2.6s)
+    eventIntervalMs: 8000,
+    clubIntervalMs: 2600,
+    rotationIntervalMs: 7000, // fallback
+    transitionDurationMs: 800,
+    fadeHalfPointMs: 400,
     
     // Audio loops for reactive logo border (drop your files in assests/ and add them here)
     // All loops in this array will play simultaneously and mix together.

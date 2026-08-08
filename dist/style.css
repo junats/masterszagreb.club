@@ -10,6 +10,8 @@
     --bg-image: url('assests/events/post-DbodVNtI17B.jpg');
     --bg-opacity: 1;
     --bg-size: min(85vw, 85vh);
+    --club-hue: 0deg;
+    --club-gradient: none;
 }
 
 * {
@@ -57,11 +59,11 @@ body::before {
     background-position: center !important;
     background-repeat: no-repeat !important;
     background-color: #000;
-    filter: brightness(0.38) contrast(1.15) saturate(0.85) blur(10px);
+    filter: brightness(0.38) contrast(1.15) saturate(0.85) blur(10px) hue-rotate(var(--club-hue, 0deg));
     transform: scale(1.04);
     z-index: -3;
     opacity: var(--bg-opacity);
-    transition: opacity 1.0s ease;
+    transition: opacity 1.0s ease, filter 0.8s ease;
 }
 
 /* Layer 2: Ambient automated reveals with chromatic lens and morph */
@@ -75,14 +77,29 @@ body::before {
     background-size: var(--bg-size, min(85vw, 85vh)) !important;
     background-position: center !important;
     background-repeat: no-repeat;
-    filter: brightness(0.75) contrast(1.25) saturate(1.25);
+    filter: brightness(0.75) contrast(1.25) saturate(1.25) hue-rotate(var(--club-hue, 0deg));
     z-index: -2;
     opacity: 1;
     mask-image: var(--ambient-mask);
     -webkit-mask-image: var(--ambient-mask);
     pointer-events: none;
     animation: chromaticLens 10s ease-in-out infinite, morphBackground 15s ease-in-out infinite;
-    transition: opacity 1.0s ease;
+    transition: opacity 1.0s ease, filter 0.8s ease;
+}
+
+/* Dynamic color gradient wash for non-event club slides */
+.grain-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: var(--club-gradient, none);
+    mix-blend-mode: color-dodge;
+    opacity: 0.65;
+    pointer-events: none;
+    transition: opacity 0.8s ease, background-image 0.8s ease;
 }
 
 
@@ -128,6 +145,99 @@ body::before {
 
     75% {
         transform: scale(1.1) rotate(1deg);
+    }
+}
+
+/* ── Enhanced Glitch & Kinetic Effects for Non-Event Club Slides ── */
+body.showing-club-glitch::before {
+    filter: brightness(0.44) contrast(1.35) saturate(1.3) blur(8px) hue-rotate(var(--club-hue, 0deg));
+    animation: clubAmbientGlitch 1.8s steps(6, end) infinite;
+}
+
+body.showing-club-glitch .grain-overlay {
+    filter: brightness(0.88) contrast(1.45) saturate(1.6) hue-rotate(var(--club-hue, 0deg));
+    animation: chromaticLens 4s ease-in-out infinite, morphBackground 6s ease-in-out infinite, clubRgbDistort 0.6s steps(5, end) infinite, clubScanJitter 1.2s steps(8, end) infinite;
+}
+
+@keyframes clubRgbDistort {
+    0% {
+        filter: brightness(0.85) contrast(1.4) saturate(1.5);
+        transform: translate(0, 0);
+    }
+    15% {
+        filter: brightness(1.2) contrast(1.8) saturate(2.4)
+            drop-shadow(4px 0 0 rgba(255, 0, 80, 0.8))
+            drop-shadow(-4px 0 0 rgba(0, 255, 255, 0.8));
+        transform: translate(-2px, 1px);
+    }
+    30% {
+        filter: brightness(0.65) contrast(2.1) saturate(0.8);
+        transform: translate(2px, -1px);
+    }
+    50% {
+        filter: brightness(1.3) contrast(1.9) saturate(2.8)
+            drop-shadow(-5px 0 0 rgba(255, 0, 80, 0.9))
+            drop-shadow(5px 0 0 rgba(0, 255, 65, 0.9));
+        transform: translate(-1px, -2px);
+    }
+    70% {
+        filter: brightness(0.9) contrast(1.5) saturate(1.6);
+        transform: translate(1px, 2px);
+    }
+    85% {
+        filter: brightness(1.4) contrast(2.2) saturate(3.0)
+            drop-shadow(3px 0 0 rgba(255, 255, 0, 0.7))
+            drop-shadow(-3px 0 0 rgba(255, 0, 200, 0.7));
+        transform: translate(3px, 0);
+    }
+    100% {
+        filter: brightness(0.85) contrast(1.4) saturate(1.5);
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes clubScanJitter {
+    0%, 100% {
+        clip-path: inset(0 0 0 0);
+    }
+    12% {
+        clip-path: inset(10% 0 75% 0);
+        transform: translateX(4px);
+    }
+    14% {
+        clip-path: inset(0 0 0 0);
+        transform: translateX(0);
+    }
+    42% {
+        clip-path: inset(45% 0 35% 0);
+        transform: translateX(-5px);
+    }
+    44% {
+        clip-path: inset(0 0 0 0);
+        transform: translateX(0);
+    }
+    78% {
+        clip-path: inset(70% 0 15% 0);
+        transform: translateX(6px);
+    }
+    80% {
+        clip-path: inset(0 0 0 0);
+        transform: translateX(0);
+    }
+}
+
+@keyframes clubAmbientGlitch {
+    0%, 100% {
+        filter: brightness(0.38) contrast(1.15) saturate(0.85) blur(10px);
+    }
+    20% {
+        filter: brightness(0.5) contrast(1.4) saturate(1.4) blur(8px) hue-rotate(45deg);
+    }
+    50% {
+        filter: brightness(0.32) contrast(1.6) saturate(0.6) blur(12px) hue-rotate(-30deg);
+    }
+    80% {
+        filter: brightness(0.55) contrast(1.35) saturate(1.6) blur(7px) hue-rotate(90deg);
     }
 }
 
