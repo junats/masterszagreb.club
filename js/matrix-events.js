@@ -68,6 +68,14 @@ export class MatrixEventManager {
                 logo.setAttribute('aria-expanded', 'true');
                 if (window.gsap) {
                     window.gsap.fromTo(logo, { scale: 0.9 }, { scale: 1, duration: 0.3, ease: 'back.out(2)' });
+                    window.gsap.to(logo, {
+                        boxShadow: '0 0 28px rgba(0, 255, 65, 0.65)',
+                        borderColor: 'rgba(0, 255, 65, 1)',
+                        duration: 1,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: 'sine.inOut'
+                    });
                 }
             }
             this.startMatrixRain();
@@ -93,6 +101,14 @@ export class MatrixEventManager {
             if (logo) {
                 logo.classList.remove('events-active');
                 logo.setAttribute('aria-expanded', 'false');
+                if (window.gsap) {
+                    window.gsap.killTweensOf(logo);
+                    window.gsap.to(logo, {
+                        boxShadow: '0 0 0px rgba(0,0,0,0)',
+                        borderColor: 'rgba(255, 255, 255, 0.8)',
+                        duration: 0.3
+                    });
+                }
             }
             this.stopMatrixRain();
             this.clearMessages();
@@ -190,7 +206,7 @@ export class MatrixEventManager {
                 title: 'WEEKEND ODYSSEY // SATURDAY',
                 date: satStr,
                 description: 'Zagreb underground selectors taking over the booth until dawn. Minimal, electro, and deep grooves.',
-                image: 'assests/club-04.webp'
+                image: 'assests/club-05.webp'
             }
         ];
 
@@ -303,11 +319,9 @@ export class MatrixEventManager {
         const list = (CONFIG.clubImages && CONFIG.clubImages.length > 0)
             ? CONFIG.clubImages
             : [
-                'assests/club-01.webp', 'assests/club-04.webp', 'assests/club-05.webp',
-                'assests/club-06.webp', 'assests/club-07.webp', 'assests/club-08.webp',
+                'assests/club-01.webp', 'assests/club-05.webp', 'assests/club-06.webp',
                 'assests/club-09.webp', 'assests/club-10.webp', 'assests/club-11.webp',
-                'assests/club-12.webp', 'assests/club-12a.webp', 'assests/club-13.webp',
-                'assests/club-14.webp'
+                'assests/club-12.webp', 'assests/club-13.webp', 'assests/club-14.webp'
             ];
         let hash = 0;
         const str = String(seed || index);

@@ -155,7 +155,6 @@ body {
     color: var(--brand-silver);
     border-color: rgba(255, 255, 255, 0.4);
     background: rgba(255, 255, 255, 0.1);
-    animation: pulse 1s infinite;
 }
 
 .action-btn {

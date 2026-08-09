@@ -7,16 +7,12 @@ export const CONFIG = {
     // Authentic atmospheric nightclub photos
     clubImages: [
         'assests/club-01.webp',
-        'assests/club-04.webp',
         'assests/club-05.webp',
         'assests/club-06.webp',
-        'assests/club-07.webp',
-        'assests/club-08.webp',
         'assests/club-09.webp',
         'assests/club-10.webp',
         'assests/club-11.webp',
         'assests/club-12.webp',
-        'assests/club-12a.webp',
         'assests/club-13.webp',
         'assests/club-14.webp'
     ],

@@ -75,7 +75,6 @@
 
 .morph-menu-btn.active .morph-grid {
     gap: 2px;
-    animation: recordSpin 4s linear infinite;
 }
 
 .morph-menu-btn.active .morph-grid span {
@@ -112,11 +111,6 @@
 /* Active hover — keep white, no color change */
 .morph-menu-btn.active:hover .morph-grid span {
     background-color: #ffffff;
-}
-
-@keyframes recordSpin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
 }
 
 /* Mobile Adjustments */
