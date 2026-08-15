@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-deploy:
@@ -19,7 +20,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         # with:
           # submodules: true
           # ssh-key: ${{ secrets.SSH_KEY_CI }}
