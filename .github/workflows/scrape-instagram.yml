@@ -14,8 +14,6 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -24,21 +22,27 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-            node-version: '24'
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run Instagram scraper
         env:
-            INSTAGRAM_HANDLE: masters.zagreb
-            MAX_POSTS: '30'
-            INSTAGRAM_SESSION_ID: ${{ secrets.INSTAGRAM_SESSION_ID }}
-            APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          INSTAGRAM_HANDLE: masters.zagreb
+          MAX_POSTS: '30'
+          INSTAGRAM_SESSION_ID: ${{ secrets.INSTAGRAM_SESSION_ID }}
+          INSTAGRAM_COOKIES: ${{ secrets.INSTAGRAM_COOKIES }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
         run: node scripts/scrape-instagram.js
 
       - name: Run Instagram story scraper
         env:
-            INSTAGRAM_HANDLE: masters.zagreb
-            INSTAGRAM_SESSION_ID: ${{ secrets.INSTAGRAM_SESSION_ID }}
-            APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          INSTAGRAM_HANDLE: masters.zagreb
+          INSTAGRAM_SESSION_ID: ${{ secrets.INSTAGRAM_SESSION_ID }}
+          INSTAGRAM_COOKIES: ${{ secrets.INSTAGRAM_COOKIES }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
         run: node scripts/scrape-stories.js
 
       - name: Check for changes
