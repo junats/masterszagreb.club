@@ -43,13 +43,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "=== RUNNING CONTAINERS ==="
-            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
-            echo "=== ALL CONTAINERS ==="
-            docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
-            echo "=== SEARCH FOR masters ON ENTIRE SYSTEM ==="
-            find / -maxdepth 3 -iname "*masters*" 2>/dev/null || true
-            echo "=== REVERSE PROXY NGINX / TRAEFIK CONFIGS ==="
-            ls -la /etc/nginx/sites-enabled/ 2>/dev/null || true
-            grep -rn "masterszagreb" /etc/nginx/ 2>/dev/null || true
-            grep -rn "masterszagreb" /etc/caddy/ 2>/dev/null || true
+            echo "=== GETTRUETRACK COMPOSE ==="
+            cat /srv/gettruetrack.app/docker-compose.yml 2>/dev/null || cat /srv/gettruetrack.app/compose.yml 2>/dev/null || true
+            echo "=== SYSTEM SERVICES / CADDY / NGINX / APACHE ==="
+            systemctl list-units --type=service --state=running 2>/dev/null | grep -E "nginx|caddy|apache|traefik|proxy|cloudflared" || true
+            echo "=== CLOUDFLARE TUNNEL ==="
+            ps aux | grep -E "cloudflared|caddy|nginx" | grep -v grep || true
