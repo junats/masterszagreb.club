@@ -1,4 +1,4 @@
-/* MASTERS Nightclub - Matrix Style */
+/* MASTERS Nightclub - Black Minimal Style */
 
 :root {
     --primary-white: #ffffff;
@@ -6,31 +6,8 @@
     --dark-bg: #000000;
     --light-gray: #cccccc;
     --mid-gray: #666666;
-    --ambient-mask: radial-gradient(circle 0px at 50% 50%, transparent 0%, transparent 100%);
-    --bg-image: url('assests/events/post-DbodVNtI17B.jpg');
-    
-    /* Decoupled Trippy Backdrop Animation Variables */
-    --backdrop-image: var(--bg-image);
-    --backdrop-opacity: 1;
-    --backdrop-scale: 1.08;
-    --backdrop-tx: 0px;
-    --backdrop-ty: 0px;
-    --backdrop-blur: 10px;
-    --backdrop-brightness: 0.40;
-    --backdrop-contrast: 1.25;
-    --backdrop-saturate: 1.4;
-    --backdrop-hue: 0deg;
-
-    /* Decoupled Center Flyer Animation Variables */
-    --flyer-image: var(--bg-image);
-    --flyer-opacity: 1;
-    --flyer-scale: 1;
-    --flyer-blur: 0px;
-    --flyer-brightness: 0.95;
-
-    --bg-size: min(80vw, 80vh);
-    --club-hue: 0deg;
-    --club-gradient: none;
+    --neon-green: #00ff41;
+    --neon-green-glow: rgba(0, 255, 65, 0.4);
 }
 
 * {
@@ -59,111 +36,18 @@ body {
 
 body {
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
-    background: var(--dark-bg);
+    background: #000000;
     color: #fff;
     min-height: 100vh;
     position: relative;
+    overflow: hidden;
 }
 
-/* Layer 1: Trippy atmospheric base background cover */
-body::before {
-    content: '';
-    position: fixed;
-    top: -50px;
-    left: -50px;
-    width: calc(100% + 100px);
-    height: calc(100% + 100px);
-    background-image: var(--backdrop-image, var(--bg-image));
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-color: #000;
-    filter: brightness(var(--backdrop-brightness, 0.40)) 
-            contrast(var(--backdrop-contrast, 1.25)) 
-            saturate(var(--backdrop-saturate, 1.4)) 
-            blur(var(--backdrop-blur, 10px)) 
-            hue-rotate(var(--backdrop-hue, 0deg));
-    transform: translate(var(--backdrop-tx, 0px), var(--backdrop-ty, 0px)) scale(var(--backdrop-scale, 1.08));
-    z-index: -3;
-    opacity: var(--backdrop-opacity, 1);
-    will-change: transform, opacity, filter;
-    pointer-events: none;
-}
-
-/* Layer 2: Center Image / Flyer — 100% solid, fully opaque, non-translucent, bounded within 80vw x 80vh */
-.grain-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    padding: 10vh 10vw;
-    box-sizing: border-box;
-    background-origin: content-box;
-    background-clip: content-box;
-    background-image: var(--flyer-image, var(--bg-image));
-    background-size: contain !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    filter: brightness(var(--flyer-brightness, 0.95)) contrast(1.15) saturate(1.15) blur(var(--flyer-blur, 0px));
-    transform: scale(var(--flyer-scale, 1));
-    z-index: -2;
-    opacity: var(--flyer-opacity, 1) !important;
-    pointer-events: none;
-    will-change: transform, opacity, filter;
-}
-
-/* Seamless fullscreen dynamic color gradient wash for non-event club slides */
-.grain-overlay::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: var(--club-gradient, none);
-    mix-blend-mode: color-dodge;
-    opacity: 0.65;
-    pointer-events: none;
-    transition: opacity 0.8s ease, background-image 0.8s ease;
-}
-
-/* Seamless fullscreen dark-friendly chromatic light glaze over flyer */
-.grain-overlay::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: var(--ambient-lights, none);
-    mix-blend-mode: screen;
-    opacity: 0.45;
-    pointer-events: none;
-}
-
-/* Layer 3: Dark-friendly fluid ambient glow across full viewport */
+/* Disable all background flyer & ambient overlays */
+body::before,
+.grain-overlay,
 body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: var(--ambient-lights, none);
-    mix-blend-mode: color-dodge;
-    opacity: 0.50;
-    z-index: -1;
-    pointer-events: none;
-}
-
-/* Clean presentation for non-event club photos without glitch or rotation */
-body.showing-club-glitch::before {
-    filter: brightness(0.40) contrast(1.25) saturate(1.1) blur(10px) hue-rotate(var(--club-hue, 0deg));
-}
-
-body.showing-club-glitch .grain-overlay {
-    filter: brightness(0.90) contrast(1.2) saturate(1.2) hue-rotate(var(--club-hue, 0deg));
+    display: none !important;
 }
 
 /* Background Effects */
@@ -175,18 +59,29 @@ body.showing-club-glitch .grain-overlay {
     display: none;
 }
 
-/* Top-left SVG Logo — sits on background, blurred underneath dialog overlay */
+/* Centered MASTERS Logo */
 #svgLogo {
     position: fixed;
-    top: 24px;
-    left: 24px;
-    transform: none;
-    width: 150px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 160px;
     height: auto;
-    z-index: 500; /* below modal dialog at z-index 2000 */
-    cursor: pointer;
-    filter: drop-shadow(0 0 12px rgba(0, 255, 65, 0.4));
-    transition: all 0.4s ease;
+    z-index: 500;
+    cursor: default;
+    filter: contrast(1.1) brightness(1.05);
+    padding: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.85);
+    background: #000000;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.06);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#svgLogo:hover {
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 32px rgba(255, 255, 255, 0.18);
 }
 
 /* Top-Right Quick Navigation HUD */
@@ -756,11 +651,14 @@ body.showing-club-glitch .grain-overlay {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    /* Compact logo on mobile */
+    /* Centered logo on mobile */
     #svgLogo {
-        top: 14px;
-        left: 14px;
-        width: 90px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 110px;
+        padding: 16px;
+        border-width: 2px;
     }
 
     .logo-container {
