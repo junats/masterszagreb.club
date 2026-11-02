@@ -43,11 +43,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "=== Current User & Directory ==="
-            whoami && pwd
-            echo "=== Checking /srv ==="
-            ls -la /srv/ 2>/dev/null || true
-            echo "=== Checking for masters directory in common paths ==="
-            find /srv /var/www /home /opt -maxdepth 3 -iname "*masters*" 2>/dev/null || true
-            echo "=== Checking Docker Compose files ==="
-            find /srv /var/www /home /opt -maxdepth 3 -name "docker-compose*.yml" -o -name "compose*.yml" 2>/dev/null || true
+            echo "=== RUNNING CONTAINERS ==="
+            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+            echo "=== ALL CONTAINERS ==="
+            docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+            echo "=== SEARCH FOR masters ON ENTIRE SYSTEM ==="
+            find / -maxdepth 3 -iname "*masters*" 2>/dev/null || true
+            echo "=== REVERSE PROXY NGINX / TRAEFIK CONFIGS ==="
+            ls -la /etc/nginx/sites-enabled/ 2>/dev/null || true
+            grep -rn "masterszagreb" /etc/nginx/ 2>/dev/null || true
+            grep -rn "masterszagreb" /etc/caddy/ 2>/dev/null || true
