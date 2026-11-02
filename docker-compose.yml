@@ -1,0 +1,13 @@
+services:
+  masterszagreb:
+    image: registry.nivas.hr/markupmark/masterszagreb
+    pull_policy: always
+    restart: always
+    ports:
+      - "8058:80"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+        reservations:
+          cpus: '0.5'

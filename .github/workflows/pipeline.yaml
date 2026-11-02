@@ -43,7 +43,23 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "=== HAPROXY CONFIG FOR MASTERS / PORTS ==="
-            grep -rn -C 5 "masters" /etc/haproxy/ 2>/dev/null || true
-            echo "=== ALL HAPROXY BACKENDS ==="
-            grep -E "backend|server|bind" /etc/haproxy/haproxy.cfg 2>/dev/null || true
+            mkdir -p /srv/masterszagreb.club
+            cat << 'EOF' > /srv/masterszagreb.club/docker-compose.yml
+            services:
+              masterszagreb:
+                image: registry.nivas.hr/markupmark/masterszagreb
+                pull_policy: always
+                restart: always
+                ports:
+                  - "8058:80"
+                deploy:
+                  resources:
+                    limits:
+                      cpus: '1'
+                    reservations:
+                      cpus: '0.5'
+            EOF
+            cd /srv/masterszagreb.club
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login registry.nivas.hr -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            docker compose pull
+            docker compose up -d
