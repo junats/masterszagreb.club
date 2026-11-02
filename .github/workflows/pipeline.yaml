@@ -43,6 +43,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd /srv/masterszagreb.club/
-            docker compose pull
-            docker compose up -d
+            echo "=== Current User & Directory ==="
+            whoami && pwd
+            echo "=== Checking /srv ==="
+            ls -la /srv/ 2>/dev/null || true
+            echo "=== Checking for masters directory in common paths ==="
+            find /srv /var/www /home /opt -maxdepth 3 -iname "*masters*" 2>/dev/null || true
+            echo "=== Checking Docker Compose files ==="
+            find /srv /var/www /home /opt -maxdepth 3 -name "docker-compose*.yml" -o -name "compose*.yml" 2>/dev/null || true
