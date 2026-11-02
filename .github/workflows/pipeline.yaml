@@ -69,5 +69,9 @@ jobs:
             echo "=== SERVER PUBLIC IP ==="
             curl -s https://ifconfig.me || true
             echo ""
-            echo "=== HAPROXY FRONTEND & SSL BINDINGS ==="
-            grep -rn -C 10 "is_masterszagreb" /etc/haproxy/haproxy.cfg 2>/dev/null || true
+            echo "=== TEST LOCAL CURL TO CONTAINER ON 8058 ==="
+            curl -s http://127.0.0.1:8058/ | grep -E "svgLogo|Petar Dundov|DATE PENDING" || true
+            echo "=== TEST LOCAL CURL VIA HAPROXY PORT 80 ==="
+            curl -s -H "Host: masterszagreb.club" http://127.0.0.1:80/ | grep -E "svgLogo|Petar Dundov|DATE PENDING" || true
+            echo "=== TEST LOCAL CURL VIA HAPROXY PORT 443 ==="
+            curl -sk -H "Host: masterszagreb.club" https://127.0.0.1:443/ | grep -E "svgLogo|Petar Dundov|DATE PENDING" || true
