@@ -43,9 +43,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "=== GETTRUETRACK COMPOSE ==="
-            cat /srv/gettruetrack.app/docker-compose.yml 2>/dev/null || cat /srv/gettruetrack.app/compose.yml 2>/dev/null || true
-            echo "=== SYSTEM SERVICES / CADDY / NGINX / APACHE ==="
-            systemctl list-units --type=service --state=running 2>/dev/null | grep -E "nginx|caddy|apache|traefik|proxy|cloudflared" || true
-            echo "=== CLOUDFLARE TUNNEL ==="
-            ps aux | grep -E "cloudflared|caddy|nginx" | grep -v grep || true
+            echo "=== HAPROXY CONFIG FOR MASTERS / PORTS ==="
+            grep -rn -C 5 "masters" /etc/haproxy/ 2>/dev/null || true
+            echo "=== ALL HAPROXY BACKENDS ==="
+            grep -E "backend|server|bind" /etc/haproxy/haproxy.cfg 2>/dev/null || true
