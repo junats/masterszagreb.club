@@ -66,7 +66,8 @@ jobs:
             docker compose up -d --force-recreate
             echo "=== RUNNING CONTAINERS ==="
             docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
-            echo "=== TEST LOCAL CURL TO CONTAINER ON 8058 ==="
-            curl -I http://127.0.0.1:8058/ || true
-            echo "=== TEST LOCAL CURL VIA HAPROXY ==="
-            curl -I -H "Host: masterszagreb.club" http://127.0.0.1:80/ || true
+            echo "=== SERVER PUBLIC IP ==="
+            curl -s https://ifconfig.me || true
+            echo ""
+            echo "=== HAPROXY FRONTEND & SSL BINDINGS ==="
+            grep -rn -C 10 "is_masterszagreb" /etc/haproxy/haproxy.cfg 2>/dev/null || true
