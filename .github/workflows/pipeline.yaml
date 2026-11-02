@@ -62,4 +62,11 @@ jobs:
             cd /srv/masterszagreb.club
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login registry.nivas.hr -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
             docker compose pull
-            docker compose up -d
+            docker compose down --remove-orphans || true
+            docker compose up -d --force-recreate
+            echo "=== RUNNING CONTAINERS ==="
+            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+            echo "=== TEST LOCAL CURL TO CONTAINER ON 8058 ==="
+            curl -I http://127.0.0.1:8058/ || true
+            echo "=== TEST LOCAL CURL VIA HAPROXY ==="
+            curl -I -H "Host: masterszagreb.club" http://127.0.0.1:80/ || true

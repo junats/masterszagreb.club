@@ -11,3 +11,4 @@ services:
           cpus: '1'
         reservations:
           cpus: '0.5'
+
